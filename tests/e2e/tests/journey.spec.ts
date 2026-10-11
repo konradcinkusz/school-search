@@ -79,7 +79,7 @@ test.describe("public journey on the synthetic demo gmina", () => {
     await expect(page.getByText(/\d+\s+uczniów/).first()).toBeVisible();
     await expect(page.getByText(methodology.version, { exact: false }).first()).toBeVisible();
     await expect(page.getByText("street_list", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText(/alternatyw/i).first()).toBeVisible();
+    await expect(page.getByText(/Szkoły w zasięgu/).first()).toBeVisible();
   });
 
   test("profile: trend chart is an svg and the provenance table names the demo seed", async ({ page }) => {

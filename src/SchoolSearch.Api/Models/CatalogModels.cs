@@ -9,8 +9,8 @@ public interface IValidatedRequest
 
 public static class Methodology
 {
-    /// <summary>Methodology version served by /api/v1/meta. Draft until Phase B.</summary>
-    public const string Version = "0.0-draft";
+    /// <summary>Methodology version served by /api/v1/meta: always the scoring engine's own version.</summary>
+    public const string Version = SchoolSearch.Api.Scoring.ScoringPolicy.MethodologyVersion;
 }
 
 public sealed record ProvenanceDto(string Source, string SourceUrl, DateOnly AsOf, string Method);

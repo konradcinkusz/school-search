@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { catalog, type SchoolListItem } from "@/lib/api";
 import { siteOrigin } from "@/lib/site";
+import { isSlug } from "@/lib/validation";
+import { SCHOOL_SITEMAP_FILES } from "@/lib/sitemap-config";
 
 // Read the site origin and the catalog per request, never at build time.
 export const dynamic = "force-dynamic";
@@ -13,19 +15,11 @@ const CATALOG_PAGE_SIZE = 100;
 const PAGES_PER_SITEMAP = 100;
 const FETCH_CONCURRENCY = 8;
 
-if (CATALOG_PAGE_SIZE * PAGES_PER_SITEMAP > MAX_URLS_PER_SITEMAP) {
-  throw new Error("Sitemap chunk exceeds the protocol limit of 50 000 URLs.");
-}
-
 const STATIC_PATHS = ["/", "/porownaj", "/metodologia", "/dla-szkol", "/ranking/country"] as const;
 
-/** Id 0 holds the static pages; ids 1..n hold school profiles, n = ceil(pages / PAGES_PER_SITEMAP). */
+/** Id 0 holds the static pages; ids 1..SCHOOL_SITEMAP_FILES hold school profiles (see sitemap-config.ts). */
 export async function generateSitemaps(): Promise<Array<{ id: number }>> {
-  const first = await catalog.schools({ sort: "name", page: 1, pageSize: CATALOG_PAGE_SIZE });
-  const total = first.ok ? first.data.total : 0;
-  const pages = Math.ceil(total / CATALOG_PAGE_SIZE);
-  const files = Math.ceil(pages / PAGES_PER_SITEMAP);
-  return Array.from({ length: files + 1 }, (_, index) => ({ id: index }));
+  return Array.from({ length: SCHOOL_SITEMAP_FILES + 1 }, (_, index) => ({ id: index }));
 }
 
 async function schoolPage(page: number): Promise<SchoolListItem[]> {
@@ -61,7 +55,7 @@ export default async function sitemap({ id }: { id: number | Promise<string> }):
   const seen = new Set<string>();
   const entries: MetadataRoute.Sitemap = [];
   for (const school of schools) {
-    if (seen.has(school.slug) || entries.length >= MAX_URLS_PER_SITEMAP) continue;
+    if (!isSlug(school.slug) || seen.has(school.slug) || entries.length >= MAX_URLS_PER_SITEMAP) continue;
     seen.add(school.slug);
     entries.push({
       url: `${origin}/szkoly/${encodeURIComponent(school.slug)}`,

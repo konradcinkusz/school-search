@@ -5,7 +5,13 @@ export type RankingScope =
   | { readonly kind: "country"; readonly param: "country" }
   | { readonly kind: "gmina"; readonly param: string; readonly gminaTeryt: string };
 
-export function parseRankingScope(raw: string): RankingScope | null {
+export function parseRankingScope(rawSegment: string): RankingScope | null {
+  let raw: string;
+  try {
+    raw = decodeURIComponent(rawSegment);
+  } catch {
+    return null;
+  }
   if (raw === "country") return { kind: "country", param: "country" };
   const match = /^gmina:(.+)$/.exec(raw);
   if (!match || match[1] === undefined) return null;

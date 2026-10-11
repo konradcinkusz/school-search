@@ -1,0 +1,6 @@
+/**
+ * School sitemap files, ids 1..SCHOOL_SITEMAP_FILES (plus id 0 for static pages).
+ * Next fixes the id list at build time, when the catalog is usually unreachable; each file holds up to
+ * 10 000 URLs, so the total capacity is 50 000 schools.
+ */
+export const SCHOOL_SITEMAP_FILES = 5;

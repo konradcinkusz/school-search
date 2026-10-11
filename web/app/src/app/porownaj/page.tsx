@@ -20,7 +20,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function ComparePage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
-  const raw = firstParam(sp.s, 400);
+  const raw = firstParam(sp.slugs, 400) ?? firstParam(sp.s, 400);
   const slugs = parseSlugList(raw);
 
   return (
@@ -33,10 +33,10 @@ export default async function ComparePage({ searchParams }: { searchParams: Sear
 
       <form method="get" action="/porownaj" className="address-form">
         <div className="field">
-          <label htmlFor="s">Identyfikatory szkół (slug), oddzielone przecinkami</label>
+          <label htmlFor="slugs">Identyfikatory szkół (slug), oddzielone przecinkami</label>
           <input
-            id="s"
-            name="s"
+            id="slugs"
+            name="slugs"
             type="text"
             placeholder="np. szkola-podstawowa-nr-1-warszawa,szkola-podstawowa-nr-2-warszawa"
             defaultValue={raw ?? ""}

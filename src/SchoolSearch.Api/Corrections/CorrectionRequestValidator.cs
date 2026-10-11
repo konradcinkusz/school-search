@@ -27,6 +27,8 @@ public static class CorrectionRequestValidator
     public static readonly IReadOnlySet<string> AllowedFields = new HashSet<string>(StringComparer.Ordinal)
     {
         "name",
+        "governing_body",
+        "cohort",
         "address",
         "fee",
         "attribute",
