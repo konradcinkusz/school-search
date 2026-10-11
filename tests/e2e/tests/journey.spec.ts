@@ -151,7 +151,7 @@ test.describe("public journey on the synthetic demo gmina", () => {
     await page.goto("/dla-szkol");
 
     await page.getByLabel("Identyfikator szkoły (slug)").fill("demo-sp-1");
-    await page.getByLabel("Czego dotyczy korekty?").selectOption("name");
+    await page.getByLabel("Czego dotyczy korekta?").selectOption("name");
     await page
       .getByLabel("Co jest błędne i jakie są właściwe dane?")
       .fill("Testowe zgłoszenie korekty (dane demonstracyjne).");
