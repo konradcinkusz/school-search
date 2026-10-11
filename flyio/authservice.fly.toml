@@ -1,0 +1,43 @@
+# authservice (external identity service, konradcinkusz/authservice, read-only here). Phase E: file only, not deployed in A-D.
+# It holds the ONLY signing key in the estate (ADR-0004, P5). Every other service validates against its JWKS.
+# Deploy: `flyctl deploy --config flyio/authservice.fly.toml --image ghcr.io/konradcinkusz/authservice:<tag>`
+# The image is built in the authservice repository. This repo never vendors or modifies its source.
+#
+# [build] is declared for shape consistency only. The deploy uses --image, so this block is never used.
+# The Dockerfile path is an assumption about the external repo; verify before Phase E.
+
+app = "school-search-authservice-dev"
+primary_region = "waw"
+
+[build]
+  dockerfile = "Dockerfile"                 # assumed: Dockerfile at the root of the authservice checkout
+  context = "."
+
+[env]                                       # public values only. Signing key and DB credentials are Fly secrets.
+  ASPNETCORE_ENVIRONMENT = "Production"
+  ASPNETCORE_URLS = "http://+:8080"
+  # Issuer (Jwt authority) is the PUBLIC URL https://school-search-authservice-dev.fly.dev. The key name is
+  # set in Phase E from the authservice repo's own configuration; it is not guessed here.
+
+[http_service]
+  internal_port = 8080                      # assumed .NET default; verify against the authservice image
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # PINNED: every validator (api, later reviews) fetches JWKS in-request and re-fetches when its cache expires (Fly §7).
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+  [[http_service.checks]]
+    path = "/health"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "60s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

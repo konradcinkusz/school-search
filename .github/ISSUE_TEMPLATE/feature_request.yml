@@ -1,0 +1,41 @@
+name: Feature request
+description: A change to what the product does. Check the anti-goals first.
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read the anti-goals in docs/MASTER-PROMPT.md first. Some requests are declined by design:
+        no ascending sort on a composite score, no teacher or pupil entity, no nationality data,
+        no score for preschools, no scoring that references billing.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: Who needs this and what they cannot do today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+    validations:
+      required: true
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Phase it belongs to
+      options:
+        - A - scaffold and infrastructure
+        - B - ingest and scoring
+        - C - public search surface
+        - D - preschools
+        - E - accounts and reviews
+        - F - monetisation
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

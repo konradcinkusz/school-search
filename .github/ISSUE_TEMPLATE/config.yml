@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/konradcinkusz/school-search/security/advisories/new
+    about: Report privately. Do not open a public issue for a vulnerability.
+  - name: Correction to a school's data or score
+    url: https://github.com/konradcinkusz/school-search/issues/new?template=data_correction.yml
+    about: Use the data correction form. Schools and parents can ask for a correction.

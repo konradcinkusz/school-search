@@ -1,0 +1,90 @@
+% =============================================================================
+% school-search: project overview.
+% THIS IS NOT A RESEARCH PAPER under docs/research/00-RESEARCH-DOCUMENTATION.md.
+% It is a project overview in house style. It introduces no fact that the
+% markdown sources do not already carry (README.md, docs/methodology/,
+% docs/data/SOURCES.md, docs/adr/). It has no release cadence; it is built only
+% by a manual workflow (build-overview-pdf.yml, workflow_dispatch only).
+% Only this .tex file is committed. The PDF and LaTeX build files are not.
+% Not compiled in the authoring environment: the build has not been verified.
+% =============================================================================
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[polish,english]{babel}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+
+\title{school-search: project overview}
+\author{Konrad Cinkusz}
+\date{Status: Phase A (draft), as of 2026-10-11}
+
+\begin{document}
+\maketitle
+
+\noindent\textbf{Not a research paper.} This document describes a software project. It is
+not a study, and it makes no empirical claim beyond what the linked data sources state.
+
+\section{What the system is}
+
+school-search is a search and ranking portal for Polish primary schools, with a planned,
+read-only MCP server for the same data. The entry point is an address: the portal finds the
+catchment school for that address, then shows the school's results, trend and confidence, and
+the other schools within reach. A school with too few pupils in its class VIII cohort receives an
+explicit \emph{insufficient cohort} state rather than a number.
+
+\section{What it is not}
+
+\begin{itemize}[leftmargin=*]
+  \item Not an official ranking.
+  \item Not a judgement of individual teachers or pupils. There is no teacher or pupil entity.
+  \item Not a source of nationality or foreign-pupil data. None is collected.
+  \item Not a place where a value appears without its source, as-of date and method.
+\end{itemize}
+
+\section{Architecture in brief}
+
+The system follows the estate's reference architecture, which is held in the
+\texttt{architecture-standards} repository. The repository carries a deviation register; it
+currently records three open deviations, each with an exit condition. The key elements are:
+
+\begin{itemize}[leftmargin=*]
+  \item one composition root for development (Aspire AppHost), and a small shared kernel;
+  \item one catalog service owning its database, with a second deployable for the import job (planned);
+  \item a Next.js web surface that reads the API through a server-side proxy;
+  \item one container per service, deployed to Fly.io in region \texttt{waw}, from images in GHCR;
+  \item tag-driven CI/CD; dependency update automation declared but not opening pull requests yet.
+\end{itemize}
+
+Decisions are recorded as numbered ADRs in \texttt{docs/adr/}.
+
+\section{Phases}
+
+\begin{description}[leftmargin=*,style=nextline]
+  \item[A] Scaffold and infrastructure. Solution, API skeleton, web skeleton, Fly definitions, CI.
+  \item[B] Ingest and scoring. Idempotent import; the cohort threshold; the scoring engine. Draft methodology.
+  \item[C] Public search surface, with end-to-end tests in CI.
+  \item[D] Preschools: cost and availability, without a quality score.
+  \item[E] Accounts and moderated reviews, using an external identity service.
+  \item[F] Monetisation, with an architectural rule that scoring cannot reference billing.
+\end{description}
+
+\section{Methodology and its limits}
+
+The ranking methodology is in draft (\texttt{docs/methodology/RANKING-METHODOLOGY.md}). The cohort
+publication threshold is \emph{proposed}, not accepted (ADR-0009). The geocoding source is
+\emph{pending} (ADR-0010). Scores are not published in Phase A. Each open data question is listed,
+with how to verify it, in \texttt{docs/data/SOURCES.md}. The Polish registry API was not reachable
+from the build environment at the time of writing, and that is recorded there.
+
+\section{Where to read more}
+
+\begin{itemize}[leftmargin=*]
+  \item \texttt{README.md} for running the system.
+  \item \texttt{docs/architecture/00-ARCHITECTURE.md} for the deviation register.
+  \item \texttt{docs/ux/UI-UX.md} for screens and the ranked backlog.
+\end{itemize}
+
+\end{document}

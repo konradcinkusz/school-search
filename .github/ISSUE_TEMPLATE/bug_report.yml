@@ -1,0 +1,50 @@
+name: Bug report
+description: Something works differently from what the docs or the page say.
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste secrets, tokens or connection strings. Do not include the name of any pupil.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you saw.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Enter ...
+        3. See ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - API (search, schools, meta)
+        - Web (Polish UI)
+        - MCP server
+        - Scoring or methodology
+        - Scripts or CI
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: "v0.1.0 or the commit SHA shown at /health"
+  - type: textarea
+    id: health
+    attributes:
+      label: GET /health output (optional)
+      description: The integration list shows which features were degraded when this happened.
+      render: json

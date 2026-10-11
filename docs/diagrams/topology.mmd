@@ -1,0 +1,31 @@
+%% Topology of school-search. Planned Fly apps; only api-dev and web-dev are defined in Phase A.
+%% Phase markers in labels. Service-to-service HTTP uses the public URL, not .internal.
+flowchart TB
+    user(["Parent browser"])
+    agent(["AI agent (MCP client)"])
+    gh["GitHub Actions<br/>tag v* deploy"]
+    ghcr[("GHCR<br/>ghcr.io/konradcinkusz/school-search-*")]
+
+    subgraph fly["Fly.io, primary region waw"]
+        web["school-search-web-dev<br/>Next.js standalone :3000<br/>min 0 (Phase A)"]
+        api["school-search-api-dev<br/>Catalog API :8080<br/>min 1 (Phase A)"]
+        pg[("school-search-postgres<br/>catalogdb<br/>no public listener (Phase A)")]
+        imp["school-search-import<br/>one-shot machine (Phase B)"]
+        mcp["school-search-mcp-dev<br/>MCP, owns no DB<br/>min 0 at launch (later phase)"]
+        auth["school-search-authservice-dev<br/>external identity (Phase E)"]
+        rev["school-search-reviews-dev<br/>reviews, DSA machinery (Phase E)"]
+    end
+
+    user -->|"HTTPS"| web
+    web -->|"server-side proxy, public URL"| api
+    agent -->|"streamable HTTP, MCP_API_KEY"| mcp
+    mcp -->|"public URL"| api
+    api --> pg
+    imp -->|"Catalog.Data, writes"| pg
+    web -.->|"session, Phase E"| auth
+    rev -.->|"JWKS validation, Phase E"| auth
+    web -.->|"reviews, Phase E"| rev
+    api -.->|"JWKS validation, Phase E"| auth
+
+    gh -->|"build once"| ghcr
+    ghcr -->|"flyctl deploy --image"| fly

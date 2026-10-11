@@ -1,0 +1,41 @@
+# school-search web (web/app, Next.js 15 standalone, listens :3000). Fly §5 frontend shape.
+# Deploy: `flyctl deploy --config flyio/web.fly.toml --image ghcr.io/konradcinkusz/school-search-web:<tag>`
+# Runtime config: CATALOG_API_URL is read per request by /api/config and the /api/proxy route (FRONTEND-BFF §2),
+# so one image is promotable across environments. No NEXT_PUBLIC_* for environment-specific values.
+
+app = "school-search-web-dev"
+primary_region = "waw"
+
+[build]
+  dockerfile = "../web/app/Dockerfile"
+  context = ".."                    # repo root: pnpm workspace root is web/, the Dockerfile copies it
+
+[env]                               # public values only
+  NODE_ENV = "production"
+  PORT = "3000"
+  HOSTNAME = "0.0.0.0"              # Next standalone must bind all interfaces, not loopback
+  # Public URL, not .internal: the Fly proxy must be able to start a stopped api machine (Fly §6).
+  CATALOG_API_URL = "https://school-search-api-dev.fly.dev"
+
+[http_service]
+  internal_port = 3000              # must equal PORT
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # Entered only from a browser: a cold start is a slow first page, not a failed call (Fly §7).
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+  [[http_service.checks]]
+    path = "/healthz"               # dedicated check route, not "/" (a white screen still returns 200 on /)
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "60s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

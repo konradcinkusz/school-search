@@ -1,0 +1,33 @@
+# school-search Postgres (Fly §5 database shape). One instance, one logical database: catalogdb.
+# Deploy: `flyctl deploy --config flyio/postgres.fly.toml --image postgres:17-alpine --ha=false`
+#
+# --ha=false is mandatory. A second machine would get a second, EMPTY volume, not a replica.
+# Never scale this app past one machine and never add it to any scale workflow.
+#
+# No [http_service] and no [[services]] on purpose: no public listener, no proxy smoke check.
+# Reached only at school-search-postgres.internal:5432 over 6PN. A public listener here is a database waiting to be scanned.
+#
+# [build] uses a vanilla image, not Fly's managed postgres-flex (Fly §14: flex expects `fly postgres create` bootstrapping).
+# This file has no Dockerfile, so `dockerfile` and `context` are not applicable; see flyio/SECRETS.md and INFRASTRUCTURE-ANALYSIS.md.
+
+app = "school-search-postgres"
+primary_region = "waw"
+
+[build]
+  image = "postgres:17-alpine"      # pinned major, never :latest
+
+[env]                               # public values only; the password is the Fly secret POSTGRES_PASSWORD
+  POSTGRES_USER = "schoolsearch"
+  POSTGRES_DB = "catalogdb"
+  # Subdirectory of the mount: the volume root holds lost+found and initdb refuses a non-empty data directory (Fly §8).
+  PGDATA = "/var/lib/postgresql/data/pgdata"
+  POSTGRES_INITDB_ARGS = "--encoding=UTF8 --locale=C"   # Polish collation/ICU choice is a Phase B decision
+
+[[mounts]]
+  source = "school_search_pgdata"   # volume names: letters, digits, underscore
+  destination = "/var/lib/postgresql/data"
+  initial_size = "10gb"             # grow later if needed; shrinking is not possible
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"

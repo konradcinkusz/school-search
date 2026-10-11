@@ -1,0 +1,17 @@
+# gitleaks configuration, shared by scripts/scan-secrets.sh (pre-commit) and the
+# secret-scan CI job. Requires gitleaks >= 8.19 (see scripts/README.md).
+title = "school-search gitleaks configuration"
+
+[extend]
+# Keep gitleaks' default ruleset (cloud keys, tokens, private keys, ...).
+useDefault = true
+
+[allowlist]
+description = "Placeholders and documentation that legitimately contain key-shaped text"
+paths = [
+  '''(^|/)secrets\.env\.example$''',   # committed template, values are empty
+  '''(^|/)\.gitleaks\.toml$''',        # this file
+]
+regexes = [
+  '''replace-me''',                    # placeholder text used in docs and examples
+]
