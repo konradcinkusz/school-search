@@ -25,7 +25,10 @@ public static partial class UntrustedText
         return $"<untrusted source=\"{Escape(source)}\">\n{Escape(text)}\n</untrusted>";
     }
 
-    /// <summary>Escapes the three characters that matter for the delimiter.</summary>
+    /// <summary>
+    /// Escapes angle brackets, the only characters that can form a tag. Ampersands are left alone so that quotes the model
+    /// copies back still match the source text.
+    /// </summary>
     public static string Escape(string text)
     {
         var builder = new StringBuilder(text.Length);
@@ -35,7 +38,6 @@ public static partial class UntrustedText
             {
                 case '<': builder.Append("&lt;"); break;
                 case '>': builder.Append("&gt;"); break;
-                case '&': builder.Append("&amp;"); break;
                 default: builder.Append(c); break;
             }
         }

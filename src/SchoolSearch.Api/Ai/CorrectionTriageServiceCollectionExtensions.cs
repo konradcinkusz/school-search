@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace SchoolSearch.Api.Ai;

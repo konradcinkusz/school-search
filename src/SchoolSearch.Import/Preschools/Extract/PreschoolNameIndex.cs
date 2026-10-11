@@ -16,7 +16,7 @@ public sealed record PreschoolListLoad(PreschoolNameIndex Index, IReadOnlyList<s
 /// and Unicode form. Diacritics are kept, so "Przedszkole Źródełko" and "Przedszkole Zrodelko" never match.
 /// There is no fuzzy matching: a name that is missing or matches two entries is never resolved by guessing.
 /// </summary>
-public sealed class PreschoolNameIndex
+public sealed partial class PreschoolNameIndex
 {
     private readonly Dictionary<string, List<PreschoolRef>> _byName;
 

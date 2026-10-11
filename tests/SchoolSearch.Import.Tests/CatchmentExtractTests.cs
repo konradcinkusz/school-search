@@ -168,13 +168,15 @@ public sealed class CatchmentExtractTests
     }
 
     [Fact]
-    public void Budget_stops_the_call_before_it_is_made()
+    public async Task Budget_stops_the_call_before_it_is_made()
     {
         var fake = new CatchmentScriptedLlm("{}");
         var guarded = new BudgetedImportLlm(fake, new ImportTokenBudget(10));
 
-        return Assert.ThrowsAsync<ImportBudgetExhaustedException>(() =>
+        await Assert.ThrowsAsync<ImportBudgetExhaustedException>(() =>
             guarded.CompleteAsync(new string('s', 100), "u", 3000, CancellationToken.None));
+
+        Assert.Empty(fake.Calls);
     }
 
     [Fact]

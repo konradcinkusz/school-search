@@ -18,7 +18,7 @@ public sealed class SearchIntentParserTests
         Assert.NotNull(result);
         Assert.Equal("1465011", result.Filters.Gmina);
         Assert.Equal("matematyka", result.Filters.Q);
-        Assert.True(result.Filters.PublicOnly);
+        Assert.Equal(true, result.Filters.PublicOnly);
         Assert.Equal(5d, result.Filters.MaxDistanceKm);
         Assert.Equal("school", result.Filters.Type);
         Assert.Empty(result.Filters.Notes);
@@ -29,8 +29,8 @@ public sealed class SearchIntentParserTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("Brak filtrów.")]
-    [InlineData("[{\"gmina\":\"1465011\"}]")]
     [InlineData("{\"gmina\": ")]
+    [InlineData("{\"gmina\":\"1465011\",}")]
     public void Text_that_is_not_a_single_object_is_rejected_whole(string modelText)
     {
         Assert.Null(SearchIntentParser.Parse(modelText, Question));
@@ -78,9 +78,9 @@ public sealed class SearchIntentParserTests
         var result = SearchIntentParser.Parse("{\"unsupportedKinds\":[\"quality_or_ranking\",\"sort_order\",\"invented_kind\"]}", "Szkoła");
 
         Assert.NotNull(result);
-        Assert.Equal(2, result.Unsupported.Count);
-        Assert.Contains(result.Unsupported, text => text == SearchIntentParser.QualityUnsupported);
-        Assert.Contains(result.Unsupported, text => text == SearchIntentParser.SortUnsupported);
+        Assert.Equal(
+            new[] { SearchIntentParser.QualityUnsupported, SearchIntentParser.SortUnsupported },
+            result.Unsupported);
     }
 
     [Fact]
