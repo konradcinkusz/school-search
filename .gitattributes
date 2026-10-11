@@ -1,0 +1,34 @@
+# Normalise text to LF in the repository. Windows checkouts get CRLF only where
+# the platform needs it (PowerShell, batch).
+* text=auto eol=lf
+
+*.sh     text eol=lf
+*.ps1    text eol=crlf
+*.bat    text eol=crlf
+*.cmd    text eol=crlf
+*.tex    text eol=lf
+*.mmd    text eol=lf
+
+*.cs     text diff=csharp
+*.csproj text
+*.props  text
+*.ts     text
+*.tsx    text
+
+# Generated lockfiles: keep them in the tree, out of review diffs
+pnpm-lock.yaml -diff linguist-generated=true
+packages.lock.json -diff linguist-generated=true
+
+# Binary assets
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.webp   binary
+*.woff   binary
+*.woff2  binary
+*.pdf    binary
+*.xlsx   binary
+*.zip    binary
+*.dll    binary

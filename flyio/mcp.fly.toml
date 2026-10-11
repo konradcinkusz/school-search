@@ -1,0 +1,40 @@
+# school-search MCP server (streamable HTTP, read-only v1, listens :8080). Fly §4 stateless HTTP shape.
+# Phase later than A: the Mcp project and its Dockerfile do not exist yet. Deploy uses --image only.
+# Deploy: `flyctl deploy --config flyio/mcp.fly.toml --image ghcr.io/konradcinkusz/school-search-mcp:<tag>`
+# The MCP server owns no database. It reads the catalog only through the api's public URL.
+
+app = "school-search-mcp-dev"
+primary_region = "waw"
+
+[build]
+  dockerfile = "../src/SchoolSearch.Mcp/Dockerfile"   # does not exist until the Mcp phase; declared so the shape is fixed now
+  context = ".."
+
+[env]                               # public values only; MCP_API_KEY is a Fly secret
+  ASPNETCORE_ENVIRONMENT = "Production"
+  ASPNETCORE_URLS = "http://+:8080"
+  CATALOG_API_URL = "https://school-search-api-dev.fly.dev"   # public URL, so the proxy can wake a stopped api
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # Scale to zero at launch. Trigger to pin (min_machines_running = 1): first real agent traffic.
+  # Cold-start budget and reasoning: flyio/INFRASTRUCTURE-ANALYSIS.md section 2.
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+  [[http_service.checks]]
+    path = "/health"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "60s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

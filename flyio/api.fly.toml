@@ -1,0 +1,42 @@
+# school-search API (src/SchoolSearch.Api, listens :8080). Fly §4 shape: stateless HTTP service.
+# Deploy: build once in CI, then `flyctl deploy --config flyio/api.fly.toml --image ghcr.io/konradcinkusz/school-search-api:<tag>`
+# [build] is declared so a local build resolves the same way as CI (paths relative to THIS file).
+
+app = "school-search-api-dev"       # globally unique on Fly; system + service + env
+primary_region = "waw"
+
+[build]
+  dockerfile = "../src/SchoolSearch.Api/Dockerfile"
+  context = ".."                    # repo root: the Dockerfile copies project files from src/
+
+[env]                               # public values only (visible in fly config show and image metadata)
+  ASPNETCORE_ENVIRONMENT = "Production"
+  ASPNETCORE_URLS = "http://+:8080"
+  DATABASE_PROVIDER = "postgres"
+  SchoolSearch__TrustProxyClientIpHeader = "true"   # behind the Fly edge; see RateLimiting/ClientIpResolver.cs
+  # ConnectionStrings__catalogdb is a Fly secret (flyio/SECRETS.md). Never put it here.
+  # Browsers never call this API directly (BFF in web/), so no CORS origin is set here.
+
+[http_service]
+  internal_port = 8080              # must equal the port Kestrel binds (ASPNETCORE_URLS)
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # PINNED: web (server-side proxy, FRONTEND-BFF) and mcp call this in-request.
+  # Fly §7: the caller's timeout cannot absorb a cold start on this path, so one machine stays up.
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+  [[http_service.checks]]
+    path = "/health"                # kernel MapDefaultEndpoints(); lists optional integrations
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "60s"            # covers cold start; migrations run after the listener (P4)
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

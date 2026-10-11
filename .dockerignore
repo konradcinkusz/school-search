@@ -1,0 +1,36 @@
+# Exclusion-based build context. The context is the repository root, so every
+# file is included unless listed here: a new top-level folder reaches images by
+# default and shows up in review, which is the point of excluding rather than
+# allowlisting.
+
+# Version control, editors, agent and CI configuration
+.git
+.github
+.claude
+.vs
+.idea
+.DS_Store
+
+# Secrets and local configuration: never in a context, never in a layer
+.env
+.env.*
+secrets.env*
+*.pfx
+*.p12
+*.pem
+**/*.user
+
+# Build output and dependencies are rebuilt inside the image
+**/bin
+**/obj
+**/TestResults
+**/node_modules
+**/.next
+**/.pnpm-store
+**/.turbo
+
+# Trees no service image compiles or serves
+tests
+docs
+flyio
+scripts

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>SchoolSearch.Catalog.Data</RootNamespace>
+    <AssemblyName>SchoolSearch.Catalog.Data</AssemblyName>
+  </PropertyGroup>
+
+  <!--
+    Owns the catalog schema (P3: database per service). Provider selection and the
+    Npgsql/SqlServer packages are the kernel's job (AddDatabaseContext); this project
+    only needs the EF Core abstractions for the model and the migrations.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+  </ItemGroup>
+
+</Project>

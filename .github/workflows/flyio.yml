@@ -1,0 +1,403 @@
+name: flyio
+
+# Tag-driven build and ordered deploy (FLY-IO-DEPLOYMENT §10-§11).
+# Rules implemented here:
+#   - trigger on a tag, diff against the previous tag
+#   - a service whose Fly app does not exist is always selected
+#   - kernel/contracts changes invalidate every image
+#   - one image per changed service, pushed to GHCR, then deployed by reference
+#   - order: postgres -> authservice (Phase E, gated) -> api -> web -> mcp
+#   - every gate accepts success || skipped from its upstream
+#   - app and volume creation is idempotent and lives here, not in a shell
+#   - post-deploy /health check; JWKS non-empty assertion when authservice deploys
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flyio-deploy
+  cancel-in-progress: false
+
+env:
+  FLY_ORG: personal
+  FLY_REGION: waw
+  IMAGE_PREFIX: ghcr.io/konradcinkusz/school-search
+  # Must match POSTGRES_USER in flyio/postgres.fly.toml and the api connection string.
+  POSTGRES_USER: school_search
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore SchoolSearch.sln
+      - run: dotnet build SchoolSearch.sln --no-restore -c Release -warnaserror
+      - run: dotnet test SchoolSearch.sln --no-build -c Release
+      - run: bash scripts/check-kernel-size.sh
+
+  detect-changes:
+    name: detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: dev
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      AUTHSERVICE_ENABLED: ${{ vars.AUTHSERVICE_ENABLED }}
+    outputs:
+      build_matrix: ${{ steps.select.outputs.build_matrix }}
+      deploy_postgres: ${{ steps.select.outputs.deploy_postgres }}
+      deploy_authservice: ${{ steps.select.outputs.deploy_authservice }}
+      deploy_api: ${{ steps.select.outputs.deploy_api }}
+      deploy_web: ${{ steps.select.outputs.deploy_web }}
+      deploy_mcp: ${{ steps.select.outputs.deploy_mcp }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - name: Select services
+        id: select
+        run: |
+          set -euo pipefail
+          TAG="$GITHUB_REF_NAME"
+          PREV="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
+          if [ -n "$PREV" ]; then
+            CHANGED="$(git diff --name-only "$PREV" "$TAG")"
+            echo "Diffing $PREV..$TAG"
+          else
+            CHANGED="$(git ls-tree -r --name-only "$TAG")"
+            echo "No earlier tag: every file counts as changed"
+          fi
+
+          hit() { grep -Eq "$1" <<< "$CHANGED"; }
+
+          # Kernel or contracts change invalidates every image that compiles them.
+          KERNEL=false
+          if hit '^(src/SchoolSearch\.(ServiceDefaults|Contracts)/|Directory\.(Build|Packages)\.props$|global\.json$)'; then
+            KERNEL=true
+          fi
+
+          APPS_JSON="$(flyctl apps list --json)"
+          exists() { jq -e --arg a "$1" '(. // []) | any(.[]; (.Name // .name) == $a)' <<< "$APPS_JSON" >/dev/null; }
+          # want_missing_or_changed <path-regex> <app>: selected when its paths changed or its Fly app is missing
+          want_missing_or_changed() { hit "$1" || ! exists "$2"; }
+
+          DEPLOY_POSTGRES=false
+          if want_missing_or_changed '^flyio/postgres\.fly\.toml$' school-search-postgres; then DEPLOY_POSTGRES=true; fi
+
+          DEPLOY_API=false
+          if [ "$KERNEL" = true ] || want_missing_or_changed '^(src/SchoolSearch\.(Api|Catalog\.Data)/|flyio/api\.fly\.toml$)' school-search-api-dev; then DEPLOY_API=true; fi
+
+          DEPLOY_WEB=false
+          if [ "$KERNEL" = true ] || want_missing_or_changed '^(web/|flyio/web\.fly\.toml$)' school-search-web-dev; then DEPLOY_WEB=true; fi
+
+          # MCP exists only from Phase D: needs both its Dockerfile and its fly.toml.
+          DEPLOY_MCP=false
+          if [ -f src/SchoolSearch.Mcp/Dockerfile ] && [ -f flyio/mcp.fly.toml ]; then
+            if [ "$KERNEL" = true ] || want_missing_or_changed '^(src/SchoolSearch\.Mcp/|flyio/mcp\.fly\.toml$)' school-search-mcp-dev; then DEPLOY_MCP=true; fi
+          fi
+
+          # authservice is Phase E: skipped unless the file exists AND the repo variable enables it.
+          DEPLOY_AUTHSERVICE=false
+          if [ -f flyio/authservice.fly.toml ] && [ "$AUTHSERVICE_ENABLED" = "true" ]; then
+            if want_missing_or_changed '^flyio/authservice\.fly\.toml$' school-search-authservice-dev; then DEPLOY_AUTHSERVICE=true; fi
+          fi
+
+          MATRIX='[]'
+          add_build() { MATRIX="$(jq -c --arg s "$1" --arg d "$2" '. + [{service: $s, dockerfile: $d}]' <<< "$MATRIX")"; }
+          if [ "$DEPLOY_API" = true ]; then add_build api src/SchoolSearch.Api/Dockerfile; fi
+          if [ "$DEPLOY_WEB" = true ]; then add_build web web/app/Dockerfile; fi
+          if [ "$DEPLOY_MCP" = true ]; then add_build mcp src/SchoolSearch.Mcp/Dockerfile; fi
+
+          {
+            echo "build_matrix=$MATRIX"
+            echo "deploy_postgres=$DEPLOY_POSTGRES"
+            echo "deploy_authservice=$DEPLOY_AUTHSERVICE"
+            echo "deploy_api=$DEPLOY_API"
+            echo "deploy_web=$DEPLOY_WEB"
+            echo "deploy_mcp=$DEPLOY_MCP"
+          } >> "$GITHUB_OUTPUT"
+          echo "Build matrix: $MATRIX"
+          echo "postgres=$DEPLOY_POSTGRES authservice=$DEPLOY_AUTHSERVICE api=$DEPLOY_API web=$DEPLOY_WEB mcp=$DEPLOY_MCP"
+
+  build:
+    name: build ${{ matrix.service }}
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.build_matrix != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.detect-changes.outputs.build_matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build once and push to GHCR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.ref_name }}
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:sha-${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  deploy_postgres:
+    name: deploy postgres
+    needs: [detect-changes, test]
+    if: >-
+      always() && !cancelled()
+      && needs.test.result == 'success'
+      && needs.detect-changes.result == 'success'
+      && needs.detect-changes.outputs.deploy_postgres == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: dev
+    permissions:
+      contents: read
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      APP: school-search-postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - name: Ensure app, volume and secret (idempotent)
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        run: |
+          set -euo pipefail
+          ensure_app() {
+            local apps
+            apps="$(flyctl apps list --json)"
+            if jq -e --arg a "$1" '(. // []) | any(.[]; (.Name // .name) == $a)' <<< "$apps" >/dev/null; then
+              echo "App $1 exists"
+            else
+              flyctl apps create "$1" --org "$FLY_ORG" --yes
+            fi
+          }
+          ensure_volume() {
+            local vols
+            vols="$(flyctl volumes list --app "$1" --json)"
+            if jq -e --arg n "$2" '(. // []) | any(.[]; (.name // .Name) == $n)' <<< "$vols" >/dev/null; then
+              echo "Volume $2 exists on $1"
+            else
+              flyctl volumes create "$2" --app "$1" --region "$FLY_REGION" --size "$3" --yes
+            fi
+          }
+          ensure_app "$APP"
+          ensure_volume "$APP" school_search_pgdata 10
+          : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set in the dev environment}"
+          flyctl secrets set --app "$APP" --stage "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}"
+      - name: Deploy (private network only, single machine)
+        run: flyctl deploy --config flyio/postgres.fly.toml --app school-search-postgres --ha=false --yes
+      - name: Status
+        run: flyctl status --app school-search-postgres
+
+  deploy_authservice:
+    name: deploy authservice (Phase E)
+    needs: [detect-changes, test, deploy_postgres]
+    if: >-
+      always() && !cancelled()
+      && needs.test.result == 'success'
+      && needs.detect-changes.result == 'success'
+      && (needs.deploy_postgres.result == 'success' || needs.deploy_postgres.result == 'skipped')
+      && needs.detect-changes.outputs.deploy_authservice == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: dev
+    permissions:
+      contents: read
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      APP: school-search-authservice-dev
+      # Runs the published authservice image; its source is never vendored here.
+      AUTHSERVICE_IMAGE: ${{ vars.AUTHSERVICE_IMAGE }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Ensure app and signing key (idempotent)
+        env:
+          # PHASE E: confirm the secret name and config key against the authservice README.
+          AUTHSERVICE_SIGNING_KEY: ${{ secrets.AUTHSERVICE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          apps="$(flyctl apps list --json)"
+          if ! jq -e --arg a "$APP" '(. // []) | any(.[]; (.Name // .name) == $a)' <<< "$apps" >/dev/null; then
+            flyctl apps create "$APP" --org "$FLY_ORG" --yes
+          fi
+          : "${AUTHSERVICE_IMAGE:?set the AUTHSERVICE_IMAGE repository variable}"
+          : "${AUTHSERVICE_SIGNING_KEY:?AUTHSERVICE_SIGNING_KEY is not set in the dev environment}"
+          flyctl secrets set --app "$APP" --stage "SIGNING_KEY_PEM=${AUTHSERVICE_SIGNING_KEY}"
+      - name: Deploy
+        run: flyctl deploy --config flyio/authservice.fly.toml --app school-search-authservice-dev --image "$AUTHSERVICE_IMAGE" --yes
+      - name: Assert JWKS is non-empty (health cannot see an empty key set)
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 20 --retry-delay 5 --retry-all-errors \
+            "https://${APP}.fly.dev/.well-known/jwks.json" -o jwks.json
+          jq -e '(.keys // []) | length > 0' jwks.json > /dev/null \
+            || { echo "::error::JWKS has no keys: every consumer would reject every token"; exit 1; }
+          echo "JWKS publishes $(jq '.keys | length' jwks.json) key(s)"
+
+  deploy_api:
+    name: deploy api
+    needs: [detect-changes, test, build, deploy_postgres, deploy_authservice]
+    if: >-
+      always() && !cancelled()
+      && needs.test.result == 'success'
+      && needs.detect-changes.result == 'success'
+      && (needs.build.result == 'success' || needs.build.result == 'skipped')
+      && (needs.deploy_postgres.result == 'success' || needs.deploy_postgres.result == 'skipped')
+      && (needs.deploy_authservice.result == 'success' || needs.deploy_authservice.result == 'skipped')
+      && needs.detect-changes.outputs.deploy_api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: dev
+    permissions:
+      contents: read
+      packages: read
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      APP: school-search-api-dev
+      IMAGE: ghcr.io/konradcinkusz/school-search-api:${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Ensure app and database connection secret (idempotent)
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        run: |
+          set -euo pipefail
+          apps="$(flyctl apps list --json)"
+          if ! jq -e --arg a "$APP" '(. // []) | any(.[]; (.Name // .name) == $a)' <<< "$apps" >/dev/null; then
+            flyctl apps create "$APP" --org "$FLY_ORG" --yes
+          fi
+          : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set in the dev environment}"
+          DB_URL="Host=school-search-postgres.internal;Port=5432;Database=catalogdb;Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+          flyctl secrets set --app "$APP" --stage "ConnectionStrings__catalogdb=${DB_URL}"
+      - name: Deploy the built image (no rebuild)
+        run: flyctl deploy --config flyio/api.fly.toml --app school-search-api-dev --image "$IMAGE" --yes
+      - name: Post-deploy health check
+        run: curl --fail --silent --show-error --retry 20 --retry-delay 5 --retry-all-errors "https://${APP}.fly.dev/health"
+
+  deploy_web:
+    name: deploy web
+    needs: [detect-changes, test, build, deploy_postgres, deploy_authservice, deploy_api]
+    if: >-
+      always() && !cancelled()
+      && needs.test.result == 'success'
+      && needs.detect-changes.result == 'success'
+      && (needs.build.result == 'success' || needs.build.result == 'skipped')
+      && (needs.deploy_postgres.result == 'success' || needs.deploy_postgres.result == 'skipped')
+      && (needs.deploy_authservice.result == 'success' || needs.deploy_authservice.result == 'skipped')
+      && (needs.deploy_api.result == 'success' || needs.deploy_api.result == 'skipped')
+      && needs.detect-changes.outputs.deploy_web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: dev
+    permissions:
+      contents: read
+      packages: read
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      APP: school-search-web-dev
+      IMAGE: ghcr.io/konradcinkusz/school-search-web:${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Ensure app (idempotent)
+        run: |
+          set -euo pipefail
+          apps="$(flyctl apps list --json)"
+          if ! jq -e --arg a "$APP" '(. // []) | any(.[]; (.Name // .name) == $a)' <<< "$apps" >/dev/null; then
+            flyctl apps create "$APP" --org "$FLY_ORG" --yes
+          fi
+      - name: Deploy the built image (no rebuild)
+        run: flyctl deploy --config flyio/web.fly.toml --app school-search-web-dev --image "$IMAGE" --yes
+      - name: Post-deploy health check
+        run: curl --fail --silent --show-error --retry 20 --retry-delay 5 --retry-all-errors "https://${APP}.fly.dev/health"
+
+  deploy_mcp:
+    name: deploy mcp (Phase D)
+    needs: [detect-changes, test, build, deploy_postgres, deploy_authservice, deploy_api, deploy_web]
+    if: >-
+      always() && !cancelled()
+      && needs.test.result == 'success'
+      && needs.detect-changes.result == 'success'
+      && (needs.build.result == 'success' || needs.build.result == 'skipped')
+      && (needs.deploy_postgres.result == 'success' || needs.deploy_postgres.result == 'skipped')
+      && (needs.deploy_authservice.result == 'success' || needs.deploy_authservice.result == 'skipped')
+      && (needs.deploy_api.result == 'success' || needs.deploy_api.result == 'skipped')
+      && (needs.deploy_web.result == 'success' || needs.deploy_web.result == 'skipped')
+      && needs.detect-changes.outputs.deploy_mcp == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: dev
+    permissions:
+      contents: read
+      packages: read
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      APP: school-search-mcp-dev
+      IMAGE: ghcr.io/konradcinkusz/school-search-mcp:${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Ensure app and MCP key (idempotent)
+        env:
+          MCP_API_KEY: ${{ secrets.MCP_API_KEY }}
+        run: |
+          set -euo pipefail
+          apps="$(flyctl apps list --json)"
+          if ! jq -e --arg a "$APP" '(. // []) | any(.[]; (.Name // .name) == $a)' <<< "$apps" >/dev/null; then
+            flyctl apps create "$APP" --org "$FLY_ORG" --yes
+          fi
+          : "${MCP_API_KEY:?MCP_API_KEY is not set in the dev environment}"
+          flyctl secrets set --app "$APP" --stage "MCP_API_KEY=${MCP_API_KEY}"
+      - name: Deploy the built image (no rebuild)
+        run: flyctl deploy --config flyio/mcp.fly.toml --app school-search-mcp-dev --image "$IMAGE" --yes
+      - name: Post-deploy health check
+        run: curl --fail --silent --show-error --retry 20 --retry-delay 5 --retry-all-errors "https://${APP}.fly.dev/health"

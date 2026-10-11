@@ -1,0 +1,58 @@
+name: Data correction
+description: A school, a parent or anyone else thinks a published value or fact is wrong.
+labels: ["data-correction", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every published value carries its source, sourceUrl, asOf and method. Say which field is wrong
+        and what the correct value is, with a source. Do not include the name of any pupil, and do not
+        include a private individual's name for a school whose governing body is a private person.
+        Corrections are reviewed against the source before anything changes.
+  - type: input
+    id: school
+    attributes:
+      label: School (RSPO number or the school's public name)
+    validations:
+      required: true
+  - type: dropdown
+    id: requester
+    attributes:
+      label: You are
+      options:
+        - The school or its operator
+        - A parent or guardian
+        - Someone else
+    validations:
+      required: true
+  - type: input
+    id: field
+    attributes:
+      label: Field or page
+      description: For example "exam average 2025, subject polski", or the URL of the page.
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: What the page says now
+    validations:
+      required: true
+  - type: textarea
+    id: correct
+    attributes:
+      label: What it should say
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source for the correct value
+      description: A URL to the official publication (for example the CKE or SIO document), or a document you can share.
+    validations:
+      required: true
+  - type: input
+    id: contact
+    attributes:
+      label: Contact for follow-up (optional)
+      description: Only the operator sees this. It is not published.

@@ -1,0 +1,63 @@
+name: flyio-destroy
+
+# Teardown behind a typed confirmation. Reverse dependency order: stateless apps first,
+# Postgres last. The Postgres app is kept by default because destroying a Fly app
+# destroys its volumes; that is irreversible.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type exactly: DESTROY school-search dev'
+        type: string
+        required: true
+      delete_database:
+        description: "Also destroy school-search-postgres and its data volume (irreversible)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flyio-destroy
+  cancel-in-progress: false
+
+jobs:
+  destroy:
+    name: destroy dev estate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: dev
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      CONFIRM: ${{ inputs.confirm }}
+      DELETE_DATABASE: ${{ inputs.delete_database }}
+    steps:
+      - name: Check the typed confirmation
+        run: |
+          if [ "$CONFIRM" != "DESTROY school-search dev" ]; then
+            echo "::error::Confirmation text does not match; nothing was destroyed"
+            exit 1
+          fi
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - name: Destroy in reverse dependency order
+        run: |
+          set -euo pipefail
+          APPS_JSON="$(flyctl apps list --json)"
+          destroy_app() {
+            if jq -e --arg a "$1" '(. // []) | any(.[]; (.Name // .name) == $a)' <<< "$APPS_JSON" >/dev/null; then
+              flyctl apps destroy "$1" --yes
+            else
+              echo "Skipping $1: app does not exist"
+            fi
+          }
+          destroy_app school-search-mcp-dev
+          destroy_app school-search-web-dev
+          destroy_app school-search-api-dev
+          destroy_app school-search-authservice-dev
+          if [ "$DELETE_DATABASE" = "true" ]; then
+            destroy_app school-search-postgres
+          else
+            echo "Keeping school-search-postgres and its data volume (delete_database was false)."
+          fi

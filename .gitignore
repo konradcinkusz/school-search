@@ -1,0 +1,44 @@
+# .NET
+bin/
+obj/
+TestResults/
+*.user
+*.suo
+.vs/
+
+# Node / web (pnpm workspace under web/)
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.pnpm-store/
+playwright-report/
+test-results/
+blob-report/
+
+# Secrets and local configuration: values live in dotnet user-secrets or in
+# a local .env; only secrets.env.example (placeholders, no values) is committed.
+.env
+.env.*
+*.pfx
+*.p12
+*.pem
+.last-image-tag
+.claude/settings.local.json
+
+# Documentation build artefacts: only the .tex source is committed, never a
+# PDF that can disagree with its source (REPO-BASELINE, RESEARCH §"Diagrams").
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+docs/**/*.pdf
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+.idea/
+*.swp

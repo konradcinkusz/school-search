@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Pre-commit hook: refuses a commit that stages a secret.
+# Installed by scripts/setup.sh with: git config core.hooksPath scripts/hooks
+set -euo pipefail
+
+exec "$(dirname "$0")/../scan-secrets.sh" --staged

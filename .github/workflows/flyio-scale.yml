@@ -1,0 +1,67 @@
+name: flyio-scale
+
+# Manual machine-count profile for the stateless apps. The Postgres app is never
+# scaled: it has a volume and must stay at one machine (FLY-IO-DEPLOYMENT §8, §12).
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "start = one machine per app; request-path-2 = api and authservice at two; stop = zero machines"
+        type: choice
+        required: true
+        default: start
+        options:
+          - start
+          - request-path-2
+          - stop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flyio-scale
+  cancel-in-progress: false
+
+jobs:
+  scale:
+    name: scale stateless apps
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: dev
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      PROFILE: ${{ inputs.profile }}
+    steps:
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - name: Apply profile
+        run: |
+          set -euo pipefail
+          APPS_JSON="$(flyctl apps list --json)"
+          exists() { jq -e --arg a "$1" '(. // []) | any(.[]; (.Name // .name) == $a)' <<< "$APPS_JSON" >/dev/null; }
+          scale() {
+            if exists "$1"; then
+              flyctl scale count "$2" --app "$1" --yes
+            else
+              echo "Skipping $1: app does not exist"
+            fi
+          }
+          case "$PROFILE" in
+            start)
+              scale school-search-api-dev 1
+              scale school-search-authservice-dev 1
+              scale school-search-web-dev 1
+              scale school-search-mcp-dev 1
+              ;;
+            request-path-2)
+              scale school-search-api-dev 2
+              scale school-search-authservice-dev 2
+              ;;
+            stop)
+              scale school-search-mcp-dev 0
+              scale school-search-web-dev 0
+              scale school-search-api-dev 0
+              scale school-search-authservice-dev 0
+              ;;
+          esac
+          echo "Postgres (school-search-postgres) deliberately not touched."

@@ -1,0 +1,18 @@
+{
+  "name": "@school-search/web-root",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm --filter @school-search/web build",
+    "typecheck": "pnpm --filter @school-search/web typecheck",
+    "start": "pnpm --filter @school-search/web start"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": ">=8.5.18"
+    }
+  }
+}
