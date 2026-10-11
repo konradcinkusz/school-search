@@ -4,6 +4,7 @@ using SchoolSearch.Catalog.Data;
 using SchoolSearch.Import.Catchment;
 using SchoolSearch.Import.Cke;
 using SchoolSearch.Import.Geo;
+using SchoolSearch.Import.Preschools;
 
 namespace SchoolSearch.Import;
 
@@ -150,6 +151,36 @@ internal static class Program
                     });
                 }
 
+            case "sio-preschools":
+                {
+                    var file = Required(options, "file");
+                    var asOf = options.TryGetValue("as-of", out var asOfText)
+                        ? DateOnly.ParseExact(asOfText, "yyyy-MM-dd", CultureInfo.InvariantCulture)
+                        : (DateOnly?)null;
+                    var map = ColumnMapLoader.Load<PreschoolSioColumnMap>(Optional(options, "map"));
+
+                    return await RunLoaderAsync(db, "sio-preschools", ct, async (context, token) =>
+                    {
+                        await using var stream = File.OpenRead(file);
+                        return await PreschoolSioLoader.RunAsync(context, stream, map, TimeProvider.System, token, asOf);
+                    });
+                }
+
+            case "preschool-facts":
+                {
+                    var file = Required(options, "file");
+                    var source = new PreschoolFactsSource(
+                        Required(options, "source-name"),
+                        Required(options, "source-url"),
+                        DateOnly.ParseExact(Required(options, "as-of"), "yyyy-MM-dd", CultureInfo.InvariantCulture));
+
+                    return await RunLoaderAsync(db, "preschool-facts", ct, async (context, token) =>
+                    {
+                        await using var stream = File.OpenRead(file);
+                        return await PreschoolFactsLoader.RunAsync(context, stream, source, token);
+                    });
+                }
+
             default:
                 throw new ArgumentException($"Unknown command '{command}'.");
         }
@@ -269,6 +300,8 @@ internal static class Program
           baseline  --file <csv>  --year <yyyy>
           geo       --file <csv>
           catchment --file <csv>
+          sio-preschools   --file <csv> [--as-of yyyy-MM-dd] [--map <json>]
+          preschool-facts  --file <csv> --source-name <text> --source-url <url> --as-of yyyy-MM-dd
         Environment: DATABASE_PROVIDER=postgres|inmemory, ConnectionStrings__catalogdb (postgres).
         Exit codes: 0 ok, 1 error, 2 schema mismatch.
         """;

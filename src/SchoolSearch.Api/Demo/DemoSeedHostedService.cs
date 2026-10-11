@@ -34,6 +34,7 @@ public sealed class DemoSeedHostedService(
             await using var scope = scopes.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
             var report = await DemoSeed.ApplyAsync(db, stoppingToken);
+            await DemoPreschoolSeed.ApplyAsync(db, stoppingToken);
 
             logger.LogInformation(
                 "Demo seed finished: {RowsAdded} synthetic rows added (gmina {GminaTeryt}). Repeat runs add nothing.",

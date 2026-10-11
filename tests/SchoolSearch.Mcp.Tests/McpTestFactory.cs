@@ -55,6 +55,9 @@ public sealed class CatalogStubHandler : HttpMessageHandler
         {
             "/api/v1/schools" => Json(HttpStatusCode.OK, SchoolsPageJson),
             "/api/v1/catchment" => Json(HttpStatusCode.OK, CatchmentNoDataJson),
+            "/api/v1/preschools" => Json(HttpStatusCode.OK, PreschoolsPageJson),
+            "/api/v1/preschools/przedszkole-demonstracyjne-1" => Json(HttpStatusCode.OK, PreschoolWithFactsJson),
+            "/api/v1/preschools/przedszkole-demonstracyjne-2" => Json(HttpStatusCode.OK, PreschoolWithoutFactsJson),
             _ => Json(HttpStatusCode.NotFound, NotFoundJson),
         };
         return Task.FromResult(response);
@@ -137,6 +140,90 @@ public sealed class CatalogStubHandler : HttpMessageHandler
           "match": "no_data",
           "schools": [],
           "disclaimer": "Dla tej gminy nie ma danych o obwodach szkół. Obwód ustala gmina; sprawdź uchwałę gminy."
+        }
+        """;
+
+    // Synthetic preschools. One public with facts (one free-places count), one non-public without a facts row.
+    // Preschools carry no score block at all (ADR-0014).
+    private const string PreschoolsPageJson = """
+        {
+          "items": [
+            {
+              "slug": "przedszkole-demonstracyjne-1",
+              "name": "Przedszkole Demonstracyjne nr 1",
+              "gminaTeryt": "1465011",
+              "gminaName": "Warszawa",
+              "isPublic": true,
+              "latitude": 52.2297,
+              "longitude": 21.0122,
+              "distanceKm": null,
+              "monthlyTuition": { "minPln": 350.00, "maxPln": 420.00 },
+              "freePlacesCount": 3
+            },
+            {
+              "slug": "przedszkole-demonstracyjne-2",
+              "name": "Przedszkole Demonstracyjne nr 2",
+              "gminaTeryt": "1465011",
+              "gminaName": "Warszawa",
+              "isPublic": false,
+              "latitude": null,
+              "longitude": null,
+              "distanceKm": null,
+              "monthlyTuition": { "minPln": null, "maxPln": null },
+              "freePlacesCount": null
+            }
+          ],
+          "total": 2,
+          "page": 1,
+          "pageSize": 20
+        }
+        """;
+
+    private const string PreschoolWithFactsJson = """
+        {
+          "slug": "przedszkole-demonstracyjne-1",
+          "name": "Przedszkole Demonstracyjne nr 1",
+          "gminaTeryt": "1465011",
+          "gminaName": "Warszawa",
+          "isPublic": true,
+          "street": "ul. Przykładowa 1",
+          "postalCode": "00-001",
+          "city": "Warszawa",
+          "latitude": 52.2297,
+          "longitude": 21.0122,
+          "governingBody": { "typeCode": null, "typeLabel": null, "labelVerified": false, "isNaturalPerson": false },
+          "facts": {
+            "monthlyTuition": { "minPln": 350.00, "maxPln": 420.00 },
+            "monthlyMealPln": 110.00,
+            "hours": { "opens": "06:30", "closes": "16:30" },
+            "freePlaces": { "count": 3, "asOf": "2026-09-01" },
+            "source": {
+              "source": "Dane demonstracyjne (plik)",
+              "sourceUrl": "https://example.invalid/czesne",
+              "asOf": "2026-09-01",
+              "method": "csv import",
+              "confidence": "reported"
+            }
+          },
+          "notice": "Przedszkola nie mają wyniku jakości. Pokazujemy praktyczne informacje: lokalizację, opłaty, godziny i wolne miejsca, każdą ze źródłem i datą."
+        }
+        """;
+
+    private const string PreschoolWithoutFactsJson = """
+        {
+          "slug": "przedszkole-demonstracyjne-2",
+          "name": "Przedszkole Demonstracyjne nr 2",
+          "gminaTeryt": "1465011",
+          "gminaName": "Warszawa",
+          "isPublic": false,
+          "street": null,
+          "postalCode": null,
+          "city": null,
+          "latitude": null,
+          "longitude": null,
+          "governingBody": { "typeCode": null, "typeLabel": null, "labelVerified": false, "isNaturalPerson": true },
+          "facts": null,
+          "notice": "Przedszkola nie mają wyniku jakości. Pokazujemy praktyczne informacje: lokalizację, opłaty, godziny i wolne miejsca, każdą ze źródłem i datą."
         }
         """;
 

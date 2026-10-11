@@ -6,8 +6,9 @@ using SchoolSearch.Mcp.Catalog;
 namespace SchoolSearch.Mcp.Tools;
 
 /// <summary>
-/// The six read-only tools. Names are part of the public surface and are fixed: no tool name may contain
-/// create, update, write or delete. Each tool forwards to one Api endpoint and returns its JSON verbatim.
+/// The six read-only school tools (preschool tools are in <see cref="PreschoolTools"/>). Names are part of the public
+/// surface and are fixed: no tool name may contain create, update, write or delete. Each tool forwards to one Api
+/// endpoint and returns its JSON verbatim.
 /// </summary>
 [McpServerToolType]
 public sealed class SchoolTools(CatalogClient catalog)

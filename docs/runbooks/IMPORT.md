@@ -162,3 +162,56 @@ The golden list is in `tests/SchoolSearch.Import.Tests/CatchmentLoaderTests.cs`.
 `match: "no_data"`, with an empty school list. The response never implies a boundary the file does not contain.
 The house number is the leading digits of `number` (`12A` is 12). A street with a number range or parity needs
 `number` to match. The disclaimer and the resolution link are shown with every answer.
+
+## 9. Preschools (przedszkola)
+
+Two commands. Preschools get **no quality score, rank or grade**. The importer loads identity and practical facts
+only, and every fact carries its source, date and confidence. Architecture tests enforce the absence (ADR-0014).
+
+### 9.1 `sio-preschools`
+
+`sio-preschools --file <csv> [--as-of yyyy-MM-dd] [--map <json>]`
+
+- Input: the SIO preschool units as CSV (delimiter `;` or `,`, detected from the header). The default header names
+  and the value `Przedszkole` are UNVERIFIED (`PreschoolSioColumnMap`). Override them with `--map`; unknown JSON
+  properties are refused.
+- Required columns: `idPodmiot`, `TypPodmiotu`, `Nazwa`, `TerytGmina`, `Publiczność`, `idTypOrgProw`. Optional
+  columns: `Gmina`, `Ulica`, `KodPocztowy`, `Miejscowosc` (set a map entry to `null` to switch one off). A missing
+  mapped column aborts the run before any write.
+- Only rows with `TypPodmiotu` equal to the preschool value are loaded. Other rows are counted as read, not rejected.
+- Rejected with a reason: non-integer or duplicate `idPodmiot`, empty or over-long name, bad TERYT code, non-integer
+  governing body code, over-long address fields. Rejected rows never change the exit code.
+- Upsert by `idPodmiot`. A stored slug is kept. Coordinates are not in this file and are never written here.
+- The operator NAME column is never read. Only the governing body type code is stored. A header containing a
+  name or personal-data column aborts the whole file.
+- Provenance: source `SIO`, source URL `https://dane.gov.pl/pl/dataset/288`, `asOf` (the `--as-of` date, else the run
+  date), method `csv import`.
+
+### 9.2 `preschool-facts`
+
+`preschool-facts --file <csv> --source-name <text> --source-url <url> --as-of yyyy-MM-dd`
+
+The file carries the facts of a single publisher (a gmina's tuition table, a vacancy list). The three CLI arguments
+are required and become the provenance of every row. Nothing is scraped; the CSV is the only input.
+
+| Column | Required | Meaning |
+|---|---|---|
+| `idPodmiot` | yes | Exact SIO idPodmiot of an existing preschool. Unknown ids are rejected. |
+| `tuitionMin`, `tuitionMax` | no | Monthly tuition (czesne) in PLN. Decimal point or one decimal comma, at most two decimals, not negative, min not above max. |
+| `meal` | no | Monthly meal cost (wyżywienie) in PLN, same format. |
+| `opens`, `closes` | no | `HH:mm`. Closing must be after opening when both are given. |
+| `freePlaces` | no | Whole number, zero or more. Needs `freePlacesAsOf`. |
+| `freePlacesAsOf` | with `freePlaces` | `yyyy-MM-dd`, the date the vacancy count describes. |
+| `confidence` | no | `reported` (default: primary public source) or `unverified` (submitted, not checked). |
+
+Rules:
+
+- Each row is parsed completely before it is written. A rejected row writes nothing; other rows still load.
+- Blank cells are unknown. Nothing is defaulted or estimated. A row with no fact value at all is rejected.
+- Each facts row is replaced by key on re-run. Preschools absent from the file are not touched.
+- The importer writes an `ImportRun` row (kind `preschool-facts` or `sio-preschools`) with the counts.
+- Use `confidence` `reported` only for values copied from the primary public source. Anything else is `unverified`.
+  Facts proposed by the AI tuition-table extractor (docs/ai/AI-FEATURES.md) are loaded as `reported` only after a
+  person has checked the CSV.
+
+Status: **no preschool file has been loaded.** Source availability per gmina is an open item (docs/data/SOURCES.md).

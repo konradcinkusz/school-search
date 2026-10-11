@@ -69,6 +69,28 @@ CKE rows (ADR-0012), so it must be verified before any CKE import.
 - A school may request a correction. The correction path is a Phase C deliverable and is recorded in the UX backlog.
 - Fixtures are synthetic. Test data uses school names such as "Szkoła Podstawowa nr 1 w Testowie" and no person's name.
 
+## 4A. Phase D: preschool sources (przedszkola)
+
+Preschools have no quality score (ADR-0014). Their sources give practical facts only. Each value carries `source`,
+`sourceUrl`, `asOf`, `method` and `confidence` (`reported` or `unverified`). Nothing here is fetched by the code: each
+source is a file the operator loads with the `sio-preschools` and `preschool-facts` commands.
+
+| Item | Status | Value and how it is established |
+|---|---|---|
+| SIO preschool units | UNVERIFIED | Same CC0 SIO dataset (288) as §1, filtered to preschool units. The filter value and the column map are not checked against the real file. The default map is the Phase B family (`SioColumnMap`), overridable through the JSON column-map mechanism. Record the URL, the retrieval date and the header row at first load. |
+| SIO preschool headers | UNVERIFIED | Not read from a real file. Check the header row before the first load, and record each difference from the default map. |
+| Gmina vacancy lists (free places) | OPEN | Each gmina (kuratorium or gmina office) publishes vacancy lists in its own format. Not checked for any gmina. Load as CSV with `freePlaces` and `freePlacesAsOf`, `confidence` as the operator states it, and the list's URL as `sourceUrl`. |
+| Gmina tuition tables (czesne) | OPEN | Published per gmina or per operator, in PDF or HTML. Not checked for any gmina. Load as CSV after a human has read the source. `method` is recorded as the loader's method, not as the source's. |
+| Operator-submitted values | `unverified` | Values submitted by an operator or a parent are loaded only with `confidence = unverified`, and are shown as unverified. |
+| Governing body (organ prowadzący) | UNVERIFIED | Only `GoverningBodyTypeCode` is stored. The `idTypOrgProw` dictionary is the same open item as §3.2. Private-individual codes 141, 146 and 150 yield the type only. The name is never read. |
+| Licence of gmina files | OPEN | Check each gmina's terms before loading its files. Record the licence text with the URL and date. |
+
+**Never used:** competitor sites (waszaedukacja.pl and similar), operator web pages fetched by the code, and any staff
+or child personal data. A preschool value that cannot be traced to one of the sources above is not loaded.
+
+**Verify before the first preschool load:** the SIO preschool headers (above), the licence of each gmina file, and
+that each tuition value appears in its source with the same number. The check is a human read, not a model's output.
+
 ## 5. Phase B encodings: UNVERIFIED, and what the owner must check
 
 Phase B encodes the following as **defaults in code**. They were written from the brief and from the Phase B

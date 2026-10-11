@@ -54,6 +54,14 @@ export function firstParam(value: string | string[] | undefined, maxLength: numb
   return trimmed;
 }
 
+/** Parses a positive amount in złoty ("600", "600,50" or "600.5"). Returns null for anything else. */
+export function moneyParam(value: string | string[] | undefined): number | null {
+  const raw = firstParam(value, 12);
+  if (raw === undefined || !/^[0-9]{1,7}(?:[.,][0-9]{1,2})?$/.test(raw)) return null;
+  const parsed = Number.parseFloat(raw.replace(",", "."));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 /** Parses a positive integer search parameter; anything else falls back to the default. */
 export function intParam(value: string | string[] | undefined, fallback: number, max: number): number {
   const raw = firstParam(value, 10);

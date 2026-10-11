@@ -27,6 +27,8 @@ const GET_ROUTES: ReadonlyArray<RouteMatcher> = [
   ["api", "v1", "gminas"],
   ["api", "v1", "catchment"],
   ["api", "v1", "meta"],
+  ["api", "v1", "preschools"],
+  (s) => s.length === 4 && s[0] === "api" && s[1] === "v1" && s[2] === "preschools" && isSlug(s[3] ?? ""),
   (s) =>
     s.length === 4 && s[0] === "api" && s[1] === "v1" && s[2] === "corrections" && isToken(s[3] ?? ""),
 ];

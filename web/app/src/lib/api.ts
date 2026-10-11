@@ -171,6 +171,88 @@ export interface CorrectionStatusView {
 }
 
 // ---------------------------------------------------------------------------
+// Preschools (SPEC-D, ADR-0014). Practical facts only: no score, rank, grade or quality field exists on these types.
+// Unknown values are null and render as "brak danych", never as zero.
+// ---------------------------------------------------------------------------
+
+/** "reported" (primary public source, loaded from file) or "unverified" (submitted, not checked). */
+export type PreschoolConfidence = "reported" | "unverified";
+
+export interface FactSource {
+  readonly source: string;
+  readonly sourceUrl: string | null;
+  /** ISO date (yyyy-mm-dd). */
+  readonly asOf: string;
+  readonly method: string;
+  readonly confidence: PreschoolConfidence | string;
+}
+
+export interface MoneyRange {
+  readonly minPln: number | null;
+  readonly maxPln: number | null;
+}
+
+export interface OpeningHours {
+  /** "HH:mm" or null. */
+  readonly opens: string | null;
+  /** "HH:mm" or null. */
+  readonly closes: string | null;
+}
+
+export interface FreePlaces {
+  /** Null when unknown; 0 means the unit reported no vacancies. */
+  readonly count: number | null;
+  /** ISO date (yyyy-mm-dd) the count describes. */
+  readonly asOf: string | null;
+}
+
+export interface PreschoolFactsBlock {
+  readonly monthlyTuition: MoneyRange;
+  readonly monthlyMealPln: number | null;
+  readonly hours: OpeningHours;
+  readonly freePlaces: FreePlaces;
+  readonly source: FactSource;
+}
+
+export interface PreschoolListItem {
+  readonly slug: string;
+  readonly name: string;
+  readonly gminaTeryt: string | null;
+  readonly gminaName: string | null;
+  readonly isPublic: boolean;
+  readonly latitude: number | null;
+  readonly longitude: number | null;
+  readonly distanceKm: number | null;
+  readonly monthlyTuition: MoneyRange;
+  readonly freePlacesCount: number | null;
+}
+
+export interface PreschoolProfile {
+  readonly slug: string;
+  readonly name: string;
+  readonly gminaTeryt: string | null;
+  readonly gminaName: string | null;
+  readonly isPublic: boolean;
+  readonly street: string | null;
+  readonly postalCode: string | null;
+  readonly city: string | null;
+  readonly latitude: number | null;
+  readonly longitude: number | null;
+  readonly governingBody: GoverningBody;
+  /** Null when no facts row exists. */
+  readonly facts: PreschoolFactsBlock | null;
+  /** Fixed API text explaining that preschools have no quality score. */
+  readonly notice: string;
+}
+
+export interface PreschoolPage {
+  readonly items: readonly PreschoolListItem[];
+  readonly total: number;
+  readonly page: number;
+  readonly pageSize: number;
+}
+
+// ---------------------------------------------------------------------------
 // Result type. Pages render a service-unavailable state instead of throwing.
 // ---------------------------------------------------------------------------
 
@@ -296,6 +378,19 @@ export interface SchoolsQuery {
   readonly pageSize?: number;
 }
 
+export interface PreschoolsQuery {
+  readonly gmina?: string;
+  readonly q?: string;
+  readonly lat?: number;
+  readonly lon?: number;
+  readonly radiusKm?: number;
+  readonly publicOnly?: boolean;
+  readonly maxTuition?: number;
+  readonly hasFreePlaces?: boolean;
+  readonly page?: number;
+  readonly pageSize?: number;
+}
+
 function toQuery(entries: Record<string, string | number | boolean | undefined>): URLSearchParams {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(entries)) {
@@ -369,6 +464,31 @@ export const catalog = {
       `/api/v1/corrections/${encodeURIComponent(token)}`,
       null,
       CACHE_NONE,
+    ),
+
+  preschools: (query: PreschoolsQuery) =>
+    catalogGet<PreschoolPage>(
+      "/api/v1/preschools",
+      toQuery({
+        gmina: query.gmina,
+        q: query.q,
+        lat: query.lat,
+        lon: query.lon,
+        radiusKm: query.radiusKm,
+        publicOnly: query.publicOnly,
+        maxTuition: query.maxTuition,
+        hasFreePlaces: query.hasFreePlaces,
+        page: query.page,
+        pageSize: query.pageSize,
+      }),
+      CACHE_SHORT,
+    ),
+
+  preschool: (slug: string) =>
+    catalogGet<PreschoolProfile>(
+      `/api/v1/preschools/${encodeURIComponent(slug)}`,
+      null,
+      CACHE_DEFAULT,
     ),
 };
 

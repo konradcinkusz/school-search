@@ -190,4 +190,52 @@ test.describe("public journey on the synthetic demo gmina", () => {
     await expect(page.getByRole("heading", { name: "Szkoła obwodowa" })).toHaveCount(0);
     await expect(page.getByText(CATCHMENT_SCHOOL, { exact: true })).toHaveCount(0);
   });
+
+  test("preschools: list opens a profile with practical facts and the fixed notice, and no quality words", async ({
+    page,
+    request,
+  }) => {
+    const base = await catalogApi(request);
+    await expect
+      .poll(
+        async () => {
+          const response = await request.get(`${base}/api/v1/preschools`);
+          if (!response.ok()) {
+            return 0;
+          }
+          const body = (await response.json()) as { total: number };
+          return body.total;
+        },
+        { timeout: 90_000, intervals: [1_000, 2_000, 3_000] },
+      )
+      .toBeGreaterThan(0);
+
+    await page.goto("/przedszkola");
+    const main = page.getByRole("main");
+    const firstLink = main.locator('a[href^="/przedszkola/"]').first();
+    await expect(firstLink).toBeVisible();
+    await firstLink.click();
+
+    await expect(page).toHaveURL(/\/przedszkola\/[a-z0-9-]+$/);
+    await expect(main.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(main.getByText("Przedszkola nie mają wyniku jakości", { exact: false })).toBeVisible();
+    await expect(main.getByRole("heading", { name: "Opłaty, godziny i wolne miejsca" })).toBeVisible();
+    // Every fact row shows either a value with its confidence badge or "brak danych"; never a blank cell.
+    await expect(main.getByText(/zweryfikowane źródło|niezweryfikowane|brak danych/).first()).toBeVisible();
+
+    // The fixed notice itself contains "wyniku jakości", so the check is on whole words only.
+    const text = await main.innerText();
+    expect(text).not.toMatch(/\bwynik\b/i);
+    expect(text).not.toMatch(/\bocena\b/i);
+    expect(text).not.toMatch(/ranking/i);
+    expect(text).not.toMatch(/[★☆]|gwiazd/i);
+  });
+
+  test("preschool list filter for public preschools lists no non-public entry", async ({ page }) => {
+    await page.goto("/przedszkola?publicOnly=true");
+
+    const main = page.getByRole("main");
+    await expect(main.getByRole("heading", { level: 1, name: "Przedszkola" })).toBeVisible();
+    await expect(main.getByText("przedszkole niepubliczne")).toHaveCount(0);
+  });
 });

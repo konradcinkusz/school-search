@@ -4,3 +4,5 @@
  * 10 000 URLs, so the total capacity is 50 000 schools.
  */
 export const SCHOOL_SITEMAP_FILES = 5;
+/** Id of the preschool profile file (SPEC-D). It follows the school files; one file holds up to 10 000 preschools. */
+export const PRESCHOOL_SITEMAP_ID = SCHOOL_SITEMAP_FILES + 1;

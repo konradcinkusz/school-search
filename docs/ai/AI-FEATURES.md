@@ -373,11 +373,11 @@ Stripped before sending: submitter e-mail and phone numbers (regex and removal, 
 **Phase.** D.
 
 **Data sent (exact).**
-- The text of the operator's own or official page, converted to text, pruned to blocks that contain price-related keywords plus three lines of context on each side. Maximum 8000 tokens of input per item.
-- `sourceUrl` and `fetchedAt` (asOf).
+- The text of a tuition table file that a person has saved from the gmina's or the operator's published page (PDF or HTML), converted to text by a local tool, pruned to blocks that contain price-related keywords plus three lines of context on each side. Maximum 8000 tokens of input per item. The file is an input the operator supplies; no page is fetched by the code or by the model (Phase D rule, ADR-0014).
+- `sourceUrl` (typed by the person who saved the file) and `asOf` (the date the person saved it).
 - The operator type bucket (`publiczny`, `niepubliczny`, or `niepubliczny-osoba-fizyczna`). For the last bucket no operator name is included at all (B4).
 
-Pre-send filter: the page text is searched for personal names near staff keywords ("dyrektor", "nauczyciel"); those lines are removed before sending, because the output schema has no staff field anyway. Pages from hosts outside the allowlist are not fetched (B10). The fetch layer respects robots.txt and is outside the AI code.
+Pre-send filter: the page text is searched for personal names near staff keywords ("dyrektor", "nauczyciel"); those lines are removed before sending, because the output schema has no staff field anyway. Files from sources the operator did not supply, and any competitor source, are not loaded (B10, SOURCES §4A). The code does not fetch pages, so there is no fetch layer and no robots.txt step.
 
 **Model tier.** `claude-haiku-5-5`, effort `low`, batch. Escalate to `claude-sonnet-5-5` for items the validator rejects.
 
@@ -398,14 +398,46 @@ No field for quality, staff, ratings or names. Validation: `value` must occur in
 
 **Human spot-check.** Every new value is checked by a reviewer for the first batch. After a measured error rate threshold (D7, to be set) the sample rate drops to a fixed percentage. Stored as `value, currency, sourceUrl, asOf, method = llm-extract-v1 + human-spot-checked`, never without these fields (MASTER-PROMPT §5).
 
-**Cost guard.** Batch pricing; pages re-fetched only when the content hash changes; per-run budget.
+**Cost guard.** Batch pricing; a file is re-processed only when its content hash changes; per-run budget.
 
 **Ethics check.**
-- No quality or ranking output. The schema does not allow it.
-- No competitor data: the source is the operator's page; the allowlist enforces it.
+- No quality or ranking output. The schema does not allow it (ADR-0014).
+- No competitor data: the source is the operator's or the gmina's own published file, and the operator supplies it.
 - Preschool values are shown with `asOf`; stale values are shown as stale, not hidden.
 
-**Degrade.** Section 3.2, row 6.
+**Concrete design: preschool tuition-table extractor (design only, NOT implemented).**
+
+The extractor turns one saved tuition table into reviewed rows for the existing `preschool-facts` loader (D2). The
+model proposes rows. A person decides. The database is written only by the loader, from a signed-off file.
+
+1. **Save.** A person saves the gmina's or the operator's tuition table (PDF or HTML) into a working folder outside
+   the repository, and records its `sourceUrl` and the date saved (`asOf`).
+2. **Prepare.** A local tool converts the file to text and prunes it (the Data sent rules above). The file stays out of
+   source control.
+3. **Extract.** The model returns one object per tuition line in the output contract above. Each object is validated
+   (`value` in `quote`, `currency` = `PLN`, `quote` verbatim in the text). A failed object is dropped and logged, and a
+   retry goes to the escalation model (sonnet) only for that object.
+4. **Propose.** The tool writes a proposal CSV in the `preschool-facts` column layout (`tuitionMin`, `tuitionMax`,
+   `meal`, `freePlaces` and so on), with `confidence = unverified`, and a review file beside it with each row's
+   `quote`, `pageRef` and the label "Wygenerowano przez AI" (B6). The `idPodmiot` column is left empty. The model
+   never names a preschool and never matches one to an identifier.
+5. **Verify (human).** A reviewer opens the source file and checks each row against its quote. The reviewer fills
+   `idPodmiot` from the catalog (exact match, the loader rejects unknown ids) and corrects or drops rows. Only a row
+   the reviewer has signed off gets `confidence = reported`.
+6. **Load.** `preschool-facts` loads the signed-off CSV with `--source-name`, `--source-url` and `--as-of`, under the
+   same validation as a hand-made file (min <= max, HH:mm times, non-negative, no partial write). The review file is
+   kept with the import run, so each stored value can be traced to the quote and the reviewer's sign-off.
+
+Boundaries that apply here: the extractor has no write path to `catalogdb` and no connection string (B1, B8). It runs
+outside the API and the import machine, and the import never holds `ANTHROPIC_API_KEY` by default (ADR-0011,
+decision 2). Output is a file for review, never a page or an API reply. Nothing a model returns is shown to a parent
+until step 6.
+
+Eval gate before any use: a fixed set of synthetic tables with known rows. The extractor must return every row with
+exact values and must propose no row that is absent from the table. Thresholds are set by the owner (D7).
+
+**Degrade.** Section 3.2, row 6. Without the key the extraction does not run, and the manual path (hand-made CSV with
+`confidence = unverified` or `reported` after a human read) is the only path.
 
 ---
 
