@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 
 namespace SchoolSearch.Api.Errors;
 
@@ -16,7 +17,9 @@ public sealed class ApiErrorMiddleware(RequestDelegate next, ILogger<ApiErrorMid
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Unhandled exception for {Method} {Path}", SafeForLog(context.Request.Method), SafeForLog(context.Request.Path.Value));
+            // Log the matched route template (server-defined), never the raw request path or method.
+            var route = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText ?? "(unmatched)";
+            logger.LogError(ex, "Unhandled exception for route {Route} (trace {TraceId})", route, context.TraceIdentifier);
             if (!context.Response.HasStarted)
             {
                 await ApiErrorWriter.WriteAsync(context, StatusCodes.Status500InternalServerError, "internal_error", "Unexpected server error.");
@@ -38,8 +41,4 @@ public sealed class ApiErrorMiddleware(RequestDelegate next, ILogger<ApiErrorMid
             }
         }
     }
-
-    // The path is attacker-controlled: drop control characters so a request cannot forge log lines.
-    private static string SafeForLog(string? value) =>
-        string.Concat((value ?? string.Empty).Where(c => !char.IsControl(c)));
 }
