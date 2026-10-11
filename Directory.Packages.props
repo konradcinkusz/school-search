@@ -49,4 +49,9 @@
     <PackageVersion Include="CsvHelper" Version="33.1.0" />
   </ItemGroup>
 
+  <ItemGroup Label="MCP server and AI explain">
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
+    <PackageVersion Include="Anthropic" Version="12.55.0" />
+  </ItemGroup>
+
 </Project>

@@ -404,8 +404,13 @@ jobs:
           if ! jq -e --arg a "$APP" '(. // []) | any(.[]; (.Name // .name) == $a)' <<< "$apps" >/dev/null; then
             flyctl apps create "$APP" --org "$FLY_ORG" --yes
           fi
-          : "${MCP_API_KEY:?MCP_API_KEY is not set in the dev environment}"
-          flyctl secrets set --app "$APP" --stage "MCP_API_KEY=${MCP_API_KEY}"
+          # Optional (flyio/SECRETS.md): without it the MCP server calls the catalog anonymously.
+          # Value on stdin, never on the command line (SECRETS.md section 2).
+          if [ -n "${MCP_API_KEY:-}" ]; then
+            printf 'MCP_API_KEY=%s\n' "$MCP_API_KEY" | flyctl secrets import --stage --app "$APP"
+          else
+            echo "MCP_API_KEY is not set in the dev environment: MCP runs with the anonymous rate bucket"
+          fi
       - name: Deploy the built image (no rebuild)
         run: flyctl deploy --config flyio/mcp.fly.toml --app school-search-mcp-dev --image "$IMAGE" --yes
       - name: Post-deploy health check

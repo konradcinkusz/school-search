@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { ExplainPanel } from "@/components/explain-panel";
 import { ScoreBadge } from "@/components/score-badge";
 import { ServiceUnavailable } from "@/components/service-unavailable";
 import { SchoolJsonLd } from "@/components/school-jsonld";
@@ -86,6 +87,8 @@ export default async function SchoolPage({ params }: Props) {
           uczniów. Zasady są w <Link href="/metodologia">metodologii</Link>.
         </p>
       </section>
+
+      <ExplainPanel slug={school.slug} />
 
       <section aria-labelledby="trend-heading">
         <h2 id="trend-heading">Wyniki w kolejnych latach</h2>

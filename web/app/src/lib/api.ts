@@ -371,3 +371,43 @@ export const catalog = {
       CACHE_NONE,
     ),
 };
+
+// ---------------------------------------------------------------------------
+// AI explain (feature 1, docs/ai/AI-FEATURES.md). Called from the browser through the BFF proxy,
+// so these are types only: the client component imports them with `import type` and never this module's runtime.
+// ---------------------------------------------------------------------------
+
+export interface ExplainFacts {
+  readonly score: ScoreBlock | null;
+  readonly scoreStatus: ScoreStatus;
+  readonly coveragePercent: number | null;
+  readonly cohortSize: number | null;
+}
+
+export interface ExplainResponse {
+  readonly slug: string;
+  /** Model output. Plain text only: render with React escaping, never as HTML. */
+  readonly text: string;
+  /** Always "Wygenerowano przez AI" from the server. */
+  readonly label: string;
+  readonly model: string;
+  readonly methodologyVersion: string;
+  readonly examYear: number;
+  readonly facts: ExplainFacts;
+  readonly generatedAt: string;
+  readonly cached: boolean;
+}
+
+/** Uniform error codes from the explain endpoint and the BFF (503 ai_unavailable / ai_budget_exhausted, 502, 429). */
+export type ExplainErrorCode =
+  | "ai_unavailable"
+  | "ai_budget_exhausted"
+  | "ai_output_rejected"
+  | "rate_limited"
+  | "upstream_unavailable"
+  | "upstream_timeout"
+  | "unknown";
+
+export type ExplainResult =
+  | { readonly ok: true; readonly data: ExplainResponse }
+  | { readonly ok: false; readonly status: number; readonly code: ExplainErrorCode };

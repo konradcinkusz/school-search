@@ -41,6 +41,7 @@ public static class SearchEndpoints
 
         api.MapGet("/schools", ListSchools).WithName(SearchOperations.ListSchools);
         api.MapGet("/schools/{slug}", GetSchool).WithName(SearchOperations.GetSchool);
+        api.MapGet("/schools/by-id/{idPodmiot:long}", GetSchoolById).WithName(SearchOperations.GetSchoolById);
         api.MapGet("/ranking", GetRanking).WithName(SearchOperations.GetRanking);
         api.MapGet("/compare", CompareSchools).WithName(SearchOperations.CompareSchools);
         api.MapGet("/methodology", GetMethodology).WithName(SearchOperations.GetMethodology);
@@ -193,6 +194,29 @@ public static class SearchEndpoints
         var school = await db.Schools
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Slug == request.Slug, ct);
+        if (school is null)
+        {
+            return SchoolNotFound();
+        }
+
+        var year = await scores.ResolveCurrentYearAsync(ct);
+        var profile = await SchoolReadModel.BuildProfileAsync(db, scores, school, year, ct);
+        return TypedResults.Ok(profile);
+    }
+
+    /// <summary>
+    /// The same profile as <see cref="GetSchool"/>, addressed by the stable school id (idPodmiot) instead of the slug.
+    /// Unknown ids answer with the uniform 404, exactly like an unknown slug.
+    /// </summary>
+    internal static async Task<IResult> GetSchoolById(
+        long idPodmiot,
+        CatalogDbContext db,
+        SchoolScoreService scores,
+        CancellationToken ct)
+    {
+        var school = await db.Schools
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.IdPodmiot == idPodmiot, ct);
         if (school is null)
         {
             return SchoolNotFound();
@@ -418,6 +442,7 @@ public static class SearchOperations
 {
     public const string ListSchools = "ListSchools";
     public const string GetSchool = "GetSchool";
+    public const string GetSchoolById = "GetSchoolById";
     public const string GetRanking = "GetRanking";
     public const string CompareSchools = "CompareSchools";
     public const string GetMethodology = "GetMethodology";

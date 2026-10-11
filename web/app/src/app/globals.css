@@ -347,3 +347,44 @@ td {
     grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   }
 }
+
+/* AI explain (feature 1). The AI box is visually separate from the facts so it never reads as the score. */
+.ai-explain__result {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.ai-box {
+  border: 2px dashed var(--color-accent);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: var(--color-bg);
+}
+
+.ai-box__label {
+  font-weight: 600;
+  color: var(--color-accent);
+  margin: 0 0 0.5rem;
+}
+
+.ai-box__text {
+  white-space: pre-line;
+  margin: 0 0 0.5rem;
+}
+
+.ai-box__meta {
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+@media (min-width: 40rem) {
+  .ai-explain__result {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 16rem);
+    align-items: start;
+  }
+
+  .ai-explain__result > .muted {
+    grid-column: 1 / -1;
+  }
+}

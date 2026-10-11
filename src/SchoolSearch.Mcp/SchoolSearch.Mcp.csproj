@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>SchoolSearch.Mcp</RootNamespace>
+    <AssemblyName>SchoolSearch.Mcp</AssemblyName>
+  </PropertyGroup>
+
+  <!--
+    The MCP server owns no database and does not reference the Api or Catalog.Data. It reads the catalog only
+    through the Api's public JSON contract (CATALOG_API_URL), so its contract with the Api is the Contracts project.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\SchoolSearch.ServiceDefaults\SchoolSearch.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\SchoolSearch.Contracts\SchoolSearch.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
+  </ItemGroup>
+
+</Project>

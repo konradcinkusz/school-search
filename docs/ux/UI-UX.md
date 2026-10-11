@@ -78,6 +78,8 @@ Status column shows what Phase C delivered; open items are the ones still gated.
 | 12 | Ranking list (country and gmina) | Only after cohort rules and methodology are final | e2e descending scores and no sort control | Working; needs Phase B methodology sign-off |
 | 13 | Preschool cost and availability (no quality score) | Phase D; a different data shape | Phase D scope | Not started |
 | 14 | Parent reviews and accounts | Phase E; DSA machinery required first | authservice wired; DSA terms | Not started |
+| 15 | AI explanation panel ("Wyjaśnij ten wynik"): delimited box, label "Wygenerowano przez AI — to nie jest ocena szkoły", structured facts beside it, link to `/metodologia`, graceful messages for 503, 502 and 429 | Reader harm if the text reads as a verdict; the facts must stay next to it (ADR-0011 B6) | Playwright: label and facts visible; 503 and 502 messages; no HTML from the model | Written at PR 4, not run in CI; needs O1 (retention) before public launch |
+| 16 | MCP connection page (`/mcp` docs) and the agent-facing wording of scores (score with interval, `n uczniów`, version) | Agents repeat numbers without context; the wording is the only guard they see | Protocol test on tool descriptions; review of the example conversation in `docs/mcp/MCP.md` | Written at PR 4; no public page yet; MCP not deployed |
 
 ## Rules for every screen
 
