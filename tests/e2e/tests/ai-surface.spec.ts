@@ -26,7 +26,7 @@ test.describe("AI surface: degrade states and guard rails", () => {
     await page.goto("/");
     const before = new URL(page.url());
 
-    await page.getByLabel("Opisz czego szukasz").fill("Szkoła podstawowa w gminie Przykładowo, z oddziałem sportowym");
+    await page.getByRole("textbox", { name: "Opisz czego szukasz" }).fill("Szkoła podstawowa w gminie Przykładowo, z oddziałem sportowym");
     await page.getByRole("button", { name: "Przygotuj filtry" }).click();
 
     await expect(page.getByRole("alert").filter({ hasText: AI_DEGRADED })).toBeVisible();
@@ -39,7 +39,7 @@ test.describe("AI surface: degrade states and guard rails", () => {
 
   test("search box: the AI result never reaches the school list by itself", async ({ page }) => {
     await page.goto("/");
-    await page.getByLabel("Opisz czego szukasz").fill("najlepsza szkoła w okolicy");
+    await page.getByRole("textbox", { name: "Opisz czego szukasz" }).fill("najlepsza szkoła w okolicy");
     await page.getByRole("button", { name: "Przygotuj filtry" }).click();
 
     await expect(page.getByRole("alert").filter({ hasText: AI_DEGRADED })).toBeVisible();

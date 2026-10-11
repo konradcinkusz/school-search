@@ -55,7 +55,7 @@ public sealed class CorrectionPreschoolTests
         // The seeded preschool has IdPodmiot 1, and school 1 exists too. The stored id is negative, so no school matches it.
         Assert.Equal("preschool.hours", row.Field);
         Assert.Equal(-1L, row.SchoolId);
-        Assert.False(await db.Schools.AnyAsync(s => s.IdPodmiot == row.SchoolId));
+        Assert.Equal(0, await db.Schools.CountAsync(s => s.IdPodmiot == row.SchoolId));
     }
 
     [Fact]

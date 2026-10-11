@@ -50,8 +50,8 @@ public sealed class McpGapTests
 
         Assert.False(reply.IsError, reply.Text);
         var call = Assert.Single(factory.Reviews.Calls);
-        Assert.False(call.ContainsKey("X-Bff-Secret"));
-        Assert.False(call.ContainsKey("X-Client-Ip"));
+        Assert.DoesNotContain(call.Keys, key => key == "X-Bff-Secret");
+        Assert.DoesNotContain(call.Keys, key => key == "X-Client-Ip");
     }
 
     [Fact]

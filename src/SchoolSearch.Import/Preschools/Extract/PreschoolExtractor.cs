@@ -137,17 +137,17 @@ public static class PreschoolExtractor
 
         // The same preschool twice in the table: both rows are held back, a human decides which one is right.
         var duplicates = matched
-            .GroupBy(row => row.IdPodmiot)
+            .GroupBy(candidate => candidate.IdPodmiot)
             .Where(group => group.Count() > 1)
             .Select(group => group.Key)
             .ToHashSet();
 
-        foreach (var row in matched.Where(row => duplicates.Contains(row.IdPodmiot)))
+        foreach (var held in matched.Where(candidate => duplicates.Contains(candidate.IdPodmiot)))
         {
-            rejects.Add($"chunk {row.Fact.Chunk}: idPodmiot {row.IdPodmiot} appears more than once in the proposed rows; both held back");
+            rejects.Add($"chunk {held.Fact.Chunk}: idPodmiot {held.IdPodmiot} appears more than once in the proposed rows; both held back");
         }
 
-        var rows = matched.Where(row => !duplicates.Contains(row.IdPodmiot)).ToList();
+        var rows = matched.Where(candidate => !duplicates.Contains(candidate.IdPodmiot)).ToList();
 
         return new PreschoolExtractResult(
             rows,

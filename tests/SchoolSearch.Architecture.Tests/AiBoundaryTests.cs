@@ -274,7 +274,7 @@ public sealed class AiBoundaryTests
         {
             foreach (var type in AiTypes(assembly))
             {
-                if (type.Namespace is not null && !names.Contains(type.Namespace, StringComparer.Ordinal))
+                if (type.Namespace is not null && !names.Contains(type.Namespace))
                 {
                     names.Add(type.Namespace);
                 }
@@ -302,7 +302,7 @@ public sealed class AiBoundaryTests
     /// <summary>True when the type or one of its base types is named DbContext (no compile-time EF reference needed).</summary>
     private static bool IsDbContext(Type type)
     {
-        for (var current = type; current is not null; current = current.BaseType)
+        for (Type? current = type; current is not null; current = current.BaseType)
         {
             if (current.Name == "DbContext")
             {

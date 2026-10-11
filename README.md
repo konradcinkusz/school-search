@@ -72,22 +72,23 @@ Run the tests with `dotnet test SchoolSearch.sln`. The end-to-end journey is in 
 | `src/SchoolSearch.Catalog.Data` | Catalog persistence: `CatalogDbContext` and the school entity. Owns the `catalogdb` schema. |
 | `src/SchoolSearch.Api` | The catalog API (`/api/v1/schools`, `/api/v1/meta`), `/health` and `/alive`. Listens on 8080. |
 | `src/SchoolSearch.Api/Scoring` | The scoring engine and ranking builder (Phase B, in review). Pure functions, no I/O. |
-| `src/SchoolSearch.Mcp` | Read-only MCP server over streamable HTTP (PR 4, not deployed). Six tools, two resources, one guided prompt. Calls the catalog API over its public URL and owns no database (ADR-0006). Rate limit 60 requests per minute per IP on `/mcp`. |
+| `src/SchoolSearch.Mcp` | Read-only MCP server over streamable HTTP (PR 4, not deployed). Six tools, two resources, one guided prompt. Calls the catalog API over its public URL and owns no database (ADR-0006). Rate limit 60 requests per minute per IP on `/mcp`. Hosts the Phase G agent "Doradca wyboru szkoły" at `POST /agent/chat` (`src/SchoolSearch.Mcp/Agent`, ADR-0017), off until enabled. |
 | `src/SchoolSearch.Reviews` | Reviews service (Phase E, in review): user-generated opinions, DSA notices, statements of reasons, moderation. Owns `reviewsdb`. Validates authservice tokens; mints none. Listens on 8080. |
 | `src/SchoolSearch.Reviews/Dsa` | DSA machinery (art. 11, 12, 14, 16, 17, 20): notices, statements of reasons, complaints, contact point, transparency counts (Phase E). See `docs/legal/DSA.md`. |
 | `tests/SchoolSearch.Reviews.Tests` | Reviews service tests, InMemory database and a test authentication scheme (Phase E, not yet run in CI). |
 | `src/SchoolSearch.Billing` | Billing service (Phase F, in review): sponsored school profiles, parent enquiries and subscription entitlements. Owns `billingdb`. Provider-neutral webhook; no provider chosen (ADR-0016). Validates authservice tokens; mints none. Listens on 8080. |
 | `tests/SchoolSearch.Billing.Tests` | Billing service tests, InMemory database and a test authentication scheme (Phase F, not yet run in CI). |
 | `tests/SchoolSearch.Mcp.Tests` | Protocol-level tests of the MCP server, raw JSON-RPC over HTTP against a stub catalog (PR 4, not yet run in CI). |
-| `src/SchoolSearch.Api/Ai` | The one AI feature so far: `POST /api/v1/schools/{slug}/explain` (PR 4). Needs `ANTHROPIC_API_KEY`; without it returns 503 and the rest of the product is unchanged (ADR-0011). |
+| `src/SchoolSearch.Api/Ai` | AI in the catalog API: the explanation `POST /api/v1/schools/{slug}/explain` (PR 4), and Phase G's search intent, methodology answers and correction triage. Each needs `ANTHROPIC_API_KEY` and its `AI_ENABLED` switch (off in the deployed config). Without them it returns 503 and the rest of the product is unchanged (ADR-0011, ADR-0017). |
+| `src/SchoolSearch.Import/Ai`, `Catchment/Extract`, `Preschools/Extract` | Phase G batch extractors (catchment resolutions and preschool tuition tables). Run only by an operator with their own key; they write candidate files for human sign-off and never touch the database (ADR-0017). |
 | `src/SchoolSearch.Import` | Import console app (Phase B, in review): `sio`, `cke`, `baseline`, `geo` and `check-schema` commands. Writes `catalogdb` directly (ADR-0013). Runs as a one-shot job, not a service. |
 | `tests/SchoolSearch.Import.Tests` | Import tests, xUnit with the InMemory database and synthetic inputs built in the test. |
 | `web/app` | Next.js product surface, reading the API through a server-side proxy. Listens on 3000. |
 | `tests/SchoolSearch.Api.Tests` | Unit and integration tests, InMemory database. |
-| `tests/SchoolSearch.Architecture.Tests` | Architecture rules: the kernel holds no entity type; `Scoring` does not reference billing or user types; scores, rankings and reviews have no path to billing (`MonetisationBoundaryTests.cs`). |
+| `tests/SchoolSearch.Architecture.Tests` | Architecture rules: the kernel holds no entity type; `Scoring` does not reference billing or user types; scores, rankings and reviews have no path to billing (`MonetisationBoundaryTests.cs`); the Anthropic SDK sits only behind `Anthropic*Client`/`*Llm` files and AI code never reaches scoring, the catalog data or the database from the extractors (`AiBoundaryTests.cs`). |
 | `tests/e2e` | Playwright journey, run in CI against the built web and API. |
 | `flyio/` | Fly.io app definitions (postgres, authservice, reviews, billing, api, mcp, web) and the secret inventory (`SECRETS.md`). |
-| `docs/` | Architecture, ADRs, UX backlog, data sources, methodology, diagrams, overview paper. |
+| `docs/` | Architecture, ADRs, UX backlog, data sources, methodology, diagrams, overview paper, the AI feature record (`docs/ai/`), its operations runbook (`docs/runbooks/AI-OPERATIONS.md`) and security reviews. |
 
 The MCP server is in this tree (PR 4) but is not deployed. The import job is a second deployable of the
 catalog context (ADR-0007).

@@ -29,7 +29,12 @@ public sealed partial class PreschoolNameIndex
     public IReadOnlyList<PreschoolRef> Find(string nameAsWritten)
     {
         ArgumentNullException.ThrowIfNull(nameAsWritten);
-        return _byName.TryGetValue(Normalize(nameAsWritten), out var refs) ? refs : Array.Empty<PreschoolRef>();
+        if (_byName.TryGetValue(Normalize(nameAsWritten), out var refs))
+        {
+            return refs;
+        }
+
+        return Array.Empty<PreschoolRef>();
     }
 
     /// <summary>
