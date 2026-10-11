@@ -113,7 +113,7 @@ public static class DemoPreschoolSeed
         OpensAt = facts.Opens,
         ClosesAt = facts.Closes,
         FreePlaces = facts.FreePlaces,
-        FreePlacesAsOf = facts.FreePlaces is null ? null : DemoSeed.AsOf,
+        FreePlacesAsOf = facts.FreePlaces is null ? (DateOnly?)null : DemoSeed.AsOf,
         Confidence = facts.Confidence,
         Provenance = Prov(),
     };

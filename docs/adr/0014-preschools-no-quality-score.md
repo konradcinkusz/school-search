@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-11
-- **Deciders:** owner (Konrad Cinkusz), Phase D brief
+- **Deciders:** owner (Konrad Cinkusz), to confirm at Phase D review; the Phase D brief states the rule (preschools get no quality score)
 
 ## Context
 
