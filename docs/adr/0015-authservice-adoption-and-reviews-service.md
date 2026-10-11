@@ -25,7 +25,7 @@ back to a person through this database.
 3. **Without `Auth:Authority` the service still starts (P8).** The admin group answers 404, and `/health` reports the
    integration `authservice` as `disabled`. Missing `Auth:Issuer` or `Auth:Audience` with an authority fails startup.
 4. **Reviews are a separate deployable** (`SchoolSearch.Reviews`, its own database `reviewsdb`, database-per-service).
-   It validates the same kind of token, stores only a salted hash of the subject (SHA-256 over a server-side pepper), and
+   It validates the same kind of token, stores only a keyed hash of the subject (SHA-256 over a server-side pepper), and
    never stores e-mail addresses. Its responses are always marked `userGenerated: true`, and it is not referenced by the
    scoring code. The architecture tests enforce the second point.
 5. **Moderation is human.** Moderator decisions are the only code path that changes a review's status. Automated

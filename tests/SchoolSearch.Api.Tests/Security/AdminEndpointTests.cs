@@ -192,7 +192,7 @@ public sealed class AdminEndpointTests
         };
         using var factory = new ConfiguredApiFactory(incomplete);
 
-        var error = Assert.ThrowsAny<Exception>(() => factory.CreateClient());
+        var error = Assert.ThrowsAny<Exception>(() => { factory.CreateClient(); });
 
         Assert.Contains("Auth:Issuer", FlattenMessages(error), StringComparison.Ordinal);
     }

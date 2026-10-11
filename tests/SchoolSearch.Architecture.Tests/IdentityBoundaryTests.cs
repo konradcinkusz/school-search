@@ -220,7 +220,7 @@ public sealed class IdentityBoundaryTests
 
     private static string FindRepositoryRoot()
     {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        DirectoryInfo? directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Directory.Packages.props")))
         {
             directory = directory.Parent;

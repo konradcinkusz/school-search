@@ -38,14 +38,6 @@ read_env() {
   grep -E "^$1=" .env | tail -n1 | cut -d= -f2- || true
 }
 
-random_hex() {
-  if have openssl; then
-    openssl rand -hex 32
-  else
-    head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n'
-  fi
-}
-
 REQUIRED_MISSING=""
 OPTIONAL_MISSING=""
 
@@ -66,7 +58,7 @@ check_tool() {
 
 # Step 1: prerequisites, with install pointers. Also what --check runs.
 step_prerequisites() {
-  say "1/6 Prerequisites"
+  say "1/5 Prerequisites"
   check_tool "git"                  git      1 "https://git-scm.com/downloads"
   check_tool ".NET 10 SDK (dotnet)" dotnet   1 "https://dotnet.microsoft.com/download/dotnet/10.0"
   if have dotnet && [[ "$(dotnet --version 2>/dev/null | cut -d. -f1)" != "10" ]]; then
@@ -94,7 +86,7 @@ summary_check() {
 
 # Step 2: the pre-commit secret scan. Fails closed without gitleaks.
 step_hooks() {
-  say "2/6 Secret-scan pre-commit hook"
+  say "2/5 Secret-scan pre-commit hook"
   if ! git rev-parse --git-dir >/dev/null 2>&1; then
     skip "not a git checkout; hook not installed"
     return
@@ -106,7 +98,7 @@ step_hooks() {
 
 # Step 3: the local .env, gitignored, created from the committed template.
 step_env() {
-  say "3/6 Local .env (gitignored)"
+  say "3/5 Local .env (gitignored)"
   if [[ -f .env ]]; then
     ok ".env exists; left unchanged"
   else
@@ -115,36 +107,9 @@ step_env() {
   fi
 }
 
-# Step 4: the one secret the system will require. No secret is mandatory in
-# Phase A (zero-credential run), so this generates ADMIN_API_KEY ahead of Phase C
-# and stores it in dotnet user-secrets, never in a file in the tree.
-step_generate_secret() {
-  say "4/6 Generate ADMIN_API_KEY into the local secret store"
-  if [[ ! -f "$APPHOST" ]]; then
-    skip "$APPHOST not present yet; re-run this step once the solution is in place"
-    return
-  fi
-  if ! have dotnet; then
-    skip "dotnet missing; cannot use user-secrets (see step 1)"
-    return
-  fi
-  dotnet user-secrets init --project "$APPHOST" >/dev/null
-  if dotnet user-secrets list --project "$APPHOST" | grep -q '^Parameters:admin-api-key = '; then
-    ok "ADMIN_API_KEY already in user-secrets; not regenerated"
-    return
-  fi
-  local value
-  value="$(read_env ADMIN_API_KEY)"
-  if [[ -z "$value" ]]; then
-    value="$(random_hex)"
-  fi
-  dotnet user-secrets set "Parameters:admin-api-key" "$value" --project "$APPHOST" >/dev/null
-  ok "stored ADMIN_API_KEY in user-secrets (read by nothing until Phase C)"
-}
-
-# Step 5: optional integrations, each labelled with what it enables.
+# Step 4: optional integrations, each labelled with what it enables.
 step_optional() {
-  say "5/6 Optional integrations"
+  say "4/5 Optional integrations"
   local key
   key="$(read_env ANTHROPIC_API_KEY)"
   if [[ -z "$key" && -t 0 ]]; then
@@ -160,13 +125,13 @@ step_optional() {
     dotnet user-secrets set "Parameters:anthropic-api-key" "$key" --project "$APPHOST" >/dev/null
     ok "stored ANTHROPIC_API_KEY in user-secrets"
   else
-    skip "ANTHROPIC_API_KEY read but no AppHost or dotnet yet; set it again after step 4"
+    skip "ANTHROPIC_API_KEY read but no AppHost or dotnet yet; run setup again once the solution is in place"
   fi
 }
 
-# Step 6: scan the tree once, then say what to run next.
+# Step 5: scan the tree once, then say what to run next.
 step_scan_and_next() {
-  say "6/6 Scan the working tree and next steps"
+  say "5/5 Scan the working tree and next steps"
   if have gitleaks; then
     if ./scripts/scan-secrets.sh --all >/dev/null 2>&1; then
       ok "gitleaks: no secrets in the working tree"
@@ -190,7 +155,6 @@ main() {
   fi
   step_hooks
   step_env
-  step_generate_secret
   step_optional
   step_scan_and_next
   summary_check

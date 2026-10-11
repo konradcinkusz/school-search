@@ -40,12 +40,6 @@ function Read-EnvValue([string]$Key) {
     return ($line -replace "^$Key=", '')
 }
 
-function New-RandomHex {
-    $bytes = New-Object byte[] 32
-    [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
-    return -join ($bytes | ForEach-Object { $_.ToString('x2') })
-}
-
 $script:RequiredMissing = @()
 $script:OptionalMissing = @()
 
@@ -60,7 +54,7 @@ function Test-ToolEntry([string]$Name, [string]$Command, [bool]$Required, [strin
 
 # Step 1: prerequisites, with install pointers. Also what -Check runs.
 function Step-Prerequisites {
-    Say '1/6 Prerequisites'
+    Say '1/5 Prerequisites'
     Test-ToolEntry 'git'                       'git'      $true  'https://git-scm.com/downloads'
     Test-ToolEntry '.NET 10 SDK (dotnet)'      'dotnet'   $true  'https://dotnet.microsoft.com/download/dotnet/10.0'
     if ((Test-Tool 'dotnet') -and -not ((& dotnet --version) -like '10.*')) {
@@ -88,7 +82,7 @@ function Write-Summary {
 
 # Step 2: the pre-commit secret scan. Fails closed without gitleaks.
 function Step-Hooks {
-    Say '2/6 Secret-scan pre-commit hook'
+    Say '2/5 Secret-scan pre-commit hook'
     & git rev-parse --git-dir *> $null
     if ($LASTEXITCODE -ne 0) { Skip 'not a git checkout; hook not installed'; return }
     & git config core.hooksPath scripts/hooks
@@ -97,7 +91,7 @@ function Step-Hooks {
 
 # Step 3: the local .env, gitignored, created from the committed template.
 function Step-Env {
-    Say '3/6 Local .env (gitignored)'
+    Say '3/5 Local .env (gitignored)'
     if (Test-Path '.env') {
         Ok '.env exists; left unchanged'
     } else {
@@ -106,30 +100,9 @@ function Step-Env {
     }
 }
 
-# Step 4: the one secret the system will require. Generated into dotnet user-secrets,
-# never into a file in the tree. Nothing reads it until Phase C.
-function Step-GenerateSecret {
-    Say '4/6 Generate ADMIN_API_KEY into the local secret store'
-    if (-not (Test-Path $AppHost)) {
-        Skip "$AppHost not present yet; re-run this step once the solution is in place"
-        return
-    }
-    if (-not (Test-Tool 'dotnet')) { Skip 'dotnet missing; cannot use user-secrets (see step 1)'; return }
-    & dotnet user-secrets init --project $AppHost | Out-Null
-    $listed = & dotnet user-secrets list --project $AppHost
-    if ($listed | Where-Object { $_ -like 'Parameters:admin-api-key = *' }) {
-        Ok 'ADMIN_API_KEY already in user-secrets; not regenerated'
-        return
-    }
-    $value = Read-EnvValue 'ADMIN_API_KEY'
-    if (-not $value) { $value = New-RandomHex }
-    & dotnet user-secrets set 'Parameters:admin-api-key' $value --project $AppHost | Out-Null
-    Ok 'stored ADMIN_API_KEY in user-secrets (read by nothing until Phase C)'
-}
-
-# Step 5: optional integrations, each labelled with what it enables.
+# Step 4: optional integrations, each labelled with what it enables.
 function Step-Optional {
-    Say '5/6 Optional integrations'
+    Say '4/5 Optional integrations'
     $key = Read-EnvValue 'ANTHROPIC_API_KEY'
     if (-not $key -and [Environment]::UserInteractive) {
         $secure = Read-Host 'ANTHROPIC_API_KEY (optional, needed for AI features; Enter to skip)' -AsSecureString
@@ -143,13 +116,13 @@ function Step-Optional {
         & dotnet user-secrets set 'Parameters:anthropic-api-key' $key --project $AppHost | Out-Null
         Ok 'stored ANTHROPIC_API_KEY in user-secrets'
     } else {
-        Skip 'ANTHROPIC_API_KEY read but no AppHost or dotnet yet; set it again after step 4'
+        Skip 'ANTHROPIC_API_KEY read but no AppHost or dotnet yet; run setup again once the solution is in place'
     }
 }
 
-# Step 6: scan the tree once, then say what to run next.
+# Step 5: scan the tree once, then say what to run next.
 function Step-ScanAndNext {
-    Say '6/6 Scan the working tree and next steps'
+    Say '5/5 Scan the working tree and next steps'
     if (Test-Tool 'gitleaks') {
         & gitleaks dir --redact --no-banner --config .gitleaks.toml . *> $null
         if ($LASTEXITCODE -eq 0) { Ok 'gitleaks: no secrets in the working tree' }
@@ -171,7 +144,6 @@ if ($Check) {
 
 Step-Hooks
 Step-Env
-Step-GenerateSecret
 Step-Optional
 Step-ScanAndNext
 Write-Summary
