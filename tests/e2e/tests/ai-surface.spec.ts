@@ -55,7 +55,8 @@ test.describe("AI surface: degrade states and guard rails", () => {
     expect(new URL(page.url()).pathname).toBe("/");
     const aiBox = page.locator("section.ai-search");
     await expect(aiBox).toBeVisible();
-    await expect(aiBox.getByText(NOT_RANKING)).toHaveCount(0);
+    // The visitor's own words sit in the textarea and are not portal copy: only rendered text is checked.
+    await expect(aiBox.locator("p, li, label, legend, h2").filter({ hasText: NOT_RANKING })).toHaveCount(0);
   });
 
   test("methodology: the question box shows the degrade state and the methodology text stays intact", async ({ page }) => {
