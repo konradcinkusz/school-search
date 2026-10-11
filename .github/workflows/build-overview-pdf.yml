@@ -1,0 +1,32 @@
+name: build-overview-pdf
+
+# Manual only: a document with no release cadence does not pretend to have one.
+# The PDF is a run artifact, never committed (RESEARCH-DOCUMENTATION).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pdf:
+    name: build overview PDF
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y latexmk texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-lang-polish
+      - name: Build the PDF
+        working-directory: docs/papers
+        run: latexmk -pdf -interaction=nonstopmode -halt-on-error school-search-overview.tex
+      - name: Upload as run artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: school-search-overview
+          path: docs/papers/school-search-overview.pdf
+          if-no-files-found: error
+          retention-days: 30
