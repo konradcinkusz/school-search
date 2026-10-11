@@ -52,8 +52,10 @@ public sealed class PaymentsTestFactory : WebApplicationFactory<Program>
         }
 
         builder.UseSetting("Billing:Plans:0:Code", "monthly");
+        builder.UseSetting("Billing:Plans:0:Name", "Plan miesięczny (test)");
         builder.UseSetting("Billing:Plans:0:Interval", "month");
         builder.UseSetting("Billing:Plans:1:Code", "yearly");
+        builder.UseSetting("Billing:Plans:1:Name", "Plan roczny (test)");
         builder.UseSetting("Billing:Plans:1:Interval", "year");
 
         builder.UseSetting("Auth:Authority", "https://authservice.test");
