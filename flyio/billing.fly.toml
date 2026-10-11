@@ -40,7 +40,6 @@ primary_region = "waw"
   # Secrets (never here): ConnectionStrings__billingdb, Billing__SubjectPepper, Billing__WebhookSecret (flyio/SECRETS.md).
   # ANTHROPIC_API_KEY (profile-copy assistant, F6) is a Fly secret pushed by flyio.yml when the GitHub secret exists.
   # The kill switch stays false: a key alone never turns the assistant on (P8, docs/ai/AI-FEATURES.md section 8, F6).
-  AI_ENABLED = "false"
 
 [http_service]
   internal_port = 8080

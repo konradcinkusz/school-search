@@ -17,7 +17,6 @@ primary_region = "waw"
   # AI explain (feature 1) and the Phase G search-intent and methodology answers (ADR-0011, ADR-0017). ANTHROPIC_API_KEY is
   # a Fly secret pushed by flyio.yml when the GitHub secret exists. The kill switch stays false: a key alone never turns
   # an AI feature on. Flip to "true" only after the open items in docs/ai/AI-FEATURES.md (O1, O2) and the eval gate close.
-  AI_ENABLED = "false"
   AI_DAILY_TOKEN_BUDGET = "200000"
   # Admin routes validate authservice access tokens (role Admin or SuperAdmin), ADR-0015. Same issuer and audience
   # as authservice (flyio/authservice.fly.toml). Auth__Authority unset would answer the admin group with 404 (P8).
