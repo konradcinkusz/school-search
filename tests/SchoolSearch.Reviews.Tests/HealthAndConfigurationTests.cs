@@ -67,9 +67,9 @@ public sealed class HealthAndConfigurationTests
     [Fact]
     public void Subject_hash_is_64_lowercase_hex_and_depends_on_the_pepper()
     {
-        var environment = new HostingEnvironment { EnvironmentName = Environments.Development };
-        var first = new SubjectHasher(Options.Create(new ReviewsOptions { SubjectPepper = "pepper-one" }), environment);
-        var second = new SubjectHasher(Options.Create(new ReviewsOptions { SubjectPepper = "pepper-two" }), environment);
+        var environment = new TestHostEnvironment(Environments.Development);
+        var first = new SubjectHasher(Microsoft.Extensions.Options.Options.Create(new ReviewsOptions { SubjectPepper = "pepper-one" }), environment);
+        var second = new SubjectHasher(Microsoft.Extensions.Options.Options.Create(new ReviewsOptions { SubjectPepper = "pepper-two" }), environment);
 
         var hash = first.Hash("sub-123");
 
@@ -83,8 +83,8 @@ public sealed class HealthAndConfigurationTests
     [Fact]
     public void Outside_production_without_a_pepper_an_ephemeral_pepper_is_used()
     {
-        var environment = new HostingEnvironment { EnvironmentName = Environments.Staging };
-        var hasher = new SubjectHasher(Options.Create(new ReviewsOptions()), environment);
+        var environment = new TestHostEnvironment(Environments.Staging);
+        var hasher = new SubjectHasher(Microsoft.Extensions.Options.Options.Create(new ReviewsOptions()), environment);
 
         Assert.True(hasher.IsConfigured);
         Assert.True(hasher.IsEphemeral);
@@ -93,8 +93,8 @@ public sealed class HealthAndConfigurationTests
     [Fact]
     public void Production_without_a_pepper_is_not_configured_so_review_writes_answer_503()
     {
-        var environment = new HostingEnvironment { EnvironmentName = Environments.Production };
-        var hasher = new SubjectHasher(Options.Create(new ReviewsOptions()), environment);
+        var environment = new TestHostEnvironment(Environments.Production);
+        var hasher = new SubjectHasher(Microsoft.Extensions.Options.Options.Create(new ReviewsOptions()), environment);
 
         Assert.False(hasher.IsConfigured);
     }
@@ -132,4 +132,17 @@ public sealed class HealthAndConfigurationTests
 
         return new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
     }
+}
+
+/// <summary>Minimal <see cref="IHostEnvironment"/> for constructing services directly in tests.</summary>
+internal sealed class TestHostEnvironment(string environmentName) : IHostEnvironment
+{
+    public string EnvironmentName { get; set; } = environmentName;
+
+    public string ApplicationName { get; set; } = "SchoolSearch.Reviews.Tests";
+
+    public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+
+    public Microsoft.Extensions.FileProviders.IFileProvider ContentRootFileProvider { get; set; } =
+        new Microsoft.Extensions.FileProviders.NullFileProvider();
 }
