@@ -84,6 +84,9 @@ async function checkFixtures({ name, dir, cases, errors }) {
 }
 
 // paths: { datasetsDir, fixturesDir, featuresDir, thresholdsFile }
+// Datasets graded only by the .NET project tests/SchoolSearch.Evals.Tests (they call product code, not HTTP).
+const TIER_B_ONLY = new Set(['review-triage', 'correction-triage', 'profile-copy', 'catchment-extract', 'preschool-extract']);
+
 export async function runSelftest(paths) {
   const errors = [];
   const warnings = [];
@@ -116,6 +119,10 @@ export async function runSelftest(paths) {
     errors.push(...dataset.errors);
     datasets.push(dataset);
     const module = modules.get(name);
+    if (!module && TIER_B_ONLY.has(name)) {
+      console.log(`${name}: ${dataset.cases.length} cases (graded by tests/SchoolSearch.Evals.Tests, no Node module)`);
+      continue;
+    }
     if (!module) {
       errors.push(`${name}: dataset without a feature module (evals/features/${name}.mjs)`);
       continue;
