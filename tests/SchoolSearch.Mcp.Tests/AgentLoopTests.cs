@@ -216,7 +216,11 @@ public sealed class AgentLoopTests
     {
         var settings = options ?? Options();
         var catalog = new CatalogClient(new HttpClient(stub) { BaseAddress = new Uri(AgentTestData.CatalogBase) });
-        var reviews = new ReviewsClient(new HttpClient(stub) { BaseAddress = new Uri(AgentTestData.ReviewsBase) });
+        var reviews = new ReviewsClient(
+            new HttpClient(stub) { BaseAddress = new Uri(AgentTestData.ReviewsBase) },
+            new Microsoft.AspNetCore.Http.HttpContextAccessor(),
+            new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build(),
+            Microsoft.Extensions.Options.Options.Create(new SchoolSearch.Mcp.Options.McpOptions()));
         var runner = new AgentToolRunner(new SchoolTools(catalog), new PreschoolTools(catalog), new ReviewsTools(reviews));
         var budget = new AgentTokenBudget(settings, TimeProvider.System);
         return new AgentService(llm, runner, budget, settings);
