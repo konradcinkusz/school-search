@@ -1,3 +1,4 @@
+using SchoolSearch.Api.Endpoints;
 using SchoolSearch.Api.Extensions;
 using SchoolSearch.Catalog.Data;
 using SchoolSearch.ServiceDefaults;

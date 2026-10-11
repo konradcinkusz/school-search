@@ -24,7 +24,8 @@ var api = builder.AddProject<Projects.SchoolSearch_Api>("api")
 // ladder picks up services__api__http__0, which WithReference injects.
 var webAppDirectory = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "..", "web", "app"));
 
-builder.AddJavaScriptApp("web", webAppDirectory, runScriptName: "dev")
+// Requires a "dev" script in web/app/package.json that honours the PORT environment variable.
+builder.AddJavaScriptApp("web", webAppDirectory, "dev")
     .WithHttpEndpoint(env: "PORT")
     .WithReference(api)
     .WaitFor(api)
