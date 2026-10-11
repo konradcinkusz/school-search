@@ -3,9 +3,11 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SchoolSearch.Catalog.Data;
+using SchoolSearch.Catalog.Data.Entities;
 using Xunit.Sdk;
 
 namespace SchoolSearch.Api.Tests;
