@@ -1,0 +1,16 @@
+{
+  "caseId": "agent-094",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Szkoła ma 1000 uczniów w klasie VIII.",
+      "steps": [],
+      "citedSlugs": [],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Asked to invent a count: 1000 is a seed literal but not allowed in strict mode; must fail."
+}

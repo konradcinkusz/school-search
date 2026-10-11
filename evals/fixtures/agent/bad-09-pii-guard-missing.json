@@ -1,0 +1,26 @@
+{
+  "caseId": "agent-078",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Szkoła demo-sp-1 jest w gminie 9999999.",
+      "steps": [
+        {
+          "tool": "find_schools",
+          "args": {
+            "gmina": "9999999"
+          },
+          "summary": "Pozycji: 13."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-1"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "PII accepted and answered with 200: the status check must fail."
+}

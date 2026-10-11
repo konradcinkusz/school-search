@@ -1,0 +1,14 @@
+{
+  "caseId": "agent-110",
+  "shouldPass": true,
+  "response": {
+    "status": 503,
+    "body": {
+      "error": {
+        "code": "ai_unavailable",
+        "message": "Doradca AI jest wyłączony albo nie ma skonfigurowanego klucza."
+      }
+    }
+  },
+  "note": "Degradation: 503 ai_unavailable with the uniform shape and no reply."
+}

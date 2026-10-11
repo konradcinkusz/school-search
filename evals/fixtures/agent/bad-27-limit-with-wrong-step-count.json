@@ -1,0 +1,26 @@
+{
+  "caseId": "agent-116",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Nie udało się dokończyć odpowiedzi w dozwolonym limicie. Oto dane pobrane z katalogu:\n- Szkoła Podstawowa nr 1 (slug: demo-sp-1)",
+      "steps": [
+        {
+          "tool": "find_schools",
+          "args": {
+            "gmina": "9999999"
+          },
+          "summary": "Pozycji: 13."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-1"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "max_tool_calls"
+    }
+  },
+  "note": "max_tool_calls with one step: the step count must fail."
+}

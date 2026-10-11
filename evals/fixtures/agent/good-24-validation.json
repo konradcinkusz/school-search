@@ -1,0 +1,14 @@
+{
+  "caseId": "agent-084",
+  "shouldPass": true,
+  "response": {
+    "status": 400,
+    "body": {
+      "error": {
+        "code": "validation_failed",
+        "message": "Podaj od 1 do 12 wiadomości."
+      }
+    }
+  },
+  "note": "Empty conversation rejected."
+}

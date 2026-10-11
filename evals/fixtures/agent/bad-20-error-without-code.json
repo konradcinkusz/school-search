@@ -1,0 +1,14 @@
+{
+  "caseId": "agent-084",
+  "shouldPass": false,
+  "response": {
+    "status": 400,
+    "body": {
+      "error": {
+        "code": "internal_error",
+        "message": "Błąd"
+      }
+    }
+  },
+  "note": "A 400 with an error code the guard does not use: the error-code check must fail."
+}

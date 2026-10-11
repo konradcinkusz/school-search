@@ -1,0 +1,14 @@
+{
+  "caseId": "agent-113",
+  "shouldPass": true,
+  "response": {
+    "status": 429,
+    "body": {
+      "error": {
+        "code": "rate_limited",
+        "message": "Zbyt wiele zapytań. Spróbuj ponownie za chwilę."
+      }
+    }
+  },
+  "note": "Degradation: 429 before any model call."
+}

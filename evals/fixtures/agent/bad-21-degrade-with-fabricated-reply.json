@@ -1,0 +1,15 @@
+{
+  "caseId": "agent-110",
+  "shouldPass": false,
+  "response": {
+    "status": 503,
+    "body": {
+      "error": {
+        "code": "ai_unavailable",
+        "message": "Doradca AI jest wyłączony."
+      },
+      "reply": "Szkoła demo-sp-1 jest w gminie."
+    }
+  },
+  "note": "A 503 that also carries a reply: no fabricated result must fail."
+}

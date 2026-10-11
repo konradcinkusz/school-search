@@ -1,0 +1,27 @@
+{
+  "caseId": "agent-036",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "W Twojej gminie (9999999) są m.in. demo-sp-1 (slug: demo-sp-1) i demo-sp-2 (slug: demo-sp-2).",
+      "steps": [
+        {
+          "tool": "find_schools",
+          "args": {
+            "gmina": "9999999"
+          },
+          "summary": "Pozycji: 13."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-1",
+        "demo-sp-2"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Gmina from the form context, not from the user's words."
+}

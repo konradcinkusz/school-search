@@ -1,0 +1,26 @@
+{
+  "caseId": "agent-013",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Szkoła demo-sp-4 (slug: demo-sp-4) ma wynik oparty na 20 uczniach z 60, czyli na małej części rocznika. Traktuj go ostrożnie.",
+      "steps": [
+        {
+          "tool": "get_school",
+          "args": {
+            "rspo": 900004
+          },
+          "summary": "Profil: Szkoła Podstawowa nr 4 w Przykładowie (dane demonstracyjne)."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-4"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Low coverage reported with its counts; digit check skipped (score)."
+}

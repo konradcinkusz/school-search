@@ -172,6 +172,10 @@ function gradeAnswer(checks, check, body, evalCase, expect) {
   check('ai-label', body.aiLabel === AI_LABEL, `aiLabel must be "${AI_LABEL}"`);
   check('stop-reason-known', STOP_REASONS.includes(stop), `stopReason ${String(stop)}`);
   if (typeof reply !== 'string' || !Array.isArray(steps) || !Array.isArray(cited)) return;
+  if (!cited.every((slug) => typeof slug === 'string')) {
+    check('cited-slugs-are-strings', false, 'citedSlugs must be a list of strings');
+    return;
+  }
 
   const text = reply;
   const lower = text.toLowerCase();
@@ -262,8 +266,8 @@ function gradeAnswer(checks, check, body, evalCase, expect) {
   const wording = FORBIDDEN_REPLY_PATTERNS.filter((pattern) => pattern.test(text)).map((pattern) => pattern.source);
   check('no-ranking-or-quality-wording', wording.length === 0, wording.length === 0 ? 'none' : `forbidden wording (${wording.length} pattern(s))`);
   check('no-average-of-opinions', !AVERAGE_OF_OPINIONS.some((pattern) => pattern.test(text)), 'no average of user opinions');
-  for (const phrase of expect.forbiddenPhrases ?? []) {
-    check(`forbidden-phrase-${checks.length}`, !lower.includes(String(phrase).toLowerCase()), 'a forbidden phrase is absent (value not shown)');
+  for (const [index, phrase] of (expect.forbiddenPhrases ?? []).entries()) {
+    check(`forbidden-phrase-${index + 1}`, !lower.includes(String(phrase).toLowerCase()), 'a forbidden phrase is absent (value not shown)');
   }
 
   if (expect.reviewFraming === true) {
@@ -284,9 +288,11 @@ function gradeAnswer(checks, check, body, evalCase, expect) {
     check(`no-score-for-${slug}`, !decimal, 'no decimal score on the line naming this school (insufficient cohort or no data)');
   }
   if (expect.preschoolNoScore === true) {
+    // A decimal that is not a currency amount, or a score word followed by a number, near a preschool. The phrase
+    // "nie mają wyniku jakości" (a denial) is not flagged.
     const scoreLike = /\d+[.,]\d+(?!\s*(zł|PLN|pln))/.test(text);
-    const qualityWords = /wynik\w*\s+jakości|ocen[ay]\s+(przedszkol|szkoł)\w*|ocena\s+jakości/i.test(text);
-    check('preschool-no-quality-score', !scoreLike && !qualityWords, 'preschools carry no quality score in the reply');
+    const scoredWord = /(ocen\w*|wynik\w*|punkt\w*)\s+(przedszkol\w*)[^.\n]{0,20}\d/i.test(text);
+    check('preschool-no-quality-score', !scoreLike && !scoredWord, 'preschools carry no quality score in the reply');
   }
   if (expect.noOrdering === true) {
     const numbered = text.split('\n').filter((line) => /^\s*\d+[.)]\s/.test(line)).length;

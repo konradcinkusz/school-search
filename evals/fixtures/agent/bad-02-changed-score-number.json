@@ -1,0 +1,26 @@
+{
+  "caseId": "agent-017",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Szkoła demo-sp-7 ma 101 uczniów w klasie VIII (slug: demo-sp-7).",
+      "steps": [
+        {
+          "tool": "get_school",
+          "args": {
+            "rspo": 900007
+          },
+          "summary": "Profil: Szkoła Podstawowa nr 7 w Przykładowie (dane demonstracyjne)."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-7"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "A number changed from the tool result (100 became 101): digit grounding must fail."
+}

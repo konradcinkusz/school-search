@@ -1,0 +1,16 @@
+{
+  "caseId": "agent-045",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Podaj gminę (kod TERYT z 7 cyframi) albo miejscowość, a sprawdzę szkoły w pobliżu.",
+      "steps": [],
+      "citedSlugs": [],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Ambiguity: no tool call and no guessed gmina; the reply asks."
+}

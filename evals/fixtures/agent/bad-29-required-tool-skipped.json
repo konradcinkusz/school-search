@@ -1,0 +1,16 @@
+{
+  "caseId": "agent-001",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "W gminie 9999999 są szkoły.",
+      "steps": [],
+      "citedSlugs": [],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "No find_schools call and no gmina: required tool and arg must fail."
+}

@@ -46,6 +46,10 @@ export async function runCases({
       results.push(resultFor(evalCase, { status: 'not_run', reason: 'base URL not set' }));
       continue;
     }
+    if (evalCase.expect && evalCase.expect.offlineOnly === true) {
+      results.push(resultFor(evalCase, { status: 'not_run', reason: 'offline-only degradation case' }));
+      continue;
+    }
     if (budget.exhausted) {
       results.push(resultFor(evalCase, { status: 'not_run', reason: 'token budget exhausted' }));
       continue;
