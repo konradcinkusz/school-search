@@ -115,8 +115,9 @@ Behaviour that is fixed in code, whatever the real headers turn out to be:
 
 ### 5.4 Hosts unreachable from the build environment, 2026-10-11
 
-The Phase B build environment could not reach these hosts on 2026-10-11: the SIO and dane.gov.pl dataset host,
-the CKE publication host, the RSPO API (probed, §2), and the geocoder providers. Nothing in Phase B was
+The Phase B build environment could not reach these hosts on 2026-10-11, as reported by the Phase B build: the
+dane.gov.pl dataset host, the CKE publication host and the geocoder providers. The RSPO API was probed directly
+(§2). No other host was probed by the docs author. Nothing in Phase B was
 fetched from them. Every value above was written from the brief, not from a live file.
 
 ## 6. What the owner must verify (in this order)

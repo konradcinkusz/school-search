@@ -33,4 +33,3 @@ scripts
 src/SchoolSearch.Api
 src/SchoolSearch.ServiceDefaults
 src/SchoolSearch.AppHost
-src/SchoolSearch.Architecture.Tests

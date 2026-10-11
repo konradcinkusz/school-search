@@ -17,9 +17,9 @@ read-only MCP server planned for the same data. The wedge is an address: it find
 catchment school (obwód) for that address, then shows the school's results, their trend, and
 how much confidence the data supports, alongside the other schools a family can realistically reach.
 
-**Status: Phase A (scaffold and infrastructure).** The tree holds the solution, the API skeleton,
-the web skeleton, the Fly.io definitions and the CI workflows. There is no ingest, no scoring
-engine and no user accounts yet. Scores are not published anywhere in this phase.
+**Status: Phase A merged; Phase B in review.** Phase A holds the solution, the API skeleton, the web skeleton,
+the Fly.io definitions and the CI workflows. Phase B adds the import job and the scoring engine (ingest and
+scoring, under review). No user accounts exist yet. No score is shown on any public surface: that is Phase C.
 
 ## What this is not
 
@@ -31,7 +31,7 @@ engine and no user accounts yet. Scores are not published anywhere in this phase
 - Each published value carries its source, source URL, as-of date and method.
 
 The metric rules are in [`docs/methodology/RANKING-METHODOLOGY.md`](docs/methodology/RANKING-METHODOLOGY.md)
-(draft) and the standards they follow in [`docs/architecture/00-ARCHITECTURE.md`](docs/architecture/00-ARCHITECTURE.md).
+(version 1.0.0) and the standards they follow in [`docs/architecture/00-ARCHITECTURE.md`](docs/architecture/00-ARCHITECTURE.md).
 
 ## Run it
 
@@ -61,15 +61,18 @@ Run the tests with `dotnet test SchoolSearch.sln`. The end-to-end journey is in 
 | `src/SchoolSearch.Contracts` | DTOs that cross a service boundary. |
 | `src/SchoolSearch.Catalog.Data` | Catalog persistence: `CatalogDbContext` and the school entity. Owns the `catalogdb` schema. |
 | `src/SchoolSearch.Api` | The catalog API (`/api/v1/schools`, `/api/v1/meta`), `/health` and `/alive`. Listens on 8080. |
-| `src/SchoolSearch.Api/Scoring` | Placeholder only. The scoring engine arrives in Phase B. |
+| `src/SchoolSearch.Api/Scoring` | The scoring engine and ranking builder (Phase B, in review). Pure functions, no I/O. |
+| `src/SchoolSearch.Import` | Import console app (Phase B, in review): `sio`, `cke`, `baseline`, `geo` and `check-schema` commands. Writes `catalogdb` directly (ADR-0013). Runs as a one-shot job, not a service. |
+| `tests/SchoolSearch.Import.Tests` | Import tests, xUnit with the InMemory database and synthetic inputs built in the test. |
 | `web/app` | Next.js product surface, reading the API through a server-side proxy. Listens on 3000. |
 | `tests/SchoolSearch.Api.Tests` | Unit and integration tests, InMemory database. |
 | `tests/SchoolSearch.Architecture.Tests` | Architecture rules: the kernel holds no entity type; `Scoring` does not reference billing or user types. |
 | `tests/e2e` | Playwright journey, run in CI against the built web and API. |
 | `flyio/` | Fly.io app definitions and the infrastructure analysis. |
-| `docs/` | Architecture, ADRs, UX backlog, data sources, methodology draft, diagrams, overview paper. |
+| `docs/` | Architecture, ADRs, UX backlog, data sources, methodology, diagrams, overview paper. |
 
-Later phases add an import job and an MCP server as their own deployables. Neither is in this tree yet.
+The MCP server is a later phase and is not in this tree yet. The import job is a second deployable of the
+catalog context (ADR-0007).
 
 ## Documentation
 

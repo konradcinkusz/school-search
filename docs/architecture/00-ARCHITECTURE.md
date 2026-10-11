@@ -41,5 +41,7 @@ If a row has no exit condition, it is not a deviation register entry; it is drif
 
 ## Known gaps in this document
 
-- The scoring engine, the import job and the MCP service are not in this tree. Their architecture is recorded in ADR-0006 and ADR-0007 and will be measured here when they exist.
+- The MCP service is not in this tree. Its architecture is recorded in ADR-0006 and will be measured here when it exists.
+- The Phase B scoring engine and import job are in review. They are not compiled in the build environment that wrote
+  the Phase B docs. Their shape is recorded in ADR-0007, ADR-0009, ADR-0012 and ADR-0013.
 - The constitution's P8 zero-credential run and the container health gates are not claimed as passed here. See the verification record in the delivery pull request.
