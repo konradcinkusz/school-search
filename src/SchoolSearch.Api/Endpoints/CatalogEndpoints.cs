@@ -36,14 +36,14 @@ public static class CatalogEndpoints
     {
         var (pageNumber, pageSize) = ClampPaging(page, limit);
 
-        var publicSchools = db.Schools.AsNoTracking().Where(s => s.IsPublic);
-        var total = await publicSchools.CountAsync(ct);
+        var allSchools = db.Schools.AsNoTracking();
+        var total = await allSchools.CountAsync(ct);
 
         var offset = (long)(pageNumber - 1) * pageSize;
         var items = new List<SchoolDto>();
         if (offset < total)
         {
-            var rows = await publicSchools
+            var rows = await allSchools
                 .OrderBy(s => s.Name)
                 .ThenBy(s => s.IdPodmiot)
                 .Skip((int)offset)
@@ -63,7 +63,7 @@ public static class CatalogEndpoints
     {
         var school = await db.Schools
             .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Slug == request.Slug && s.IsPublic, ct);
+            .FirstOrDefaultAsync(s => s.Slug == request.Slug, ct);
 
         return school is null
             ? ApiErrorWriter.Result(StatusCodes.Status404NotFound, "not_found", "School not found.")
