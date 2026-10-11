@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>SchoolSearch.Reviews</RootNamespace>
+    <AssemblyName>SchoolSearch.Reviews</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SchoolSearch.ServiceDefaults\SchoolSearch.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\SchoolSearch.Contracts\SchoolSearch.Contracts.csproj" />
+  </ItemGroup>
+
+  <!--
+    Reviews owns its own database (reviewsdb, P3). Tokens are validated only (ADR-0015): there is no
+    token creation and no identity package in this project. Versions live in Directory.Packages.props.
+    Anthropic is referenced for Ai/ only (E6).
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Anthropic" />
+  </ItemGroup>
+
+</Project>

@@ -55,6 +55,7 @@ jobs:
           destroy_app school-search-mcp-dev
           destroy_app school-search-web-dev
           destroy_app school-search-api-dev
+          destroy_app school-search-reviews-dev
           destroy_app school-search-authservice-dev
           if [ "$DELETE_DATABASE" = "true" ]; then
             destroy_app school-search-postgres

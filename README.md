@@ -17,9 +17,11 @@ read-only MCP server planned for the same data. The wedge is an address: it find
 catchment school (obwód) for that address, then shows the school's results, their trend, and
 how much confidence the data supports, alongside the other schools a family can realistically reach.
 
-**Status: Phase A merged; Phase B in review.** Phase A holds the solution, the API skeleton, the web skeleton,
-the Fly.io definitions and the CI workflows. Phase B adds the import job and the scoring engine (ingest and
-scoring, under review). No user accounts exist yet. No score is shown on any public surface: that is Phase C.
+**Status: Phase A merged; Phase B in review; Phase E (accounts and reviews) in review.** Phase A holds the solution, the API
+skeleton, the web skeleton, the Fly.io definitions and the CI workflows. Phase B adds the import job and the scoring engine
+(ingest and scoring, under review). Phase E adds sign-in through authservice (the only identity provider), moderated
+reviews, the DSA notice and statement-of-reasons machinery, and the Reviews service. Nothing of Phase E is deployed, and
+login against a real authservice has not run. No score is shown on any public surface: that is Phase C.
 
 **PR 4 (MCP and AI explanation), not deployed.** A read-only MCP server (`src/SchoolSearch.Mcp`) and one AI feature
 ("Wyjaśnij ten wynik", a plain-Polish explanation of a school's score, built from the API's own data and labelled as AI)
@@ -69,6 +71,9 @@ Run the tests with `dotnet test SchoolSearch.sln`. The end-to-end journey is in 
 | `src/SchoolSearch.Api` | The catalog API (`/api/v1/schools`, `/api/v1/meta`), `/health` and `/alive`. Listens on 8080. |
 | `src/SchoolSearch.Api/Scoring` | The scoring engine and ranking builder (Phase B, in review). Pure functions, no I/O. |
 | `src/SchoolSearch.Mcp` | Read-only MCP server over streamable HTTP (PR 4, not deployed). Six tools, two resources, one guided prompt. Calls the catalog API over its public URL and owns no database (ADR-0006). Rate limit 60 requests per minute per IP on `/mcp`. |
+| `src/SchoolSearch.Reviews` | Reviews service (Phase E, in review): user-generated opinions, DSA notices, statements of reasons, moderation. Owns `reviewsdb`. Validates authservice tokens; mints none. Listens on 8080. |
+| `src/SchoolSearch.Reviews/Dsa` | DSA machinery (art. 11, 12, 14, 16, 17, 20): notices, statements of reasons, complaints, contact point, transparency counts (Phase E). See `docs/legal/DSA.md`. |
+| `tests/SchoolSearch.Reviews.Tests` | Reviews service tests, InMemory database and a test authentication scheme (Phase E, not yet run in CI). |
 | `tests/SchoolSearch.Mcp.Tests` | Protocol-level tests of the MCP server, raw JSON-RPC over HTTP against a stub catalog (PR 4, not yet run in CI). |
 | `src/SchoolSearch.Api/Ai` | The one AI feature so far: `POST /api/v1/schools/{slug}/explain` (PR 4). Needs `ANTHROPIC_API_KEY`; without it returns 503 and the rest of the product is unchanged (ADR-0011). |
 | `src/SchoolSearch.Import` | Import console app (Phase B, in review): `sio`, `cke`, `baseline`, `geo` and `check-schema` commands. Writes `catalogdb` directly (ADR-0013). Runs as a one-shot job, not a service. |
@@ -77,7 +82,7 @@ Run the tests with `dotnet test SchoolSearch.sln`. The end-to-end journey is in 
 | `tests/SchoolSearch.Api.Tests` | Unit and integration tests, InMemory database. |
 | `tests/SchoolSearch.Architecture.Tests` | Architecture rules: the kernel holds no entity type; `Scoring` does not reference billing or user types. |
 | `tests/e2e` | Playwright journey, run in CI against the built web and API. |
-| `flyio/` | Fly.io app definitions and the infrastructure analysis. |
+| `flyio/` | Fly.io app definitions (postgres, authservice, reviews, api, mcp, web) and the secret inventory (`SECRETS.md`). |
 | `docs/` | Architecture, ADRs, UX backlog, data sources, methodology, diagrams, overview paper. |
 
 The MCP server is in this tree (PR 4) but is not deployed. The import job is a second deployable of the
@@ -93,6 +98,9 @@ catalog context (ADR-0007).
 - [`docs/ai/AI-FEATURES.md`](docs/ai/AI-FEATURES.md): the seven proposed AI features, with the status of each.
 - [`docs/proposals/MCP-SURFACE.md`](docs/proposals/MCP-SURFACE.md): a draft for the standards repository on exposing metrics through MCP. Not filed.
 - [`docs/data/SOURCES.md`](docs/data/SOURCES.md): data sources and the open questions about them.
+- [`docs/runbooks/AUTHSERVICE.md`](docs/runbooks/AUTHSERVICE.md): the identity provider: keys, databases, deploy, rotation, post-deploy assertions.
+- [`docs/legal/DSA.md`](docs/legal/DSA.md): the DSA mapping for reviews, what is not implemented, and what the owner must supply. Terms and privacy notice drafts: `docs/legal/`.
+- [`docs/security/SECURITY-REVIEW-PHASE-E.md`](docs/security/SECURITY-REVIEW-PHASE-E.md): the Phase E threat model and verification record.
 
 ## Licence
 

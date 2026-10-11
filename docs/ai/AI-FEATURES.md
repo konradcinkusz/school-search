@@ -10,7 +10,7 @@
 | 1 | Wyjaśnij ten wynik | **Implemented (PR 4), not deployed** | `POST /api/v1/schools/{slug}/explain` in `src/SchoolSearch.Api/Ai/`; button and panel in `web/app` on `/szkoly/[slug]` | Model `claude-haiku-5-5`. Behind `ANTHROPIC_API_KEY` and `AI_ENABLED`; without them 503 `ai_unavailable`. ADR-0011 open items O1 (retention) and O2 (payload allowlist) must close before public launch. |
 | 2 | NL question to filters | Proposed | none | Needs eval harness at 100% on constraint scenarios first. |
 | 3 | Catchment-resolution extractor | Proposed | none | Offline; needs human verification queue. |
-| 4 | Review moderation triage | Proposed (Phase E) | none | Depends on reviews, DSA notice mechanism, legal review D3. |
+| 4 | Review moderation triage | **Triage label implemented (E6), not deployed**; PII spans and policy flags still Proposed | `src/SchoolSearch.Reviews/Ai/`; see "Review moderation triage — implemented" at the end of this file | Depends on reviews, DSA notice mechanism, legal review D3. |
 | 5 | Correction triage and reply draft | Proposed | none | Needs admin credential and moderator queue. |
 | 6 | Preschool czesne extraction | Proposed (Phase D) | none | Needs preschool source list and spot-check process. |
 | 7 | Methodology Q&A | Proposed | none | Needs eval set; model choice open. |
@@ -594,3 +594,46 @@ Ordered by risk, dependency and the phase gates.
 - [ ] Eval spec per feature drafted before any prompt is written
 - [ ] Human review roles for features 3, 5 and 6 named
 - [ ] D3 legal review scheduled before Phase E
+
+## Review moderation triage — implemented
+
+Scope: the advisory triage label of feature 4 (Phase E), in `src/SchoolSearch.Reviews/Ai/`. Only `ModerationTriage`
+rows are written. The label and a note of at most 300 characters are stored; the note is internal and never shown to
+readers. The moderator queue (E1b) orders by the label. The labels are `ok`, `needs_attention`,
+`likely_personal_data`, `likely_abusive` and `unclear`; any output that does not parse to one of them is `unclear`.
+
+- **Who triages.** `ReviewTriageService.TriageAsync(reviewId)` on demand, and `ReviewTriageWorker`, a hosted worker that
+  triages `pending` reviews with no label yet, in batches (`Reviews:Ai:BatchSize`, default 5) within
+  `Reviews:Ai:TriagesPerMinute` (default 10). A review is triaged once; an existing row is never replaced.
+- **What is sent.** The fixed operator rules, and a user turn with the review title and body only, inside an
+  `<untrusted>` block with `<` and `>` escaped. The author hash, school slug, dates and ids are not parameters of the
+  prompt builder, so they cannot reach the model. A title plus body longer than `Reviews:Ai:MaxInputChars` (default
+  4000, the entity limit) is labelled `unclear` without a call, because truncation could hide the name a moderator must see.
+- **What it never does.** It never changes `Review.Status`, never creates a `ModerationDecision`, never sets
+  `Automated`, and never publishes, rejects or removes anything. The only code path that does so is the moderation
+  decision endpoint (E1b). Labels only order the queue (B8).
+- **Degrade (P8).** With no `ANTHROPIC_API_KEY`, or `AI_ENABLED=false`, the worker returns at once, no model call is
+  possible, the queue shows no label, and `/health` lists integration `anthropic` as `disabled`. A failed call writes
+  nothing, the integration is `degraded` with a fixed detail, and the worker waits five minutes before retrying.
+- **Budget.** `AI_DAILY_TOKEN_BUDGET` (default 100000 in this service, separate from the Api's 200000), an in-memory
+  counter reset at UTC midnight, the same cost-guard idea as the Api's `TokenBudget`. A restart or a second instance
+  gets its own counter (the same deviation as ADR-0011 item 11).
+- **Model.** `claude-haiku-5-5`, pinned by `AI_MODEL` or `Reviews:Ai:Model`. The only file that references the SDK is
+  `AnthropicReviewTriageClient.cs`, with calls copied from the Api's `AnthropicExplainClient.cs`.
+
+**Deviations from the feature 4 proposal above (recorded here, not re-decided):**
+
+- The output is a label and a note only. The PII `piiSpans`, `policyFlags` and `priorityHint` contract is not implemented.
+  Spans and evidence substrings would need their own validation and eval set (open item O4).
+- `MaxTokens` is 1500, not 300, for the same reason as the Api (adaptive thinking counts against the cap).
+- Input is capped at 4000 characters and not at 2000, because the entity allows 4000 and a truncated review cannot be
+  triaged for names. Over the cap, the review is `unclear` with no call.
+- There is no content-hash cache. A review is triaged once, so a re-submission is a new review and a new call.
+- The Phase E data basis (D3, third-party personal data in reviews) and retention (O1) are not closed. Triage is
+  not to be enabled in production until both are closed, as for feature 1.
+
+**Evals.** `tests/SchoolSearch.Reviews.Tests/AiReviewTriageServiceTests.cs`, `AiReviewTriageParserTests.cs`,
+`AiTriageBudgetTests.cs` use a fake `IReviewTriageClient` and make no network call. They cover: the label is stored with
+the pinned model; malformed or out-of-set output is `unclear`; an exhausted budget, the per-minute allowance and
+disabled AI skip the model; a triage never changes the review status; the prompt carries only title and body and
+escapes markup; the failure path writes nothing.

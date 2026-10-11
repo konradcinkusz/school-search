@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ExplainPanel } from "@/components/explain-panel";
+import { ReviewsSection } from "@/components/reviews/reviews-section";
 import { ScoreBadge } from "@/components/score-badge";
 import { ServiceUnavailable } from "@/components/service-unavailable";
 import { SchoolJsonLd } from "@/components/school-jsonld";
@@ -9,12 +10,13 @@ import { TrendChart } from "@/components/trend-chart";
 import { catalog, type ScoreStatus, type SchoolProfile, type TrendPoint } from "@/lib/api";
 import { asOfLabel, formatInteger, formatPercent, formatScore, formatStudents, schoolYearLabel } from "@/lib/format";
 import { siteOrigin } from "@/lib/site";
-import { isSlug, safeHttpUrl } from "@/lib/validation";
+import { intParam, isSlug, safeHttpUrl } from "@/lib/validation";
 
 // Data-driven: rendered per request, never prerendered without the API.
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ slug: string }> };
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+type Props = { params: Promise<{ slug: string }>; searchParams: SearchParams };
 
 const SUBJECT_LABEL: Record<string, string> = {
   polish: "język polski",
@@ -42,9 +44,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function SchoolPage({ params }: Props) {
+export default async function SchoolPage({ params, searchParams }: Props) {
   const { slug } = await params;
   if (!isSlug(slug)) notFound();
+  const sp = await searchParams;
+  const reviewsPage = intParam(sp.opinie, 1, 100_000);
 
   const result = await catalog.school(slug);
   if (!result.ok) {
@@ -152,6 +156,8 @@ export default async function SchoolPage({ params }: Props) {
         <ProvenanceTable rows={school.provenance} />
         <p className="muted">Wersja metodologii: {school.methodologyVersion}</p>
       </section>
+
+      <ReviewsSection slug={school.slug} page={reviewsPage} />
 
       <p className="muted">
         Widzisz błąd w danych tej szkoły?{" "}

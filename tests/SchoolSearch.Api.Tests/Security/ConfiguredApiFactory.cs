@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -49,6 +50,11 @@ public sealed class ConfiguredApiFactory : WebApplicationFactory<Program>
             }
 
             services.AddDbContext<CatalogDbContext>(options => options.UseInMemoryDatabase(_databaseName));
+
+            // Test auth scheme, registered here only. It becomes the default authenticate scheme, so the admin
+            // filter reads test tokens instead of validating authservice tokens (no discovery or JWKS in tests).
+            services.AddAuthentication(options => options.DefaultAuthenticateScheme = TestBearerAuthHandler.SchemeName)
+                .AddScheme<AuthenticationSchemeOptions, TestBearerAuthHandler>(TestBearerAuthHandler.SchemeName, _ => { });
         });
     }
 

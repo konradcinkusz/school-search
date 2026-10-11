@@ -1,30 +1,37 @@
-# authservice (external identity service, konradcinkusz/authservice, read-only here). Phase E: file only, not deployed in A-D.
-# It holds the ONLY signing key in the estate (ADR-0004, P5). Every other service validates against its JWKS.
-# Deploy: `flyctl deploy --config flyio/authservice.fly.toml --image ghcr.io/konradcinkusz/authservice:<tag>`
-# The image is built in the authservice repository. This repo never vendors or modifies its source.
-#
-# [build] is declared for shape consistency only. The deploy uses --image, so this block is never used.
-# The Dockerfile path is an assumption about the external repo; verify before Phase E.
+# authservice: the ONLY identity provider and the only holder of a signing key (ADR-0004, P5).
+# Source: konradcinkusz/authservice (external, read-only here). Facts below are from AUTHSERVICE-BRIEF (commit d748af5):
+# VERIFIED items are read in the authservice source; UNVERIFIED items are marked and must be checked on the first deploy.
+# Deploy uses --image only: `flyctl deploy --config flyio/authservice.fly.toml --image ghcr.io/konradcinkusz/authservice:v0.3.4`
+# Pin the tag. Never :latest. The image is published by the authservice repository and is never vendored here.
+# Runbook: docs/runbooks/AUTHSERVICE.md.
 
 app = "school-search-authservice-dev"
 primary_region = "waw"
 
 [build]
-  dockerfile = "Dockerfile"                 # assumed: Dockerfile at the root of the authservice checkout
-  context = "."
+  image = "ghcr.io/konradcinkusz/authservice:v0.3.4"   # documentation only: the deploy passes --image explicitly
 
-[env]                                       # public values only. Signing key and DB credentials are Fly secrets.
+[env]                               # public values only. Signing key and DB connection are Fly secrets (flyio/SECRETS.md).
   ASPNETCORE_ENVIRONMENT = "Production"
   ASPNETCORE_URLS = "http://+:8080"
-  # Issuer (Jwt authority) is the PUBLIC URL https://school-search-authservice-dev.fly.dev. The key name is
-  # set in Phase E from the authservice repo's own configuration; it is not guessed here.
+  DatabaseProvider = "PostgreSQL"                  # README spelling. G1: DATABASE_PROVIDER appears in DEPLOYMENT.md; check at first boot
+  Jwt__Issuer = "school-search"                    # consumers set Auth__Issuer to the same value (VERIFIED: consumer config, DEPLOYMENT.md)
+  Jwt__Audience = "school-search"                  # consumers set Auth__Audience to the same value; never the default "AuthService"
+  Jwt__PublicBaseUrl = "https://school-search-authservice-dev.fly.dev"   # jwks_uri is built from this (VERIFIED)
+  Database__SchemaMode = "Migrate"                 # not the default EnsureCreated, which never upgrades a schema (VERIFIED, G2)
+  Database__MigrationsAssembly = "AuthService.Migrations.PostgreSQL"
+  Network__ClientIpHeader = "Fly-Client-IP"        # rate limits (VERIFIED: Program.cs)
+  # G3 (UNVERIFIED, likely needed): behind Fly's TLS proxy the app may see http and redirect forever (UseHttpsRedirection,
+  # KnownProxies empty by default). If /.well-known/openid-configuration redirects on first deploy, the fix is one of
+  # Network__TrustAllProxies = "true" or a KnownProxies setting. Verify before go-live; do not guess it into [env] blind.
+  # Secrets (never here): ConnectionStrings__DefaultConnection, Jwt__PrivateKeyPem (flyio/SECRETS.md).
 
 [http_service]
-  internal_port = 8080                      # assumed .NET default; verify against the authservice image
+  internal_port = 8080                            # VERIFIED: ASPNETCORE_URLS http://+:8080 in the brief's fly.toml
   force_https = true
   auto_stop_machines = "stop"
   auto_start_machines = true
-  # PINNED: every validator (api, later reviews) fetches JWKS in-request and re-fetches when its cache expires (Fly §7).
+  # PINNED: every validator fetches JWKS in-request and re-fetches when its cache expires (Fly §7).
   min_machines_running = 1
 
   [http_service.concurrency]
@@ -33,10 +40,10 @@ primary_region = "waw"
     soft_limit = 200
 
   [[http_service.checks]]
-    path = "/health"
+    path = "/health/ready"                        # 503 until schema is ready and the DB answers (VERIFIED, brief §2)
     interval = "30s"
     timeout = "5s"
-    grace_period = "60s"
+    grace_period = "60s"                          # first boot runs migrations in a BackgroundService: slow, not failed
 
 [[vm]]
   size = "shared-cpu-1x"

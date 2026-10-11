@@ -4,15 +4,18 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using SchoolSearch.Api.Errors;
 using SchoolSearch.Catalog.Data;
 using SchoolSearch.Catalog.Data.Entities;
+using SchoolSearch.ServiceDefaults;
 
 namespace SchoolSearch.Api.Security;
 
 /// <summary>
-/// Operator surface under /api/v1/admin. Every route passes <see cref="AdminKeyFilter"/>; the group is
-/// answered with 404 when ADMIN_API_KEY is unset. Responses are never cached.
+/// Operator surface under /api/v1/admin. Every route passes <see cref="AdminAccessFilter"/>: 404 when
+/// Auth:Authority is unset, 401 without a valid authservice bearer token, 403 without an Admin or SuperAdmin role.
+/// Responses are never cached.
 /// </summary>
 public static class AdminEndpoints
 {
@@ -37,13 +40,26 @@ public static class AdminEndpoints
 
     public static IEndpointRouteBuilder MapAdminEndpoints(this IEndpointRouteBuilder app)
     {
-        var admin = app.MapGroup("/api/v1/admin").AddEndpointFilter<AdminKeyFilter>();
+        RegisterAuthServiceStatus(app);
+
+        var admin = app.MapGroup("/api/v1/admin").AddEndpointFilter<AdminAccessFilter>();
 
         admin.MapGet("/corrections", ListCorrections).WithName("AdminListCorrections");
         admin.MapPatch("/corrections/{id:guid}", UpdateCorrection).WithName("AdminUpdateCorrection");
         admin.MapPost("/keys/{id:guid}/revoke", RevokeKey).WithName("AdminRevokeApiKey");
 
         return app;
+    }
+
+    private static void RegisterAuthServiceStatus(IEndpointRouteBuilder app)
+    {
+        var options = app.ServiceProvider.GetRequiredService<IOptions<AuthServiceOptions>>().Value;
+        app.ServiceProvider.GetRequiredService<IntegrationStatusRegistry>().Register(
+            AuthServiceOptions.IntegrationName,
+            options.IsConfigured ? IntegrationState.Ok : IntegrationState.Disabled,
+            options.IsConfigured
+                ? "Admin tokens are validated against the authservice JWKS"
+                : "Auth:Authority is not set; admin endpoints are off");
     }
 
     internal static async Task<IResult> ListCorrections(

@@ -1,6 +1,6 @@
 # ADR-0008: Interim `ADMIN_API_KEY` for admin endpoints, with a Phase E exit
 
-- **Status:** Accepted (interim)
+- **Status:** Superseded by ADR-0015 (Phase E exit). `ADMIN_API_KEY` is removed from the code.
 - **Date:** 2026-10-11
 
 ## Context

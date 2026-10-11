@@ -24,6 +24,9 @@ export function SiteHeader() {
             <li>
               <Link href="/dla-szkol">Dla szkół</Link>
             </li>
+            <li>
+              <Link href="/konto">Konto</Link>
+            </li>
           </ul>
         </nav>
       </div>

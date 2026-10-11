@@ -1,88 +1,118 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using SchoolSearch.Api.Tests.Public;
 using Xunit;
 
 namespace SchoolSearch.Api.Tests.Security;
 
-/// <summary>The admin group: 404 when ADMIN_API_KEY is unset, a uniform 401 without the right X-Admin-Key header, 200 with it.</summary>
+/// <summary>
+/// The admin group (ADR-0015): 404 when Auth:Authority is unset, 401 without a valid authservice bearer token,
+/// 403 for a valid token without an Admin or SuperAdmin role, 200 for an admin. Tokens are test tokens (TestBearerAuthHandler).
+/// </summary>
 public sealed class AdminEndpointTests
 {
-    private const string ConfigurationKey = "ADMIN_API_KEY";
-    private const string HeaderName = "X-Admin-Key";
-    private const string AdminKey = "replace-me-test-admin-credential";
+    private const string AdminToken = "Bearer test:admin-user:Admin";
+    private const string SuperAdminToken = "Bearer test:root-user:SuperAdmin";
+    private const string MemberToken = "Bearer test:member-user:Member,User";
 
     private static readonly string ListPath = "/api/v1/admin/corrections";
 
-    private static Dictionary<string, string> WithAdminKey() =>
-        new(StringComparer.Ordinal) { [ConfigurationKey] = AdminKey };
+    private static readonly IReadOnlyDictionary<string, string> AuthorityConfigured = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["Auth:Authority"] = "https://auth.test.invalid",
+        ["Auth:Issuer"] = "SchoolSearchTest",
+        ["Auth:Audience"] = "school-search-test",
+    };
 
-    private static HttpRequestMessage Request(HttpMethod method, string path, string? headerValue)
+    private static HttpRequestMessage Request(HttpMethod method, string path, string? authorization)
     {
         var request = new HttpRequestMessage(method, path);
-        if (headerValue is not null)
+        if (authorization is not null)
         {
-            request.Headers.TryAddWithoutValidation(HeaderName, headerValue);
+            request.Headers.TryAddWithoutValidation("Authorization", authorization);
         }
 
         return request;
     }
 
+    private static HttpRequestMessage PatchCorrection(string id, string? authorization)
+    {
+        var request = Request(HttpMethod.Patch, $"/api/v1/admin/corrections/{id}", authorization);
+        request.Content = new StringContent("{\"status\":\"accepted\"}", Encoding.UTF8, "application/json");
+        return request;
+    }
+
     [Fact]
-    public async Task Admin_routes_answer_404_when_ADMIN_API_KEY_is_unset_even_with_a_header_present()
+    public async Task Admin_routes_answer_404_when_Auth_Authority_is_unset_even_with_a_token()
     {
         using var factory = new ConfiguredApiFactory();
         var client = factory.CreateClient();
         var id = Guid.NewGuid().ToString();
 
-        using var list = Request(HttpMethod.Get, ListPath, "anything");
+        using var list = Request(HttpMethod.Get, ListPath, AdminToken);
         await ContractAssert.ErrorResponseAsync(await client.SendAsync(list), HttpStatusCode.NotFound, "not_found");
 
-        using var patch = Request(HttpMethod.Patch, $"/api/v1/admin/corrections/{id}", "anything");
-        patch.Content = new StringContent("{\"status\":\"accepted\"}", Encoding.UTF8, "application/json");
+        using var patch = PatchCorrection(id, AdminToken);
         await ContractAssert.ErrorResponseAsync(await client.SendAsync(patch), HttpStatusCode.NotFound, "not_found");
 
-        using var revoke = Request(HttpMethod.Post, $"/api/v1/admin/keys/{id}/revoke", "anything");
+        using var revoke = Request(HttpMethod.Post, $"/api/v1/admin/keys/{id}/revoke", AdminToken);
         await ContractAssert.ErrorResponseAsync(await client.SendAsync(revoke), HttpStatusCode.NotFound, "not_found");
     }
 
     [Fact]
-    public async Task Missing_or_wrong_admin_key_is_a_uniform_401_with_identical_bodies_and_no_echo()
+    public async Task Missing_or_unreadable_token_is_a_uniform_401_with_identical_bodies_and_no_echo()
     {
-        using var factory = new ConfiguredApiFactory(WithAdminKey());
+        using var factory = new ConfiguredApiFactory(AuthorityConfigured);
         var client = factory.CreateClient();
 
         using var missingRequest = Request(HttpMethod.Get, ListPath, null);
-        var missing = await ContractAssert.ErrorResponseAsync(await client.SendAsync(missingRequest), HttpStatusCode.Unauthorized, "unauthorized");
+        var missingResponse = await client.SendAsync(missingRequest);
+        var missing = await ContractAssert.ErrorResponseAsync(missingResponse, HttpStatusCode.Unauthorized, "unauthorized");
 
-        using var wrongRequest = Request(HttpMethod.Get, ListPath, "not-the-admin-key");
-        var wrong = await ContractAssert.ErrorResponseAsync(await client.SendAsync(wrongRequest), HttpStatusCode.Unauthorized, "unauthorized");
+        using var wrongRequest = Request(HttpMethod.Get, ListPath, "Bearer not-a-readable-token");
+        var wrongResponse = await client.SendAsync(wrongRequest);
+        var wrong = await ContractAssert.ErrorResponseAsync(wrongResponse, HttpStatusCode.Unauthorized, "unauthorized");
 
         Assert.Equal(missing.GetProperty("error").GetProperty("message").GetString(), wrong.GetProperty("error").GetProperty("message").GetString());
-        Assert.DoesNotContain(AdminKey, missing.GetRawText(), StringComparison.Ordinal);
-        Assert.DoesNotContain("not-the-admin-key", wrong.GetRawText(), StringComparison.Ordinal);
+        Assert.DoesNotContain("not-a-readable-token", wrong.GetRawText(), StringComparison.Ordinal);
+        Assert.Equal("Bearer", missingResponse.Headers.WwwAuthenticate.ToString());
     }
 
     [Fact]
-    public async Task Wrong_key_is_refused_on_every_admin_write_before_the_body_is_read()
+    public async Task Authenticated_user_without_an_admin_role_is_403_on_every_admin_write()
     {
-        using var factory = new ConfiguredApiFactory(WithAdminKey());
+        using var factory = new ConfiguredApiFactory(AuthorityConfigured);
         var client = factory.CreateClient();
         var id = Guid.NewGuid().ToString();
 
-        using var patch = Request(HttpMethod.Patch, $"/api/v1/admin/corrections/{id}", "wrong");
-        patch.Content = new StringContent("{\"status\":\"accepted\"}", Encoding.UTF8, "application/json");
-        await ContractAssert.ErrorResponseAsync(await client.SendAsync(patch), HttpStatusCode.Unauthorized, "unauthorized");
+        using var list = Request(HttpMethod.Get, ListPath, MemberToken);
+        await ContractAssert.ErrorResponseAsync(await client.SendAsync(list), HttpStatusCode.Forbidden, "forbidden");
 
-        using var revoke = Request(HttpMethod.Post, $"/api/v1/admin/keys/{id}/revoke", "wrong");
-        await ContractAssert.ErrorResponseAsync(await client.SendAsync(revoke), HttpStatusCode.Unauthorized, "unauthorized");
+        using var patch = PatchCorrection(id, MemberToken);
+        await ContractAssert.ErrorResponseAsync(await client.SendAsync(patch), HttpStatusCode.Forbidden, "forbidden");
+
+        using var revoke = Request(HttpMethod.Post, $"/api/v1/admin/keys/{id}/revoke", MemberToken);
+        await ContractAssert.ErrorResponseAsync(await client.SendAsync(revoke), HttpStatusCode.Forbidden, "forbidden");
     }
 
     [Fact]
-    public async Task Correct_admin_key_opens_the_correction_list()
+    public async Task Admin_token_without_a_subject_is_refused()
     {
-        using var factory = new ConfiguredApiFactory(WithAdminKey());
-        using var request = Request(HttpMethod.Get, ListPath, AdminKey);
+        using var factory = new ConfiguredApiFactory(AuthorityConfigured);
+        using var request = Request(HttpMethod.Get, ListPath, "Bearer test::Admin");
+
+        await ContractAssert.ErrorResponseAsync(await factory.CreateClient().SendAsync(request), HttpStatusCode.Forbidden, "forbidden");
+    }
+
+    [Theory]
+    [InlineData("Bearer test:admin-user:Admin")]
+    [InlineData("Bearer test:root-user:SuperAdmin")]
+    [InlineData("Bearer testlong:admin-user:Admin")]
+    public async Task Admin_or_superadmin_role_opens_the_correction_list_under_either_role_claim_name(string authorization)
+    {
+        using var factory = new ConfiguredApiFactory(AuthorityConfigured);
+        using var request = Request(HttpMethod.Get, ListPath, authorization);
 
         var response = await factory.CreateClient().SendAsync(request);
 
@@ -92,39 +122,97 @@ public sealed class AdminEndpointTests
     }
 
     [Fact]
-    public async Task Admin_key_passed_in_the_query_string_is_not_accepted()
+    public async Task A_valid_admin_token_reaches_the_correction_handler()
     {
-        using var factory = new ConfiguredApiFactory(WithAdminKey());
+        using var factory = new ConfiguredApiFactory(AuthorityConfigured);
         var client = factory.CreateClient();
 
-        var byName = await client.GetAsync($"{ListPath}?X-Admin-Key={AdminKey}");
-        await ContractAssert.ErrorResponseAsync(byName, HttpStatusCode.Unauthorized, "unauthorized");
+        // The id does not exist: a 404 from the handler (not from the filter) proves the token passed the gate.
+        var missingCorrection = Guid.NewGuid().ToString();
+        using var patch = PatchCorrection(missingCorrection, SuperAdminToken);
+        await ContractAssert.ErrorResponseAsync(await client.SendAsync(patch), HttpStatusCode.NotFound, "not_found");
+    }
 
-        var byParameter = await client.GetAsync($"{ListPath}?adminKey={AdminKey}");
-        await ContractAssert.ErrorResponseAsync(byParameter, HttpStatusCode.Unauthorized, "unauthorized");
+    [Fact]
+    public async Task Former_admin_key_header_and_token_in_the_query_string_are_not_accepted()
+    {
+        using var factory = new ConfiguredApiFactory(AuthorityConfigured);
+        var client = factory.CreateClient();
+
+        using var oldHeader = Request(HttpMethod.Get, ListPath, null);
+        oldHeader.Headers.TryAddWithoutValidation("X-Admin-Key", "replace-me-test-admin-credential");
+        await ContractAssert.ErrorResponseAsync(await client.SendAsync(oldHeader), HttpStatusCode.Unauthorized, "unauthorized");
+
+        var inQuery = await client.GetAsync($"{ListPath}?access_token=admin-user&adminKey=x");
+        await ContractAssert.ErrorResponseAsync(inQuery, HttpStatusCode.Unauthorized, "unauthorized");
     }
 
     [Fact]
     public async Task Public_api_key_is_not_an_admin_credential()
     {
-        using var factory = new ConfiguredApiFactory(WithAdminKey());
+        using var factory = new ConfiguredApiFactory(AuthorityConfigured);
         var client = factory.CreateClient();
         var issued = await JsonTestHelpers.ReadJsonAsync(await client.PostAsync(
             "/api/v1/keys", new StringContent("{\"label\":\"not-admin\"}", Encoding.UTF8, "application/json")));
         var publicKey = issued.GetProperty("apiKey").GetString() ?? string.Empty;
 
-        using var request = Request(HttpMethod.Get, ListPath, publicKey);
+        using var request = Request(HttpMethod.Get, ListPath, "Bearer " + publicKey);
         await ContractAssert.ErrorResponseAsync(await client.SendAsync(request), HttpStatusCode.Unauthorized, "unauthorized");
     }
 
     [Fact]
     public async Task Admin_responses_are_never_cached()
     {
-        using var factory = new ConfiguredApiFactory(WithAdminKey());
-        using var request = Request(HttpMethod.Get, ListPath, AdminKey);
+        using var factory = new ConfiguredApiFactory(AuthorityConfigured);
+        using var request = Request(HttpMethod.Get, ListPath, AdminToken);
 
         var response = await factory.CreateClient().SendAsync(request);
 
         Assert.True(response.Headers.CacheControl?.NoStore ?? false, "Admin responses must send Cache-Control: no-store.");
+    }
+
+    [Fact]
+    public async Task Health_reports_authservice_disabled_without_Authority_and_ok_with_it()
+    {
+        using var unset = new ConfiguredApiFactory();
+        var unsetRoot = await JsonTestHelpers.ReadJsonAsync(await unset.CreateClient().GetAsync("/health"));
+        AssertIntegrationState(unsetRoot, "authservice", "disabled");
+
+        using var set = new ConfiguredApiFactory(AuthorityConfigured);
+        var setRoot = await JsonTestHelpers.ReadJsonAsync(await set.CreateClient().GetAsync("/health"));
+        AssertIntegrationState(setRoot, "authservice", "ok");
+    }
+
+    [Fact]
+    public void Authority_without_issuer_or_audience_fails_startup_and_names_the_setting()
+    {
+        var incomplete = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Auth:Authority"] = "https://auth.test.invalid",
+        };
+        using var factory = new ConfiguredApiFactory(incomplete);
+
+        var error = Assert.ThrowsAny<Exception>(() => { factory.CreateClient(); });
+
+        Assert.Contains("Auth:Issuer", FlattenMessages(error), StringComparison.Ordinal);
+    }
+
+    private static void AssertIntegrationState(JsonElement root, string integrationName, string expectedState)
+    {
+        var entry = JsonTestHelpers.FindObjectContainingString(root, integrationName);
+        Assert.True(entry.HasValue, $"/health does not list integration '{integrationName}'. Body: {root.GetRawText()}");
+        Assert.True(JsonTestHelpers.ContainsString(entry.Value, expectedState),
+            $"Integration '{integrationName}' is not reported with state '{expectedState}'. Entry: {entry.Value.GetRawText()}");
+    }
+
+    private static string FlattenMessages(Exception? error)
+    {
+        var messages = new StringBuilder();
+        for (var current = error; current is not null; current = current.InnerException)
+        {
+            messages.AppendLine(current.Message);
+        }
+
+        return messages.ToString();
     }
 }
