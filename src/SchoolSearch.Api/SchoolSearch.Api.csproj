@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SchoolSearch.ServiceDefaults\SchoolSearch.ServiceDefaults.csproj" />
     <ProjectReference Include="..\SchoolSearch.Catalog.Data\SchoolSearch.Catalog.Data.csproj" />
+    <ProjectReference Include="..\SchoolSearch.Contracts\SchoolSearch.Contracts.csproj" />
   </ItemGroup>
 
   <!--

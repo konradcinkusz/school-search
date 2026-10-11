@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>SchoolSearch.Import</RootNamespace>
+    <AssemblyName>SchoolSearch.Import</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    One-shot importer (own image, own machine). Writes the catalog; it never serves traffic.
+    Plain EF + environment configuration: no kernel (ServiceDefaults) reference.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\SchoolSearch.Catalog.Data\SchoolSearch.Catalog.Data.csproj" />
+    <ProjectReference Include="..\SchoolSearch.Contracts\SchoolSearch.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" />
+    <PackageReference Include="CsvHelper" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+</Project>
