@@ -101,12 +101,28 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
+      - name: Generate ephemeral CI secrets (per run, never stored)
+        # Values exist only in this job's environment: the BFF shared secret, the web session key and the reviews
+        # subject pepper. Written to GITHUB_ENV so later steps see them; GitHub masks nothing it did not receive.
+        run: |
+          {
+            echo "BFF_SHARED_SECRET=$(openssl rand -base64 32)"
+            echo "SESSION_SECRET=$(openssl rand -base64 48)"
+            echo "Reviews__SubjectPepper=$(openssl rand -hex 32)"
+          } >> "$GITHUB_ENV"
       - name: Build and start the API (in-memory provider, no secrets)
         run: |
           dotnet build src/SchoolSearch.Api/SchoolSearch.Api.csproj -c Release
           # The demo seed refuses Production; an unset ASPNETCORE_ENVIRONMENT means Production, so CI sets Staging.
           SCHOOLSEARCH_DEMO_SEED=true ASPNETCORE_ENVIRONMENT=Staging ASPNETCORE_URLS=http://localhost:8080 nohup dotnet src/SchoolSearch.Api/bin/Release/net10.0/SchoolSearch.Api.dll > api.log 2>&1 &
           curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8080/alive
+      - name: Build and start the Reviews service (in-memory provider, no authservice)
+        # Staging with no ConnectionStrings__reviewsdb selects InMemory. AUTH_BASE_URL is unset on purpose:
+        # account routes degrade (P8). Login against a real authservice is NOT RUN in CI.
+        run: |
+          dotnet build src/SchoolSearch.Reviews/SchoolSearch.Reviews.csproj -c Release
+          ASPNETCORE_ENVIRONMENT=Staging ASPNETCORE_URLS=http://localhost:8082 nohup dotnet src/SchoolSearch.Reviews/bin/Release/net10.0/SchoolSearch.Reviews.dll > reviews.log 2>&1 &
+          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8082/alive
       - name: Install web dependencies
         working-directory: web
         run: pnpm install --frozen-lockfile
@@ -114,6 +130,7 @@ jobs:
         working-directory: web
         env:
           CATALOG_API_URL: http://localhost:8080
+          REVIEWS_BASE_URL: http://localhost:8082
         run: |
           pnpm --filter ./app run build
           PORT=3000 nohup pnpm --filter ./app exec next start -p 3000 > ../web.log 2>&1 &
@@ -138,6 +155,7 @@ jobs:
         if: failure()
         run: |
           tail -n 40 api.log || true
+          tail -n 40 reviews.log || true
           tail -n 30 web.log || true
 
   docker-build:
@@ -161,6 +179,24 @@ jobs:
         run: |
           docker run -d --name api -p 8080:8080 school-search-api:ci
           curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8080/health
+      - name: Build Reviews image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/SchoolSearch.Reviews/Dockerfile
+          push: false
+          load: true
+          tags: school-search-reviews:ci
+          cache-from: type=gha,scope=reviews
+          cache-to: type=gha,mode=max,scope=reviews
+      - name: Smoke-test the Reviews image on :8082
+        # Host port 8082: the API and MCP containers above hold 8080 and 8081. Staging selects InMemory (no database here).
+        run: |
+          docker run -d --name reviews -p 8082:8080 \
+            -e ASPNETCORE_ENVIRONMENT=Staging \
+            -e "Reviews__SubjectPepper=$(openssl rand -hex 32)" \
+            school-search-reviews:ci
+          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8082/health
       - name: Build MCP image (no push)
         uses: docker/build-push-action@v6
         with:

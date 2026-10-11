@@ -7,7 +7,7 @@ using SchoolSearch.Api.RateLimiting;
 
 namespace SchoolSearch.Api.Security;
 
-/// <summary>Registers API keys, the admin credential and the key-issuance rate policy. Called from Program.cs.</summary>
+/// <summary>Registers API keys and the key-issuance rate policy. Called from Program.cs. Admin auth is wired separately.</summary>
 public static class SecurityServiceCollectionExtensions
 {
     public static IServiceCollection AddSecurityServices(this IServiceCollection services, IConfiguration config)
@@ -16,7 +16,6 @@ public static class SecurityServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
 
         services.AddScoped<ApiKeyService>();
-        services.AddSingleton(AdminKeyCredential.FromSecret(config[AdminKeyCredential.ConfigurationKey]));
 
         services.AddRateLimiter(options =>
         {

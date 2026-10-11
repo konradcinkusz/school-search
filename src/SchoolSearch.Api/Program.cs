@@ -20,6 +20,7 @@ builder.Services.AddCatalogApi(builder.Configuration);
 builder.Services.AddSearchServices();
 builder.Services.AddCorrectionServices();
 builder.Services.AddSecurityServices(builder.Configuration);
+builder.Services.AddAuthServiceAuthentication(builder.Configuration, builder.Environment);
 builder.Services.AddDemoSeed(builder.Configuration);
 builder.Services.AddAiServices(builder.Configuration);
 

@@ -18,6 +18,8 @@
   -->
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <!-- Validation only (ADR-0015): access tokens from authservice. Version lives in Directory.Packages.props. -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <!-- Anthropic SDK: referenced only by Ai/AnthropicExplainClient.cs. Version lives in Directory.Packages.props. -->
     <PackageReference Include="Anthropic" />
   </ItemGroup>

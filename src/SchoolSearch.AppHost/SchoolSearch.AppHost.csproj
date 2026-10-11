@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SchoolSearch.Api\SchoolSearch.Api.csproj" />
+    <ProjectReference Include="..\SchoolSearch.Reviews\SchoolSearch.Reviews.csproj" />
   </ItemGroup>
 
 </Project>

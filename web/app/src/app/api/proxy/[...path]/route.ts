@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { catalogCandidates } from "@/lib/catalog-url";
+import { isSameOrigin } from "@/lib/bff-auth";
+import { forwardToReviews, reviewsRouteFor } from "@/lib/reviews-proxy";
 import { isSlug, isToken } from "@/lib/validation";
 
 // BFF catch-all (FRONTEND-BFF §5): the browser talks only to this origin; the backend address stays server-side.
@@ -154,7 +156,12 @@ export async function GET(
   context: { params: Promise<{ path: string[] }> },
 ): Promise<NextResponse> {
   const { path } = await context.params;
-  if (!segmentsAreSafe(path) || !matchesRoute(path, GET_ROUTES)) {
+  if (!segmentsAreSafe(path)) {
+    return errorResponse(404, "not_found", "Nie znaleziono zasobu.");
+  }
+  const reviews = reviewsRouteFor(path, "GET");
+  if (reviews) return forwardToReviews(request, path, reviews, null);
+  if (!matchesRoute(path, GET_ROUTES)) {
     return errorResponse(404, "not_found", "Nie znaleziono zasobu.");
   }
   return forward(request, path, "GET", null);
@@ -165,10 +172,15 @@ export async function POST(
   context: { params: Promise<{ path: string[] }> },
 ): Promise<NextResponse> {
   const { path } = await context.params;
-  if (!segmentsAreSafe(path) || !matchesRoute(path, POST_ROUTES)) {
+  const reviews = segmentsAreSafe(path) ? reviewsRouteFor(path, "POST") : null;
+  if (!reviews && (!segmentsAreSafe(path) || !matchesRoute(path, POST_ROUTES))) {
     return errorResponse(404, "not_found", "Nie znaleziono zasobu.");
   }
   if (!originAllowed(request)) {
+    return errorResponse(403, "forbidden_origin", "Żądanie z tej domeny nie jest dozwolone.");
+  }
+  // Reviews writes that act for a signed-in user must come from this origin, never from a foreign page.
+  if (reviews && reviews.access !== "anonymous" && !isSameOrigin(request)) {
     return errorResponse(403, "forbidden_origin", "Żądanie z tej domeny nie jest dozwolone.");
   }
   const contentType = request.headers.get("content-type") ?? "";
@@ -186,6 +198,7 @@ export async function POST(
   if (new TextEncoder().encode(body).byteLength > MAX_BODY_BYTES) {
     return errorResponse(413, "payload_too_large", "Zgłoszenie jest za duże.");
   }
+  if (reviews) return forwardToReviews(request, path, reviews, body);
   if (optionalBody && body === "") return forward(request, path, "POST", null);
   if (!isJson) {
     return errorResponse(415, "unsupported_media_type", "Oczekiwano danych w formacie JSON.");
@@ -193,10 +206,27 @@ export async function POST(
   return forward(request, path, "POST", body);
 }
 
-/** Every other method is refused: the proxy is read-only except for the corrections intake. */
-export function PUT(): NextResponse {
+/** Only the reviews allowlist accepts DELETE (own review withdrawal). Everything else is refused. */
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ path: string[] }> },
+): Promise<NextResponse> {
+  const { path } = await context.params;
+  const reviews = segmentsAreSafe(path) ? reviewsRouteFor(path, "DELETE") : null;
+  if (!reviews) return methodNotAllowed();
+  if (!isSameOrigin(request)) {
+    return errorResponse(403, "forbidden_origin", "Żądanie z tej domeny nie jest dozwolone.");
+  }
+  return forwardToReviews(request, path, reviews, null);
+}
+
+function methodNotAllowed(): NextResponse {
   return errorResponse(405, "method_not_allowed", "Metoda nie jest dozwolona.");
 }
 
+/** Every other method is refused: the proxy is read-only except for the corrections intake and reviews writes. */
+export function PUT(): NextResponse {
+  return methodNotAllowed();
+}
+
 export const PATCH = PUT;
-export const DELETE = PUT;

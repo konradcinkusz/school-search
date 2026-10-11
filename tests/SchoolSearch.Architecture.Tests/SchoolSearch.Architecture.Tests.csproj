@@ -21,6 +21,11 @@
     <ProjectReference Include="..\..\src\SchoolSearch.Import\SchoolSearch.Import.csproj" />
   </ItemGroup>
 
+  <!-- ADR-0015: the Reviews service is a separate deployable. Referenced only once its project exists, so the solution builds before it lands. -->
+  <ItemGroup Condition="Exists('..\..\src\SchoolSearch.Reviews\SchoolSearch.Reviews.csproj')">
+    <ProjectReference Include="..\..\src\SchoolSearch.Reviews\SchoolSearch.Reviews.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
