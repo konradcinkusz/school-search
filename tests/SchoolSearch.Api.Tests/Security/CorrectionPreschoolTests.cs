@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SchoolSearch.Api.Corrections;
 using SchoolSearch.Api.Tests.Public;
 using SchoolSearch.Catalog.Data;
 using SchoolSearch.Catalog.Data.Entities;
@@ -53,7 +54,7 @@ public sealed class CorrectionPreschoolTests
 
         // The seeded preschool has IdPodmiot 1, and school 1 exists too. The stored id is negative, so no school matches it.
         Assert.Equal("preschool.hours", row.Field);
-        Assert.Equal(-1, row.SchoolId);
+        Assert.Equal(-1L, row.SchoolId);
         Assert.False(await db.Schools.AnyAsync(s => s.IdPodmiot == row.SchoolId));
     }
 
@@ -114,7 +115,7 @@ public sealed class CorrectionPreschoolTests
         using var factory = await SeededFactoryAsync();
         var client = factory.CreateClient();
 
-        for (var i = 0; i < CorrectionEndpointsLimit; i++)
+        for (var i = 0; i < CorrectionEndpoints.MaxOpenPerSchoolFieldPerClient; i++)
         {
             using var accepted = await client.PostAsync("/api/v1/corrections", Body(new { kind = "preschool", slug = PreschoolSlug, field = "free_places", message = Message + " " + i }));
             Assert.Equal(HttpStatusCode.Created, accepted.StatusCode);
@@ -130,7 +131,7 @@ public sealed class CorrectionPreschoolTests
         using var factory = await SeededFactoryAsync();
         var client = factory.CreateClient();
 
-        for (var i = 0; i < CorrectionEndpointsLimit; i++)
+        for (var i = 0; i < CorrectionEndpoints.MaxOpenPerSchoolFieldPerClient; i++)
         {
             using var accepted = await client.PostAsync("/api/v1/corrections", Body(new { kind = "preschool", slug = PreschoolSlug, field = "address", message = Message + " " + i }));
             Assert.Equal(HttpStatusCode.Created, accepted.StatusCode);
@@ -140,9 +141,6 @@ public sealed class CorrectionPreschoolTests
         using var school = await client.PostAsync("/api/v1/corrections", Body(new { slug = PublicSeed.SchoolA, field = "address", message = Message }));
         Assert.Equal(HttpStatusCode.Created, school.StatusCode);
     }
-
-    /// <summary>Open requests one client may hold per school and field (mirrors CorrectionEndpoints.MaxOpenPerSchoolFieldPerClient).</summary>
-    private const int CorrectionEndpointsLimit = 3;
 
     private static async Task<ConfiguredApiFactory> SeededFactoryAsync()
     {
