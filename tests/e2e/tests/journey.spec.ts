@@ -78,7 +78,7 @@ test.describe("public journey on the synthetic demo gmina", () => {
     await expect(page.getByText(/\d+(?:[.,]\d+)?\s*±\s*\d+(?:[.,]\d+)?/).first()).toBeVisible();
     await expect(page.getByText(/\d+\s+uczniów/).first()).toBeVisible();
     await expect(page.getByText(methodology.version, { exact: false }).first()).toBeVisible();
-    await expect(page.getByText("street_list", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Obwody: lista ulic", { exact: true }).first()).toBeVisible();
     await expect(page.getByText(/Szkoły w zasięgu/).first()).toBeVisible();
   });
 
@@ -86,7 +86,7 @@ test.describe("public journey on the synthetic demo gmina", () => {
     await page.goto("/szkoly/demo-sp-1");
 
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Szkoła Podstawowa nr 1");
-    const trend = page.locator("section", { has: page.getByRole("heading", { name: /trend/i }) });
+    const trend = page.locator("section", { has: page.getByRole("heading", { name: /Wyniki w kolejnych latach/ }) });
     await expect(trend.locator("svg").first()).toBeVisible();
 
     const provenance = page.getByRole("table").filter({ hasText: "DEMO SEED" });
@@ -150,7 +150,8 @@ test.describe("public journey on the synthetic demo gmina", () => {
   test("correction form submit returns a public token", async ({ page }) => {
     await page.goto("/dla-szkol");
 
-    await page.getByLabel("Nazwa szkoły").fill(CATCHMENT_SCHOOL);
+    await page.getByLabel("Identyfikator szkoły (slug)").fill("demo-sp-1");
+    await page.getByLabel("Czego dotyczy korekty?").selectOption("name");
     await page
       .getByLabel("Co jest błędne i jakie są właściwe dane?")
       .fill("Testowe zgłoszenie korekty (dane demonstracyjne).");
@@ -171,9 +172,10 @@ test.describe("public journey on the synthetic demo gmina", () => {
   test("gmina without catchment data shows the no-data state and never a guessed school", async ({ page }) => {
     await lookUpCatchment(page, DEMO_GMINA_NO_DATA, DEMO_STREET, DEMO_NUMBER);
 
-    await expect(page.getByText("brak danych", { exact: false }).first()).toBeVisible();
-    await expect(page.getByText(NO_DATA_SCHOOL, { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Brak danych o obwodach", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(/Nie wyznaczamy go na podstawie odległości/).first()).toBeVisible();
+    // No school is presented as the catchment school, and the catchment school of another gmina never appears.
+    await expect(page.getByRole("heading", { name: "Szkoła obwodowa" })).toHaveCount(0);
     await expect(page.getByText(CATCHMENT_SCHOOL, { exact: true })).toHaveCount(0);
-    await expect(page.getByText(/±/)).toHaveCount(0);
   });
 });

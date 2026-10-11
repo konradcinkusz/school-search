@@ -82,24 +82,78 @@ async function CompareResults({ slugs }: { slugs: string[] }) {
           Wybrane szkoły mają wyniki z różnych wersji metodologii. Nie porównujemy takich wyników bezpośrednio.
         </div>
       ) : null}
-      <div className="compare-grid">
-        {items.map((school) => (
-          <article key={school.slug} className="card compare-card">
-            <h2>
-              <Link href={`/szkoly/${school.slug}`}>{school.name}</Link>
-            </h2>
-            <p className="muted">{school.gminaName ?? `gmina TERYT ${school.gminaTeryt}`}</p>
-            <ScoreBadge
-              status={school.scoreStatus}
-              block={school.score}
-              fallbackMethodologyVersion={school.methodologyVersion}
-            />
-            <p className="muted">
-              Liczebność w ostatnim publikowanym roku:{" "}
-              {school.score ? formatStudents(school.score.cohortSize) : "brak danych"}
-            </p>
-          </article>
-        ))}
+      <div className="table-wrap">
+        <table>
+          <caption>Porównanie szkół: te same cechy dla każdej szkoły</caption>
+          <thead>
+            <tr>
+              <th scope="col">Cecha</th>
+              {items.map((school) => (
+                <th scope="col" key={school.slug}>
+                  <Link href={`/szkoly/${school.slug}`}>{school.name}</Link>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Gmina</th>
+              {items.map((school) => (
+                <td key={school.slug}>{school.gminaName ?? `TERYT ${school.gminaTeryt}`}</td>
+              ))}
+            </tr>
+            <tr>
+              <th scope="row">Rodzaj szkoły</th>
+              {items.map((school) => (
+                <td key={school.slug}>
+                  {school.isPublic ? "publiczna" : "niepubliczna"}
+                  {school.isSpecial ? ", specjalna" : ""}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <th scope="row">Wynik z przedziałem</th>
+              {items.map((school) => (
+                <td key={school.slug}>
+                  <ScoreBadge
+                    status={school.scoreStatus}
+                    block={school.score}
+                    fallbackMethodologyVersion={school.methodologyVersion}
+                  />
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <th scope="row">Liczebność kohorty</th>
+              {items.map((school) => (
+                <td key={school.slug}>{school.score ? formatStudents(school.score.cohortSize) : "brak danych"}</td>
+              ))}
+            </tr>
+            <tr>
+              <th scope="row">Rok egzaminu</th>
+              {items.map((school) => (
+                <td key={school.slug}>{school.score ? school.score.examYear : "brak danych"}</td>
+              ))}
+            </tr>
+            <tr>
+              <th scope="row">Typ organu prowadzącego</th>
+              {items.map((school) => (
+                <td key={school.slug}>
+                  {school.governingBody.typeLabel ??
+                    (school.governingBody.typeCode !== null
+                      ? `kod ${school.governingBody.typeCode} (opis niezweryfikowany)`
+                      : "brak danych")}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <th scope="row">Wersja metodologii</th>
+              {items.map((school) => (
+                <td key={school.slug}>{school.methodologyVersion}</td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
       </div>
       <p className="muted">
         Wersja metodologii: {[...versions].join(", ") || "brak"}. Wynik nie jest oficjalnym rankingiem.
