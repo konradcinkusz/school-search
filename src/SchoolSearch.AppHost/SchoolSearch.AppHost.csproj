@@ -3,6 +3,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
+    <!-- ASPIRE010: the CLI bundle is optional; dev-only composition root (P1) does not need it. -->
+    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
     <UserSecretsId>5d0c7a3e-2b9f-4e61-9a8d-7c1f3b6e2a40</UserSecretsId>
   </PropertyGroup>
 
