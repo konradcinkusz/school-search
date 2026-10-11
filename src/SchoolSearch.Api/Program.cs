@@ -1,5 +1,6 @@
 using SchoolSearch.Api.Catchment;
 using SchoolSearch.Api.Corrections;
+using SchoolSearch.Api.Demo;
 using SchoolSearch.Api.Endpoints;
 using SchoolSearch.Api.Extensions;
 using SchoolSearch.Api.Search;
@@ -17,6 +18,7 @@ builder.Services.AddCatalogApi(builder.Configuration);
 builder.Services.AddSearchServices();
 builder.Services.AddCorrectionServices();
 builder.Services.AddSecurityServices(builder.Configuration);
+builder.Services.AddDemoSeed(builder.Configuration);
 
 var app = builder.Build();
 

@@ -12,7 +12,7 @@ namespace SchoolSearch.Import.Catchment;
 /// normalisation); replace every character that is not a letter or digit by a space; collapse whitespace;
 /// drop one leading street-type prefix ("ul", "ulica", "al", "aleja", "pl", "plac").
 /// </remarks>
-internal static class StreetNormalizer
+public static class StreetNormalizer
 {
     public const int MaxLength = 200;
 
