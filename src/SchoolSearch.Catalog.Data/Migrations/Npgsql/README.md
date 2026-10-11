@@ -10,6 +10,7 @@ Migrations, in order:
 | `20261011000000_InitialCreate` | `InitialCreate` | Phase A: `Schools` (SIO register subset). |
 | `20261011010000_Phase_B_Ingest` | `PhaseBIngest` | Phase B: new `Schools` columns (`IsSpecial`, `FaithAffiliationDerived`, `FaithAffiliationDeclared`, `Latitude`, `Longitude`, owned `CoordinatesProvenance_*`); tables `ClassCohorts`, `ExamResults`, `NationalBaselines`, `GoverningBodyTypes`, `ImportRuns`. |
 | `20261012000000_Phase_C_PublicSurface` | `PhaseCPublicSurface` | Phase C: `Schools.GminaName`; tables `ApiKeys`, `CorrectionRequests`, `CatchmentCoverages`, `CatchmentStreets` (identity `Id`, index `(GminaTeryt, StreetNormalized)`); unique indexes `IX_ApiKeys_KeyHash`, `IX_CorrectionRequests_PublicToken`; index `IX_CorrectionRequests_Status_CreatedAt`. |
+| `20261013000000_Phase_D_Preschools` | `PhaseDPreschools` | Phase D: tables `Preschools` (SIO units, location, owned provenance; unique `IX_Preschools_Slug`; indexes `IX_Preschools_GminaTeryt`, `IX_Preschools_IsPublic`) and `PreschoolFacts` (one-to-one with `Preschools` by key, FK cascade delete; tuition, meal, hours, free places, `Confidence`; check constraints for non-negative amounts, min <= max and the Confidence values). No score column (ADR-0014). |
 
 The newest id is `CatalogSchema.LatestMigrationId` (`src/SchoolSearch.Catalog.Data/CatalogSchema.cs`).
 Update it with every new migration. The importer refuses to run (exit 2) when `__EFMigrationsHistory`
@@ -25,6 +26,9 @@ Status:
   and `NationalBaselines`; the primary key is the unique key.
 - No foreign keys are declared (the entities carry plain `SchoolId` values). The loaders enforce
   that a school exists before writing its rows.
+  Exception (Phase D): `PreschoolFacts.PreschoolId` is the primary key and a foreign key to `Preschools.IdPodmiot`
+  with `ON DELETE CASCADE`, because facts are a one-to-one part of a preschool. The loaders still check the id exists.
+- Phase D check constraints are declared with `HasCheckConstraint` (`PreschoolFacts`). EF InMemory ignores them.
 - The Designer files (`*.Designer.cs`) and `CatalogDbContextModelSnapshot.cs` are **missing**.
   Without a snapshot, EF 9+ reports `PendingModelChangesWarning` on `MigrateAsync`. The context
   suppresses that warning in `CatalogDbContext.OnConfiguring`. Remove the suppression once the snapshot exists.

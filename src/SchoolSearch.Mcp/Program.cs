@@ -19,6 +19,7 @@ builder.Services.AddMcpRateLimiting();
 builder.Services.AddMcpServer()
     .WithHttpTransport(options => options.Stateless = true) // read-only tools: no per-session state, no machine affinity
     .WithTools<SchoolTools>()
+    .WithTools<PreschoolTools>()
     .WithResources<SchoolResources>()
     .WithPrompts<SchoolPrompts>();
 

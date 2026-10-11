@@ -373,11 +373,11 @@ Stripped before sending: submitter e-mail and phone numbers (regex and removal, 
 **Phase.** D.
 
 **Data sent (exact).**
-- The text of the operator's own or official page, converted to text, pruned to blocks that contain price-related keywords plus three lines of context on each side. Maximum 8000 tokens of input per item.
-- `sourceUrl` and `fetchedAt` (asOf).
+- The text of a tuition table file that a person has saved from the gmina's or the operator's published page (PDF or HTML), converted to text by a local tool, pruned to blocks that contain price-related keywords plus three lines of context on each side. Maximum 8000 tokens of input per item. The file is an input the operator supplies; no page is fetched by the code or by the model (Phase D rule, ADR-0014).
+- `sourceUrl` (typed by the person who saved the file) and `asOf` (the date the person saved it).
 - The operator type bucket (`publiczny`, `niepubliczny`, or `niepubliczny-osoba-fizyczna`). For the last bucket no operator name is included at all (B4).
 
-Pre-send filter: the page text is searched for personal names near staff keywords ("dyrektor", "nauczyciel"); those lines are removed before sending, because the output schema has no staff field anyway. Pages from hosts outside the allowlist are not fetched (B10). The fetch layer respects robots.txt and is outside the AI code.
+Pre-send filter: the page text is searched for personal names near staff keywords ("dyrektor", "nauczyciel"); those lines are removed before sending, because the output schema has no staff field anyway. Files from sources the operator did not supply, and any competitor source, are not loaded (B10, SOURCES §4A). The code does not fetch pages, so there is no fetch layer and no robots.txt step.
 
 **Model tier.** `claude-haiku-5-5`, effort `low`, batch. Escalate to `claude-sonnet-5-5` for items the validator rejects.
 

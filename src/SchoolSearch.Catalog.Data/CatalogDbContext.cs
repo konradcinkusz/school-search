@@ -31,6 +31,10 @@ public sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> options)
 
     public DbSet<CatchmentStreet> CatchmentStreets => Set<CatchmentStreet>();
 
+    public DbSet<Preschool> Preschools => Set<Preschool>();
+
+    public DbSet<PreschoolFacts> PreschoolFacts => Set<PreschoolFacts>();
+
     /// <summary>
     /// The Npgsql migrations are hand-written and no model snapshot exists yet (see
     /// Migrations/Npgsql/README.md). EF 9+ would otherwise make MigrateAsync fail with
@@ -251,6 +255,88 @@ public sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> options)
             entity.HasIndex(c => new { c.GminaTeryt, c.StreetNormalized });
 
             entity.OwnsOne(c => c.Provenance, provenance =>
+            {
+                provenance.Property(p => p.Source).HasMaxLength(200).IsRequired();
+                provenance.Property(p => p.SourceUrl).HasMaxLength(500).IsRequired();
+                provenance.Property(p => p.AsOf).IsRequired();
+                provenance.Property(p => p.Method).HasMaxLength(500).IsRequired();
+            });
+        });
+
+        modelBuilder.Entity<Preschool>(entity =>
+        {
+            entity.ToTable("Preschools");
+
+            entity.HasKey(p => p.IdPodmiot);
+            entity.Property(p => p.IdPodmiot).ValueGeneratedNever();
+
+            entity.Property(p => p.Name).HasMaxLength(300).IsRequired();
+            entity.Property(p => p.Slug).HasMaxLength(200).IsRequired();
+            entity.HasIndex(p => p.Slug).IsUnique();
+
+            entity.Property(p => p.GminaTeryt).HasMaxLength(7);
+            entity.HasIndex(p => p.GminaTeryt);
+            entity.Property(p => p.GminaName).HasMaxLength(120);
+            entity.Property(p => p.GoverningBodyTypeCode);
+            entity.Property(p => p.IsPublic).HasDefaultValue(false);
+            entity.HasIndex(p => p.IsPublic);
+            entity.Property(p => p.Street).HasMaxLength(200);
+            entity.Property(p => p.PostalCode).HasMaxLength(10);
+            entity.Property(p => p.City).HasMaxLength(120);
+            entity.Property(p => p.Latitude);
+            entity.Property(p => p.Longitude);
+
+            entity.OwnsOne(p => p.Provenance, provenance =>
+            {
+                provenance.Property(p => p.Source).HasMaxLength(200).IsRequired();
+                provenance.Property(p => p.SourceUrl).HasMaxLength(500).IsRequired();
+                provenance.Property(p => p.AsOf).IsRequired();
+                provenance.Property(p => p.Method).HasMaxLength(500).IsRequired();
+            });
+
+            entity.HasOne(p => p.Facts)
+                .WithOne()
+                .HasForeignKey<PreschoolFacts>(f => f.PreschoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PreschoolFacts>(entity =>
+        {
+            entity.ToTable("PreschoolFacts", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_PreschoolFacts_MonthlyTuitionMin_NonNegative",
+                    "\"MonthlyTuitionMinPln\" >= 0");
+                table.HasCheckConstraint(
+                    "CK_PreschoolFacts_MonthlyTuitionMax_NonNegative",
+                    "\"MonthlyTuitionMaxPln\" >= 0");
+                table.HasCheckConstraint(
+                    "CK_PreschoolFacts_MonthlyTuition_MinNotAboveMax",
+                    "\"MonthlyTuitionMinPln\" <= \"MonthlyTuitionMaxPln\"");
+                table.HasCheckConstraint(
+                    "CK_PreschoolFacts_MonthlyMeal_NonNegative",
+                    "\"MonthlyMealPln\" >= 0");
+                table.HasCheckConstraint(
+                    "CK_PreschoolFacts_FreePlaces_NonNegative",
+                    "\"FreePlaces\" >= 0");
+                table.HasCheckConstraint(
+                    "CK_PreschoolFacts_Confidence",
+                    "\"Confidence\" IN ('reported', 'unverified')");
+            });
+
+            entity.HasKey(f => f.PreschoolId);
+            entity.Property(f => f.PreschoolId).ValueGeneratedNever();
+
+            entity.Property(f => f.MonthlyTuitionMinPln).HasPrecision(10, 2);
+            entity.Property(f => f.MonthlyTuitionMaxPln).HasPrecision(10, 2);
+            entity.Property(f => f.MonthlyMealPln).HasPrecision(10, 2);
+            entity.Property(f => f.OpensAt);
+            entity.Property(f => f.ClosesAt);
+            entity.Property(f => f.FreePlaces);
+            entity.Property(f => f.FreePlacesAsOf);
+            entity.Property(f => f.Confidence).HasMaxLength(16).HasDefaultValue("reported").IsRequired();
+
+            entity.OwnsOne(f => f.Provenance, provenance =>
             {
                 provenance.Property(p => p.Source).HasMaxLength(200).IsRequired();
                 provenance.Property(p => p.SourceUrl).HasMaxLength(500).IsRequired();

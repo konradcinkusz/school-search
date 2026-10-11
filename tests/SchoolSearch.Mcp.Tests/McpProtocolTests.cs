@@ -22,6 +22,8 @@ public sealed class McpProtocolTests
         "compare_schools",
         "get_ranking",
         "get_methodology",
+        "find_preschools",
+        "get_preschool",
     ];
 
     [Fact]
@@ -37,7 +39,7 @@ public sealed class McpProtocolTests
     }
 
     [Fact]
-    public async Task Tools_list_exposes_exactly_the_six_read_only_tools()
+    public async Task Tools_list_exposes_exactly_the_eight_read_only_tools()
     {
         using var factory = new McpTestFactory();
         using var mcp = await McpWireClient.ConnectAsync(factory.CreateClient());

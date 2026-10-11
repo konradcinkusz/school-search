@@ -13,6 +13,9 @@ export function SiteHeader() {
               <Link href="/ranking/country">Ranking</Link>
             </li>
             <li>
+              <Link href="/przedszkola">Przedszkola</Link>
+            </li>
+            <li>
               <Link href="/porownaj">Porównaj</Link>
             </li>
             <li>
