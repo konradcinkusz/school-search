@@ -20,6 +20,9 @@ primary_region = "waw"
   # Public URLs, so the Fly proxy can wake a stopped machine (Fly §6). SESSION_SECRET and BFF_SHARED_SECRET are Fly secrets.
   AUTH_BASE_URL = "https://school-search-authservice-dev.fly.dev"
   REVIEWS_BASE_URL = "https://school-search-reviews-dev.fly.dev"
+  # Monetisation (Phase F): premium profiles, enquiries and the seller account pages. The BFF calls the Billing service
+  # server-side. Unset means the billing features show "niedostępne" (P8). Public URL, same reason as REVIEWS_BASE_URL.
+  BILLING_BASE_URL = "https://school-search-billing-dev.fly.dev"
 
 [http_service]
   internal_port = 3000              # must equal PORT

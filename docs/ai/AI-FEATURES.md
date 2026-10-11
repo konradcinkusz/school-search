@@ -14,6 +14,7 @@
 | 5 | Correction triage and reply draft | Proposed | none | Needs admin credential and moderator queue. |
 | 6 | Preschool czesne extraction | Proposed (Phase D) | none | Needs preschool source list and spot-check process. |
 | 7 | Methodology Q&A | Proposed | none | Needs eval set; model choice open. |
+| 8 | Profile-copy assistant (Phase F, "Zaproponuj tekst") | **Implemented (F6), not deployed, not compiled in the authoring environment** | `src/SchoolSearch.Billing/Ai/`; see "Profile-copy assistant — implemented" at the end of this file | Owner-only draft, never saved or published. Behind `ANTHROPIC_API_KEY` and `AI_ENABLED`; without them 503 `ai_unavailable`. Needs the Phase F gates (legal review of the sales terms, provider decision) before go-live. |
 
 **Deviations from the proposal as implemented in PR 4 (feature 1):**
 
@@ -637,3 +638,53 @@ readers. The moderator queue (E1b) orders by the label. The labels are `ok`, `ne
 the pinned model; malformed or out-of-set output is `unclear`; an exhausted budget, the per-minute allowance and
 disabled AI skip the model; a triage never changes the review status; the prompt carries only title and body and
 escapes markup; the failure path writes nothing.
+
+## Profile-copy assistant — implemented
+
+Scope: feature 8 (Phase F). The owner of an approved school claim with a running subscription asks for a draft of the
+premium profile text. Code: `src/SchoolSearch.Billing/Ai/`. Endpoint: `POST /api/v1/premium/{slug}/draft` (VerifiedUser).
+
+- **Input.** The owner's bullet facts: 1 to 10 bullets, each 1 to 200 characters of plain text, no line breaks. Bullets
+  are linted with the same claim linter as the profile PUT, so a banned claim is refused (400 `claim_not_allowed`) before
+  any model call.
+- **Who may ask.** An approved claim by the same owner (subject hash) and a subscription by that owner in `active` or
+  `canceling` with `CurrentPeriodEnd` in the future. Anyone else gets 403 `premium_required`. The check reads the Billing
+  rows directly (`DraftAccess`); it does not re-check the profile lock, because a draft is never published.
+- **What is sent.** The fixed operator rules and a user turn with the bullets only, inside an `<untrusted>` block with
+  `<` and `>` escaped. The school slug, owner hash, claim and subscription rows are not parameters of the prompt builder.
+  The rules forbid invented facts, superlatives, rankings, comparisons, quality or safety claims, guarantees, verification
+  claims and any number not in the facts. The model answers in Polish, as one JSON object `{headline, description}`.
+- **Output checks.** A draft is returned only when it parses defensively (outermost braces, both fields non-empty, headline
+  at most 120 characters, description at most 1500, no `<` or `>`), passes the claim linter, and every digit run in it
+  occurs in the facts (`DraftChecks.DigitsGrounded`, the same rule as the Api's `NumberGuard`). Nothing is truncated.
+- **Retry.** One retry at most (`ProfileDraftService.MaxAttempts` = 2). A refusal, a cut-off answer (`max_tokens`), an
+  unparseable answer, or a failed check counts as an attempt. Two failures answer 422 `draft_rejected`; the failing text is never shown.
+- **Never saved.** The response is `{headline, description, aiLabel: "Wygenerowano przez AI", model, saved: false}`. The
+  service writes nothing. The owner edits the text and saves it through the profile PUT, which runs the linter again.
+- **Degrade (P8).** With no `ANTHROPIC_API_KEY`, or `AI_ENABLED=false`, no SDK client is built, the endpoint answers 503
+  `ai_unavailable`, and `/health` lists integration `anthropic` as `disabled`. A failed call answers 503 with a fixed
+  message; the exception text is never returned or logged, only its type.
+- **Cost guards.** `AI_DAILY_TOKEN_BUDGET` (default 100000, in memory, reset at UTC midnight; exhausted answers 503
+  `ai_budget_exhausted`), checked before each attempt, and a per-owner allowance of `Billing:Ai:DraftsPerSubjectPerHour`
+  (default 10, 429 `rate_limited` with `Retry-After`). The owner key is the subject hash, never the raw subject.
+- **Model.** `claude-haiku-5-5`, pinned by `AI_MODEL` or `Billing:Ai:Model`, `MaxOutputTokens` 1500. The only file in
+  SchoolSearch.Billing that references the Anthropic SDK is `AnthropicDraftClient.cs`, with calls copied from the Api's
+  `AnthropicExplainClient.cs`.
+
+**Deviations from the feature 1 and 4 patterns (recorded here, not re-decided):**
+
+- Two checks are added beyond the spec: the claim linter on the owner's facts (input), and the digit grounding check on
+  the draft. Both only refuse; neither changes what is sent.
+- Entitlement is a direct query on the Billing rows, not a call to `EntitlementService`, because the owner-scoped check
+  is not a function of that service. Replace it with the service call if one is added.
+- The system rules are in English and ask for Polish output, as the triage rules do. The explain rules are in Polish.
+- The output must be plain text: a `<` or `>` makes a draft unusable and is refused, not cleaned.
+- The per-owner allowance is in memory, as the Api's explain limiter is. A restart or a second instance gets its own counts.
+
+**Evals.** `tests/SchoolSearch.Billing.Tests/AiDraft*.cs` use a fake `IDraftClient` and make no network call. They cover:
+the draft is returned and nothing is saved; no approved claim, pending claim, expired subscription or another owner's
+claim gives no call; canceling-before-end is allowed; no key and an exhausted budget make no call; banned claims in the
+facts are refused before the call; one retry for a banned claim; two bad answers give `Rejected`; an invented number is
+refused; refusal and cut-off answers are refused; the exception text is not returned; the budget stops the retry; the
+allowance is per owner; the parser and input rules; the prompt carries only the facts and escapes markup.
+Not run: no .NET SDK in the authoring environment, and no live model call. A live eval set for drafts is still to be written.

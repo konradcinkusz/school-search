@@ -26,6 +26,11 @@
     <ProjectReference Include="..\..\src\SchoolSearch.Reviews\SchoolSearch.Reviews.csproj" />
   </ItemGroup>
 
+  <!-- ADR-0016 (Phase F): the Billing service is a separate deployable, referenced only once its project exists. Rules that name it are non-vacuous once it lands. -->
+  <ItemGroup Condition="Exists('..\..\src\SchoolSearch.Billing\SchoolSearch.Billing.csproj')">
+    <ProjectReference Include="..\..\src\SchoolSearch.Billing\SchoolSearch.Billing.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>

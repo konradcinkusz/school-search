@@ -22,7 +22,9 @@ the scanner, so nothing is numbered yet.
    step 4 (`ANTHROPIC_API_KEY`, optional). Never a file in the tree. Phase E values
    are set by hand: `Reviews:SubjectPepper` (optional, keeps author hashes stable),
    `Authservice:JwtPrivateKeyPem` (only with `IncludeAuthservice=true`, see
-   `docs/runbooks/AUTHSERVICE.md`).
+   `docs/runbooks/AUTHSERVICE.md`). Phase F values, also optional: `Billing:SubjectPepper`
+   (keeps subject hashes stable) and `Billing:WebhookSecret` (only once a provider is chosen,
+   see `docs/runbooks/BILLING.md`).
 2. **AppHost parameter**: `builder.AddParameter(..., secret: true)`, read from user
    secrets as `Parameters:<name>`.
 3. **Environment variable**: the AppHost passes it to the process as the variable
@@ -58,6 +60,14 @@ Source of truth for names and tiers: [`../secrets.env.example`](../secrets.env.e
 | `Dsa__ContactEmail` | mode | the owner's single point of contact (DSA art. 11/12); never invented | `GET /api/v1/legal/contact` answers 503 `contact_not_configured` |
 | `AI_ENABLED` | mode | `true` to enable review triage (E6) | triage idle; moderator queue shows no AI label |
 | `AUTHSERVICE_JWT_PRIVATE_KEY_PEM` | ci | the Fly secret source; generated once, see the runbook | the authservice deploy job fails before any change |
+| `Billing__MockMode` | mode | `true` locally (default outside Production); `false` in Production | synthetic checkout and simulate on outside Production; Production answers checkout 503 `billing_unavailable` |
+| `Billing__CheckoutBaseUrl` | mode | the payment provider's checkout origin, set only with a provider adapter (ADR-0016) | mock checkout only; Production answers 503 `billing_unavailable` |
+| `ConnectionStrings__billingdb` | secret | the Postgres instance, database `billingdb` | the billing service selects InMemory outside Production; Production answers 503 |
+| `Billing__SubjectPepper` | secret | `openssl rand -hex 32`, never changed once claims or subscriptions exist | a per-process pepper outside Production; Production refuses writes |
+| `Billing__WebhookSecret` | secret | the payment provider's dashboard, once a provider is chosen | mock mode accepts unsigned webhooks outside Production; Production rejects every webhook |
+| `BILLING_BASE_URL` | mode | the billing service origin for the web BFF | billing features show the unavailable state; catalog and reviews are unaffected |
+| `BILLING_SUBJECT_PEPPER` | ci | GitHub environment `dev` secret; becomes the Fly secret `Billing__SubjectPepper` | the billing deploy job fails before any change |
+| `BILLING_WEBHOOK_SECRET` | ci | GitHub environment `dev` secret; becomes the Fly secret `Billing__WebhookSecret` | the billing deploy continues; every webhook is rejected in Production until it is set |
 | `AUTHSERVICE_IMAGE` | ci | repository variable: the pinned tag, for example `ghcr.io/konradcinkusz/authservice:v0.3.4` | the authservice deploy job fails before any change |
 | `ANTHROPIC_API_KEY` | secret, optional | setup step 5, or your own key | AI features disabled; `/health` lists `ai` as disabled |
 | `FLY_API_TOKEN` | ci | `fly tokens create org`, stored in the GitHub `production` environment | not read locally; the first `flyctl` call in `flyio.yml` fails, which is the intended failure point |

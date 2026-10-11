@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { AccountPanel } from "@/components/account/account-panel";
 
 // Client-driven: the session is read through the BFF on the client. Nothing sensitive is rendered on the server.
@@ -16,6 +17,9 @@ export default function AccountPage() {
     <article>
       <h1>Konto</h1>
       <AccountPanel />
+      <p>
+        Prowadzisz szkołę? <Link href="/konto/szkola">Konto szkoły</Link> (zgłoszenie reprezentacji i profil rozszerzony).
+      </p>
     </article>
   );
 }

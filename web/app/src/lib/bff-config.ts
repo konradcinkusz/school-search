@@ -32,6 +32,11 @@ export function reviewsBaseUrl(env: NodeJS.ProcessEnv = process.env): string | n
   return normaliseBaseUrl(env.REVIEWS_BASE_URL);
 }
 
+/** Base URL of the Billing service (BILLING_BASE_URL). Null when unset: billing features are then unavailable (P8). */
+export function billingBaseUrl(env: NodeJS.ProcessEnv = process.env): string | null {
+  return normaliseBaseUrl(env.BILLING_BASE_URL);
+}
+
 /** Shared secret that proves the BFF may vouch for X-Client-Ip (same contract as the catalog proxy). */
 export function bffSharedSecret(env: NodeJS.ProcessEnv = process.env): string | null {
   const raw = env.BFF_SHARED_SECRET;

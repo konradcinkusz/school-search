@@ -3,6 +3,7 @@
 // No secret literal lives here. Aspire generates a throwaway password for the local Postgres
 // container, so a fresh clone needs zero credentials (P8).
 using System.Security.Cryptography;
+using Aspire.Hosting.ApplicationModel;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
@@ -43,6 +44,37 @@ var reviews = builder.AddProject<Projects.SchoolSearch_Reviews>("reviews")
     .WaitFor(reviewsDb)
     .WithHttpHealthCheck("/health");
 
+// Billing (Phase F, ADR-0016): premium school profiles, parent enquiries and subscription entitlements. It owns billingdb
+// (database per service). It is added only once its project exists, so the solution builds before the service lands
+// (the same rule as the Reviews reference in the architecture test project). The path overload is used because the
+// generated Projects.* type exists only when the project is referenced, and this AppHost does not reference it.
+// Mock mode is stated on purpose: the synthetic checkout and the simulate endpoint are local-only (MONETIZATION-BRIEF 1c).
+var billingProject = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "SchoolSearch.Billing", "SchoolSearch.Billing.csproj"));
+IResourceBuilder<ProjectResource>? billing = null;
+if (File.Exists(billingProject))
+{
+    var billingDb = postgres.AddDatabase("billingdb");
+
+    // Keys the subject hash of claims and subscriptions. A per-run random pepper is acceptable for local data only.
+    var billingPepper = builder.Configuration["Billing:SubjectPepper"]
+        ?? Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+
+    billing = builder.AddProject("billing", billingProject)
+        .WithEnvironment("Billing__MockMode", "true")
+        .WithEnvironment("Billing__SubjectPepper", billingPepper)
+        .WithReference(billingDb)
+        .WaitFor(billingDb)
+        .WithHttpHealthCheck("/health");
+
+    // Optional. Only meaningful once a payment provider adapter exists (ADR-0016). Without it, mock mode accepts
+    // requests locally; outside mock mode the service rejects unsigned webhooks.
+    var billingWebhookSecret = builder.Configuration["Billing:WebhookSecret"];
+    if (!string.IsNullOrEmpty(billingWebhookSecret))
+    {
+        billing = billing.WithEnvironment("Billing__WebhookSecret", billingWebhookSecret);
+    }
+}
+
 if (includeAuthservice)
 {
     var authDb = postgres.AddDatabase("authservicedb");
@@ -77,6 +109,14 @@ if (includeAuthservice)
         .WithEnvironment("Auth__Issuer", AuthIssuer)
         .WithEnvironment("Auth__Audience", AuthAudience)
         .WaitFor(authservice);
+    if (billing is not null)
+    {
+        billing = billing
+            .WithEnvironment("Auth__Authority", AuthBaseUrl)
+            .WithEnvironment("Auth__Issuer", AuthIssuer)
+            .WithEnvironment("Auth__Audience", AuthAudience)
+            .WaitFor(authservice);
+    }
 }
 
 // The product surface. It reads the API through its server-side proxy; the proxy's candidate
@@ -92,6 +132,13 @@ var web = builder.AddJavaScriptApp("web", webAppDirectory, "dev")
     .WithEnvironment("REVIEWS_BASE_URL", reviews.GetEndpoint("http"))
     .WaitFor(reviews)
     .WithHttpHealthCheck("/api/config");
+
+if (billing is not null)
+{
+    // The BFF calls the Billing service server-side (BILLING_BASE_URL is read per request, like REVIEWS_BASE_URL).
+    web = web.WithEnvironment("BILLING_BASE_URL", billing.GetEndpoint("http"))
+        .WaitFor(billing);
+}
 
 if (includeAuthservice)
 {

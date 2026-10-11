@@ -1,11 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { catalogCandidates } from "@/lib/catalog-url";
 import { isSameOrigin } from "@/lib/bff-auth";
+import { billingRouteFor, forwardToBilling, type BillingRoute } from "@/lib/billing-proxy";
 import { forwardToReviews, reviewsRouteFor } from "@/lib/reviews-proxy";
 import { isSlug, isToken } from "@/lib/validation";
 
 // BFF catch-all (FRONTEND-BFF §5): the browser talks only to this origin; the backend address stays server-side.
-// No cookie or Authorization header is forwarded: this surface is public and carries no session.
+// No cookie or Authorization header is forwarded from the browser: tokens are injected here, server-side, for the
+// Reviews and Billing routes that act for a signed-in user.
 export const dynamic = "force-dynamic";
 
 /** Covers a scale-to-zero cold start of the API machine. */
@@ -61,6 +63,11 @@ function isAbortError(err: unknown): boolean {
 
 function segmentsAreSafe(path: readonly string[]): boolean {
   return path.every((segment) => SAFE_SEGMENT.test(segment) && segment !== "." && segment !== "..");
+}
+
+/** Billing routes are a separate allowlist (billing-proxy.ts); a non-billing path is never sent there. */
+function billingFor(path: readonly string[], method: string): BillingRoute | null {
+  return segmentsAreSafe(path) ? billingRouteFor(path, method) : null;
 }
 
 /** Public GET data is cacheable at the edge for a short time; errors, every POST and corrections are not. */
@@ -161,6 +168,8 @@ export async function GET(
   }
   const reviews = reviewsRouteFor(path, "GET");
   if (reviews) return forwardToReviews(request, path, reviews, null);
+  const billing = billingFor(path, "GET");
+  if (billing) return forwardToBilling(request, path, billing, null);
   if (!matchesRoute(path, GET_ROUTES)) {
     return errorResponse(404, "not_found", "Nie znaleziono zasobu.");
   }
@@ -173,20 +182,26 @@ export async function POST(
 ): Promise<NextResponse> {
   const { path } = await context.params;
   const reviews = segmentsAreSafe(path) ? reviewsRouteFor(path, "POST") : null;
-  if (!reviews && (!segmentsAreSafe(path) || !matchesRoute(path, POST_ROUTES))) {
+  const billing = billingFor(path, "POST");
+  if (!reviews && !billing && (!segmentsAreSafe(path) || !matchesRoute(path, POST_ROUTES))) {
     return errorResponse(404, "not_found", "Nie znaleziono zasobu.");
   }
   if (!originAllowed(request)) {
     return errorResponse(403, "forbidden_origin", "Żądanie z tej domeny nie jest dozwolone.");
   }
-  // Reviews writes that act for a signed-in user must come from this origin, never from a foreign page.
-  if (reviews && reviews.access !== "anonymous" && !isSameOrigin(request)) {
+  // Writes that act for a signed-in user must come from this origin, never from a foreign page.
+  const sessionRoute = reviews ?? billing;
+  if (sessionRoute && sessionRoute.access !== "anonymous" && !isSameOrigin(request)) {
     return errorResponse(403, "forbidden_origin", "Żądanie z tej domeny nie jest dozwolone.");
   }
   const contentType = request.headers.get("content-type") ?? "";
   const isJson = contentType.toLowerCase().startsWith("application/json");
   const optionalBody = isExplainPath(path);
   const declared = Number(request.headers.get("content-length") ?? "0");
+  // Billing actions such as cancel or resume may carry no body at all.
+  if (billing && declared === 0 && !isJson) {
+    return forwardToBilling(request, path, billing, null);
+  }
   // The explain body is optional: a request without a body is forwarded without one.
   if (!isJson && !(optionalBody && declared === 0)) {
     return errorResponse(415, "unsupported_media_type", "Oczekiwano danych w formacie JSON.");
@@ -199,6 +214,7 @@ export async function POST(
     return errorResponse(413, "payload_too_large", "Zgłoszenie jest za duże.");
   }
   if (reviews) return forwardToReviews(request, path, reviews, body);
+  if (billing) return forwardToBilling(request, path, billing, body === "" ? null : body);
   if (optionalBody && body === "") return forward(request, path, "POST", null);
   if (!isJson) {
     return errorResponse(415, "unsupported_media_type", "Oczekiwano danych w formacie JSON.");
@@ -206,13 +222,18 @@ export async function POST(
   return forward(request, path, "POST", body);
 }
 
-/** Only the reviews allowlist accepts DELETE (own review withdrawal). Everything else is refused. */
+/** Only the reviews (own review withdrawal) and billing (own enquiry deletion) allowlists accept DELETE. */
 export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ path: string[] }> },
 ): Promise<NextResponse> {
   const { path } = await context.params;
   const reviews = segmentsAreSafe(path) ? reviewsRouteFor(path, "DELETE") : null;
+  const billing = billingFor(path, "DELETE");
+  if (billing) {
+    if (!isSameOrigin(request)) return errorResponse(403, "forbidden_origin", "Żądanie z tej domeny nie jest dozwolone.");
+    return forwardToBilling(request, path, billing, null);
+  }
   if (!reviews) return methodNotAllowed();
   if (!isSameOrigin(request)) {
     return errorResponse(403, "forbidden_origin", "Żądanie z tej domeny nie jest dozwolone.");
@@ -220,13 +241,35 @@ export async function DELETE(
   return forwardToReviews(request, path, reviews, null);
 }
 
+/** PUT is accepted only for the owner's premium profile (billing allowlist). Everything else is refused. */
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ path: string[] }> },
+): Promise<NextResponse> {
+  const { path } = await context.params;
+  const billing = billingFor(path, "PUT");
+  if (!billing) return methodNotAllowed();
+  if (!isSameOrigin(request)) {
+    return errorResponse(403, "forbidden_origin", "Żądanie z tej domeny nie jest dozwolone.");
+  }
+  const isJson = (request.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json");
+  if (!isJson) return errorResponse(415, "unsupported_media_type", "Oczekiwano danych w formacie JSON.");
+  const declared = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
+    return errorResponse(413, "payload_too_large", "Zgłoszenie jest za duże.");
+  }
+  const body = await request.text();
+  if (new TextEncoder().encode(body).byteLength > MAX_BODY_BYTES) {
+    return errorResponse(413, "payload_too_large", "Zgłoszenie jest za duże.");
+  }
+  return forwardToBilling(request, path, billing, body);
+}
+
 function methodNotAllowed(): NextResponse {
   return errorResponse(405, "method_not_allowed", "Metoda nie jest dozwolona.");
 }
 
-/** Every other method is refused: the proxy is read-only except for the corrections intake and reviews writes. */
-export function PUT(): NextResponse {
+/** Every other method is refused. */
+export function PATCH(): NextResponse {
   return methodNotAllowed();
 }
-
-export const PATCH = PUT;
