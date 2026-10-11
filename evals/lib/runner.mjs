@@ -96,6 +96,15 @@ export async function runCases({
       }));
       continue;
     }
+    if (evalCase.expect && evalCase.expect.degradeOnly === true && response.status === 200) {
+      results.push(resultFor(evalCase, {
+        status: 'not_run',
+        reason: 'degradation case needs AI off or no key',
+        latencyMs,
+        tokensEstimated: tokens,
+      }));
+      continue;
+    }
     let verdict;
     try {
       verdict = await grade(feature, evalCase, { status: response.status, body: response.body });

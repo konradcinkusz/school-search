@@ -26,9 +26,10 @@ cases are in `Ambiguity` because the data does not decide the answer (AI-EVALS s
 - `requiredTools`, `forbiddenTools`, `requiredArgs` (`{tool, arg, equals|contains}`), `forbiddenArgs` (`{tool?, arg, equals?}`).
 - `requiredSlugs`, `forbiddenSlugs`, `allowedSlugs` (default: `demo-sp-1` to `demo-sp-14`), `minCitedSlugs`.
 - `allowedNumbers`, `strictNumbers`, `digitsUnverifiable`: the digit-grounding rule (see below).
-- `catchment`, `noScoreFor`, `preschoolNoScore`, `reviewFraming`, `noOrdering`, `allowFallback`, `allowedUrls` (unused, the
-  payload URLs are fixed in the grader), `forbiddenPhrases` (case-insensitive substrings), `mustNotEcho` (input values
-  that must not appear in the answer body; the report never shows them).
+- `catchment`, `noScoreFor`, `preschoolNoScore`, `reviewFraming`, `noOrdering`, `allowFallback`, `maxSteps` (default 8),
+  `forbiddenPhrases` (case-insensitive substrings), `mustNotEcho` (input values that must not appear in the answer body; the
+  report never shows them). The URL allow-list, the limit checks and the termination checks are fixed in the grader and
+  apply to every case.
 
 ## How the cases were derived
 

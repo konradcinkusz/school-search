@@ -200,7 +200,8 @@ function gradeAnswer(checks, check, body, evalCase, expect) {
   }
 
   // Steps.
-  check('step-count', steps.length <= MAX_STEPS, `steps ${steps.length}, limit ${MAX_STEPS}`);
+  const maxSteps = expect.maxSteps ?? MAX_STEPS;
+  check('step-count', steps.length <= maxSteps, `steps ${steps.length}, limit ${maxSteps}`);
   const shapeOk = steps.every((step) => isObject(step) && typeof step.tool === 'string'
     && isObject(step.args) && typeof step.summary === 'string');
   check('step-shape', shapeOk, 'every step has tool, args and summary');
