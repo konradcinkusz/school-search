@@ -9,14 +9,19 @@ namespace SchoolSearch.Api.Scoring;
 /// <param name="PupilStdDevPoints">The pupil-level standard deviation in percentage points.</param>
 public sealed record SubjectBaseline(Subject Subject, double NationalMeanPercent, double PupilStdDevPoints)
 {
-    public SubjectBaseline
+    // Re-declared so the positional value is validated at construction (records have no compact constructor).
+    public double PupilStdDevPoints { get; init; } = RequireValidStdDev(PupilStdDevPoints);
+
+    private static double RequireValidStdDev(double value)
     {
-        if (!double.IsFinite(PupilStdDevPoints) || PupilStdDevPoints <= 0d)
+        if (!double.IsFinite(value) || value <= 0d)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(PupilStdDevPoints),
-                PupilStdDevPoints,
+                value,
                 "The pupil standard deviation must be a finite number greater than zero.");
         }
+
+        return value;
     }
 }
