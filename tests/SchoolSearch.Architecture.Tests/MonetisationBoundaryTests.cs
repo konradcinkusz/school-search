@@ -108,7 +108,7 @@ public sealed class MonetisationBoundaryTests
         var api = Assembly.Load("SchoolSearch.Api");
 
         // Non-vacuity: the scoring namespace must exist in the Api assembly, or this rule proves nothing.
-        Assert.NotEmpty(api.GetTypes().Where(t => t.Namespace == ScoringNamespace));
+        Assert.Contains(api.GetTypes(), t => t.Namespace == ScoringNamespace);
 
         var result = Types.InAssembly(api)
             .That()

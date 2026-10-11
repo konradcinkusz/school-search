@@ -36,7 +36,7 @@ public static partial class DraftChecks
     /// Every maximal run of digits in the text must occur as a maximal run of digits in the facts. "2024" in a draft is
     /// grounded only when the facts contain "2024". A deliberate, cheap check on digits, as in the Api's NumberGuard.
     /// </summary>
-    internal static bool DigitsGrounded(string text, string facts)
+    public static bool DigitsGrounded(string text, string facts)
     {
         var allowed = new HashSet<string>(DigitRun().Matches(facts).Select(match => match.Value), StringComparer.Ordinal);
         return DigitRun().Matches(text).All(match => allowed.Contains(match.Value));
