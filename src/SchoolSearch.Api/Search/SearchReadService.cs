@@ -28,6 +28,7 @@ public sealed class SearchReadService(CatalogDbContext db, SchoolScoreService sc
         var snapshot = await cache.GetOrCreateAsync(key, entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = CacheLifetime;
+            entry.Size = 1; // the shared cache has a SizeLimit (correction flood guard); every entry must declare a size
             return BuildRankingAsync(scope, gminaTeryt, examYear, ct);
         });
         return snapshot!;
@@ -38,6 +39,7 @@ public sealed class SearchReadService(CatalogDbContext db, SchoolScoreService sc
         var gminas = await cache.GetOrCreateAsync("gminas", entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = CacheLifetime;
+            entry.Size = 1; // the shared cache has a SizeLimit (correction flood guard); every entry must declare a size
             return BuildGminasAsync(ct);
         });
         return gminas!;
