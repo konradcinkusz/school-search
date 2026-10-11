@@ -3,7 +3,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SchoolSearch.Mcp.Options;
-using SchoolSearch.Mcp.Reviews;
 using SchoolSearch.Mcp.Tools;
 
 namespace SchoolSearch.Mcp.Agent;

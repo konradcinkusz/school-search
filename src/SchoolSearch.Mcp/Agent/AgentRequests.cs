@@ -48,7 +48,7 @@ public static class AgentRequestParser
 
     public static AgentRequestValidation Parse(AgentChatRequest? request)
     {
-        if (request?.Messages is not { } turns || turns.Count == 0 || turns.Count > MaxTurns)
+        if (request is null || request.Messages is not { } turns || turns.Count == 0 || turns.Count > MaxTurns)
         {
             return Reject(ValidationCode, "Podaj od 1 do 12 wiadomości.");
         }

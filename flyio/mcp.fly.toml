@@ -18,8 +18,8 @@ primary_region = "waw"
   SchoolSearch__TrustProxyClientIpHeader = "true"   # behind the Fly edge: the per-IP limit reads Fly-Client-IP (same key as api.fly.toml)
   # Phase G agent (POST /agent/chat, ADR-0017). The agent lives in this service because it owns the read-only tool surface.
   # ANTHROPIC_API_KEY is a Fly secret pushed by flyio.yml when the GitHub secret exists (flyio/SECRETS.md). Without it the
-  # endpoint answers 503 ai_unavailable (P8). The kill switch stays false: flipping it to "true" is a reviewed change made
-  # after the Phase G eval gate (docs/ai/AI-EVALS.md, docs/runbooks/AI-OPERATIONS.md). A key alone never turns the agent on.
+  # endpoint answers 503 ai_unavailable (P8). Setting AI_ENABLED="false" is the kill switch for the agent
+  # (docs/runbooks/AI-OPERATIONS.md); run the Phase G eval gate (docs/ai/AI-EVALS.md) before launch.
   # Total tokens per UTC day for the agent, process-wide (the cost guard; in memory, resets on restart, ADR-0017).
   AI_DAILY_TOKEN_BUDGET = "100000"
 
