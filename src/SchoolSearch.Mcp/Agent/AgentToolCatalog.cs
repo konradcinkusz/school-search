@@ -57,8 +57,8 @@ public static class AgentToolCatalog
             "scope"),
         Define(
             "get_methodology",
-            [],
-            Array.Empty<string>()),
+            "Returns the current scoring methodology: version, publication threshold, coverage floor, weights, interval definition and the documentation link. Use it to explain what a score means.",
+            []),
         Define(
             "find_preschools",
             "Finds preschools by name, gmina, public status, monthly tuition, free places or distance from a point. Sorted by name. Preschools have no quality score.",
