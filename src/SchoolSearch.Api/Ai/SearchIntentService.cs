@@ -15,7 +15,6 @@ public sealed class SearchIntentService(
     SearchIntentRateLimiter rateLimiter,
     AiAvailability availability,
     IOptions<AiOptions> aiOptions,
-    IOptions<SearchIntentOptions> intentOptions,
     ILogger<SearchIntentService> logger)
 {
     public const string AiLabel = "Wygenerowano przez AI";
