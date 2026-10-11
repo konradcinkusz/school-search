@@ -25,7 +25,7 @@ public sealed class McpProtocolTests
     ];
 
     [Fact]
-    public async Task Initialize_negotiates_a_protocol_version_and_opens_a_session()
+    public async Task Initialize_negotiates_a_protocol_version()
     {
         using var factory = new McpTestFactory();
         using var mcp = await McpWireClient.ConnectAsync(factory.CreateClient());
@@ -34,7 +34,6 @@ public sealed class McpProtocolTests
         Assert.NotNull(version);
         Assert.Matches(@"^\d{4}-\d{2}-\d{2}$", version);
         Assert.True(mcp.InitializeResult.TryGetProperty("capabilities", out _), "initialize must declare server capabilities");
-        Assert.False(string.IsNullOrEmpty(mcp.SessionId), "initialize must return an Mcp-Session-Id header");
     }
 
     [Fact]
@@ -146,7 +145,7 @@ public sealed class McpProtocolTests
         {
             ["gmina"] = "1465011",
             ["street"] = "Lipowa",
-            ["number"] = 12,
+            ["number"] = "12",
         });
 
         Assert.False(reply.IsError, reply.Text);

@@ -17,7 +17,7 @@ builder.Services.AddMcpRateLimiting();
 
 // Streamable HTTP transport. Anonymous in v1; the MCP server authenticates to the catalog with its own key.
 builder.Services.AddMcpServer()
-    .WithHttpTransport()
+    .WithHttpTransport(options => options.Stateless = true) // read-only tools: no per-session state, no machine affinity
     .WithTools<SchoolTools>()
     .WithResources<SchoolResources>()
     .WithPrompts<SchoolPrompts>();
