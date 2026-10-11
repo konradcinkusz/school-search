@@ -16,8 +16,15 @@ public static class StreetNormalizer
 {
     public const int MaxLength = 200;
 
-    private const string Diacritics = "ąćęłńóśźżàáâäãåçèéêëìíîïñòôöõùúûüýÿ";
-    private const string Plain = "acelnoszzaaaaaaceeeeiiiinooooouuuuyy";
+    /// <summary>Polish and common Latin letters and their plain forms. Explicit pairs, so no alignment can drift.</summary>
+    private static readonly (char From, char To)[] FoldPairs =
+    [
+        ('ą','a'), ('ć','c'), ('ę','e'), ('ł','l'), ('ń','n'), ('ó','o'), ('ś','s'), ('ź','z'), ('ż','z'),
+        ('à','a'), ('á','a'), ('â','a'), ('ä','a'), ('ã','a'), ('å','a'), ('ç','c'),
+        ('è','e'), ('é','e'), ('ê','e'), ('ë','e'), ('ì','i'), ('í','i'), ('î','i'), ('ï','i'),
+        ('ñ','n'), ('ò','o'), ('ô','o'), ('ö','o'), ('õ','o'), ('ù','u'), ('ú','u'), ('û','u'),
+        ('ü','u'), ('ý','y'), ('ÿ','y')
+    ];
 
     private static readonly string[] Prefixes = ["ul", "ulica", "al", "aleja", "pl", "plac"];
 
@@ -57,15 +64,10 @@ public static class StreetNormalizer
 
     private static Dictionary<char, char> BuildFoldTable()
     {
-        if (Diacritics.Length != Plain.Length)
+        var table = new Dictionary<char, char>(FoldPairs.Length);
+        foreach (var (from, to) in FoldPairs)
         {
-            throw new InvalidOperationException("Street diacritic table is misaligned.");
-        }
-
-        var table = new Dictionary<char, char>(Diacritics.Length);
-        for (var i = 0; i < Diacritics.Length; i++)
-        {
-            table[Diacritics[i]] = Plain[i];
+            table[from] = to;
         }
 
         return table;

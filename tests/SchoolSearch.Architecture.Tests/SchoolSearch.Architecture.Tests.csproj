@@ -18,6 +18,7 @@
     <ProjectReference Include="..\..\src\SchoolSearch.Catalog.Data\SchoolSearch.Catalog.Data.csproj" />
     <ProjectReference Include="..\..\src\SchoolSearch.ServiceDefaults\SchoolSearch.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\src\SchoolSearch.Contracts\SchoolSearch.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\SchoolSearch.Import\SchoolSearch.Import.csproj" />
   </ItemGroup>
 
   <ItemGroup>
