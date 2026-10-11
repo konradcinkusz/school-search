@@ -32,7 +32,8 @@ public static class PreschoolEndpoints
 
     /// <summary>
     /// Lists preschools. Filters: q (name substring, two characters or more), gmina (TERYT), lat/lon with radiusKm
-    /// (default 10, up to 50), publicOnly, maxTuition (monthly tuition minimum at most this amount, PLN), hasFreePlaces.
+    /// (default 10, up to 50), publicOnly (true: public only, false: non-public only, absent: both), maxTuition (monthly
+    /// tuition minimum at most this amount, PLN), hasFreePlaces.
     /// </summary>
     internal static async Task<IResult> ListPreschools(
         string? q,
@@ -115,9 +116,9 @@ public static class PreschoolEndpoints
             query = query.Where(p => p.GminaTeryt == teryt);
         }
 
-        if (publicFlag == true)
+        if (publicFlag is bool wantPublic)
         {
-            query = query.Where(p => p.IsPublic);
+            query = query.Where(p => p.IsPublic == wantPublic);
         }
 
         if (ceiling is decimal maxPln)

@@ -1,5 +1,8 @@
+using System.Text.Json;
+using SchoolSearch.Api.Tests.Public;
 using SchoolSearch.Catalog.Data;
 using SchoolSearch.Catalog.Data.Entities;
+using Xunit;
 
 namespace SchoolSearch.Api.Tests.Preschools;
 
@@ -139,6 +142,16 @@ internal static class PreschoolFixtures
             });
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>No property name at any depth may name a quality judgement (ADR-0014).</summary>
+    public static void AssertNoScoreKeys(JsonElement root)
+    {
+        string[] forbidden = ["score", "rank", "rating", "grade", "quality", "best", "worst"];
+        var offenders = ContractAssert.AllPropertyNames(root)
+            .Where(name => forbidden.Any(word => name.Contains(word, StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+        Assert.Empty(offenders);
     }
 
     private static Provenance Prov(string source, DateOnly asOf) => new()

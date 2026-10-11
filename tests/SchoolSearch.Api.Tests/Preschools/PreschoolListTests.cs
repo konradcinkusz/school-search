@@ -107,13 +107,23 @@ public sealed class PreschoolListTests : IDisposable
     }
 
     [Fact]
-    public async Task Public_only_hides_non_public_preschools()
+    public async Task Public_only_true_hides_non_public_preschools()
     {
         await _factory.SeedAsync(ApplyAsync);
 
         var root = await ListAsync("?publicOnly=true");
 
         Assert.Equal(new[] { Alfa, Delta, Gamma }, ContractNav.Slugs(root.GetProperty("items")));
+    }
+
+    [Fact]
+    public async Task Public_only_false_keeps_only_non_public_preschools()
+    {
+        await _factory.SeedAsync(ApplyAsync);
+
+        var root = await ListAsync("?publicOnly=false");
+
+        Assert.Equal(new[] { Beta }, ContractNav.Slugs(root.GetProperty("items")));
     }
 
     [Fact]
@@ -230,7 +240,7 @@ public sealed class PreschoolListTests : IDisposable
 
         var root = await ListAsync(string.Empty);
 
-        ContractAssert.AllPropertyNames(root).Should().NotContainScoreWords();
+        AssertNoScoreKeys(root);
     }
 
     private async Task<JsonElement> ListAsync(string query)
