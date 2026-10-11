@@ -18,16 +18,113 @@ namespace SchoolSearch.Mcp.Tests;
 /// </summary>
 public sealed class McpTestFactory : WebApplicationFactory<Program>
 {
+    /// <summary>Base address the reviews client is configured with when <see cref="ReviewsConfigured"/> is true.</summary>
+    public const string ReviewsStubBaseUrl = "https://reviews.stub.invalid/";
+
     public CatalogStubHandler Catalog { get; } = new();
+
+    public ReviewsStubHandler ReviewsStub { get; } = new();
+
+    /// <summary>False leaves REVIEWS_BASE_URL unset, the state in which the reviews tool answers reviews_unavailable.</summary>
+    public bool ReviewsConfigured { get; init; } = true;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        if (ReviewsConfigured)
+        {
+            builder.UseSetting("Reviews:BaseUrl", ReviewsStubBaseUrl);
+        }
+
         builder.ConfigureTestServices(services =>
         {
             services.AddHttpClient("catalog").ConfigurePrimaryHttpMessageHandler(() => Catalog);
+            services.AddHttpClient("reviews").ConfigurePrimaryHttpMessageHandler(() => ReviewsStub);
         });
     }
+}
+
+/// <summary>
+/// Serves the Reviews service's public envelope (SPEC-E.md) from canned JSON. Every request URL is recorded.
+/// Set <see cref="UpstreamFailure"/> to answer every call with a 500 that carries a stack-like body.
+/// </summary>
+public sealed class ReviewsStubHandler : HttpMessageHandler
+{
+    public bool UpstreamFailure { get; set; }
+
+    public List<Uri> Requests { get; } = new();
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var url = request.RequestUri ?? throw new InvalidOperationException("Request without a URI.");
+        Requests.Add(url);
+
+        if (UpstreamFailure)
+        {
+            return Task.FromResult(Plain(HttpStatusCode.InternalServerError, UpstreamStackTrace));
+        }
+
+        var response = url.AbsolutePath switch
+        {
+            "/api/v1/schools/szkola-podstawowa-1/reviews" => Json(HttpStatusCode.OK, ReviewsEnvelopeJson),
+            "/api/v1/schools/szkola-bez-opinii/reviews" => Json(HttpStatusCode.OK, EmptyEnvelopeJson),
+            _ => Json(HttpStatusCode.NotFound, UnknownSchoolJson),
+        };
+        return Task.FromResult(response);
+    }
+
+    private static HttpResponseMessage Json(HttpStatusCode status, string body) =>
+        new(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
+
+    private static HttpResponseMessage Plain(HttpStatusCode status, string body) =>
+        new(status) { Content = new StringContent(body, Encoding.UTF8, "text/plain") };
+
+    private const string UpstreamStackTrace = """
+        Unhandled exception processing request.
+           at SchoolSearch.Reviews.Api.ReviewEndpoints.<<MapReviewEndpoints>b__0>d.MoveNext() in /src/src/SchoolSearch.Reviews/Api/ReviewEndpoints.cs:line 42
+        """;
+
+    // One published review with a public reply. The Reviews service returns only published items and replies.
+    private const string ReviewsEnvelopeJson = """
+        {
+          "userGenerated": true,
+          "notice": "Opinie pochodzą od zalogowanych użytkowników z potwierdzonym adresem e-mail. Nie weryfikujemy, czy autor jest rodzicem ucznia tej szkoły. Opinie nie wpływają na wynik szkoły.",
+          "items": [
+            {
+              "id": "11111111-1111-1111-1111-111111111111",
+              "rating": 4,
+              "title": "Dobra szkoła",
+              "body": "Demonstracyjna opinia użytkownika, która ma co najmniej czterdzieści znaków.",
+              "schoolYear": "2025/26",
+              "reviewedMonth": "2026-05",
+              "authorLabel": "Rodzic/opiekun (niezweryfikowany)",
+              "reply": {
+                "body": "Demonstracyjna odpowiedź szkoły.",
+                "representativeLabel": "Dyrekcja szkoły",
+                "verificationState": "unverified"
+              }
+            }
+          ],
+          "total": 1,
+          "page": 1,
+          "pageSize": 20
+        }
+        """;
+
+    private const string EmptyEnvelopeJson = """
+        {
+          "userGenerated": true,
+          "notice": "Opinie pochodzą od zalogowanych użytkowników z potwierdzonym adresem e-mail. Nie weryfikujemy, czy autor jest rodzicem ucznia tej szkoły. Opinie nie wpływają na wynik szkoły.",
+          "items": [],
+          "total": 0,
+          "page": 1,
+          "pageSize": 20
+        }
+        """;
+
+    private const string UnknownSchoolJson = """
+        {"error":{"code":"not_found","message":"Nie znaleziono szkoły.","traceId":"stub"}}
+        """;
 }
 
 /// <summary>

@@ -16,6 +16,10 @@ primary_region = "waw"
   HOSTNAME = "0.0.0.0"              # Next standalone must bind all interfaces, not loopback
   # Public URL, not .internal: the Fly proxy must be able to start a stopped api machine (Fly §6).
   CATALOG_API_URL = "https://school-search-api-dev.fly.dev"
+  # Accounts and reviews (Phase E). The BFF calls authservice and the Reviews service server-side; the browser never does.
+  # Public URLs, so the Fly proxy can wake a stopped machine (Fly §6). SESSION_SECRET and BFF_SHARED_SECRET are Fly secrets.
+  AUTH_BASE_URL = "https://school-search-authservice-dev.fly.dev"
+  REVIEWS_BASE_URL = "https://school-search-reviews-dev.fly.dev"
 
 [http_service]
   internal_port = 3000              # must equal PORT

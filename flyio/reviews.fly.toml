@@ -1,0 +1,55 @@
+# school-search Reviews service (src/SchoolSearch.Reviews, listens :8080). Phase E: user-generated reviews,
+# DSA notices and moderation. Own deployable and own database (reviewsdb on school-search-postgres).
+# Deploy uses --image only (built once in CI, flyio.yml build job). [build] is declared so a local build resolves
+# the same way as CI (paths relative to THIS file).
+# Deploy: `flyctl deploy --config flyio/reviews.fly.toml --image ghcr.io/konradcinkusz/school-search-reviews:<tag>`
+#
+# Identity: the Reviews service VALIDATES access tokens issued by authservice (JWKS). It holds no signing key and
+# mints no tokens (ADR-0004, ADR-0015). Auth__Authority is the public authservice origin.
+
+app = "school-search-reviews-dev"
+primary_region = "waw"
+
+[build]
+  dockerfile = "../src/SchoolSearch.Reviews/Dockerfile"   # paths relative to THIS file
+  context = ".."
+
+[env]                               # public values only; secrets are listed in flyio/SECRETS.md
+  ASPNETCORE_ENVIRONMENT = "Production"
+  ASPNETCORE_URLS = "http://+:8080"
+  # Token validation (ClockSkew 0, RequireHttpsMetadata true outside Development). Must equal authservice's Jwt__Issuer
+  # and Jwt__Audience (flyio/authservice.fly.toml). Service-to-service URL is the public one, not .internal.
+  Auth__Authority = "https://school-search-authservice-dev.fly.dev"
+  Auth__Issuer = "school-search"
+  Auth__Audience = "school-search"
+  # Client IP behind the Fly edge and the BFF (same key as api.fly.toml). E1a's resolver must read this key.
+  SchoolSearch__TrustProxyClientIpHeader = "true"
+  # Contact point for DSA art. 11/12 (Dsa__ContactEmail). Owner must supply it; left unset on purpose.
+  # Unset means GET /api/v1/legal/contact answers 503 contact_not_configured (no invented address).
+  # Dsa__ContactEmail = "<owner-supplied>"
+  # AI triage (ADR-0011, E6): off until the owner enables it. ANTHROPIC_API_KEY is a Fly secret (flyio/SECRETS.md).
+  AI_ENABLED = "false"
+  # ConnectionStrings__reviewsdb and Reviews__SubjectPepper are Fly secrets (flyio/SECRETS.md). Never put them here.
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # Reviews are read from the public site through the web BFF in-request: one machine stays up (Fly §7).
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+  [[http_service.checks]]
+    path = "/health"                # kernel MapDefaultEndpoints(); lists optional integrations
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "60s"            # covers cold start; migrations run after the listener (P4)
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

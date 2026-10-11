@@ -14,7 +14,12 @@ primary_region = "waw"
   ASPNETCORE_URLS = "http://+:8080"
   DATABASE_PROVIDER = "postgres"
   SchoolSearch__TrustProxyClientIpHeader = "true"   # behind the Fly edge; see RateLimiting/ClientIpResolver.cs
-  # ConnectionStrings__catalogdb is a Fly secret (flyio/SECRETS.md). Never put it here.
+  # Admin routes validate authservice access tokens (role Admin or SuperAdmin), ADR-0015. Same issuer and audience
+  # as authservice (flyio/authservice.fly.toml). Auth__Authority unset would answer the admin group with 404 (P8).
+  Auth__Authority = "https://school-search-authservice-dev.fly.dev"
+  Auth__Issuer = "school-search"
+  Auth__Audience = "school-search"
+  # ConnectionStrings__catalogdb and BFF_SHARED_SECRET are Fly secrets (flyio/SECRETS.md). Never put them here.
   # Browsers never call this API directly (BFF in web/), so no CORS origin is set here.
 
 [http_service]
