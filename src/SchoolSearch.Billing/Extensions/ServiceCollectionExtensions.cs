@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using SchoolSearch.Billing.Auth;
+using SchoolSearch.Billing.Claims;
 using SchoolSearch.Billing.Errors;
 using SchoolSearch.Billing.Hosting;
 using SchoolSearch.Billing.Plans;
