@@ -181,7 +181,7 @@ internal static class ReviewTriageEval
     private static bool HasLabelKey(string? raw) => raw is not null && raw.Contains("\"label\"", StringComparison.Ordinal);
 
     private static bool ContainsReviewText(string system, string title, string body) =>
-        (title.Length >= 6 && system.Contains(title, StringComparison.Ordinal))
+        (title.Length >= 16 && system.Contains(title, StringComparison.Ordinal))
         || (body.Length >= 6 && system.Contains(body, StringComparison.Ordinal));
 
     private static string Inner(string user, string open, string close)
