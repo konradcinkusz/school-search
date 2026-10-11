@@ -28,7 +28,8 @@ public sealed class SchoolSearchApiFactory : WebApplicationFactory<Program>
         {
             var registrations = services
                 .Where(d => d.ServiceType == typeof(DbContextOptions<CatalogDbContext>)
-                         || d.ServiceType == typeof(DbContextOptions))
+                         || d.ServiceType == typeof(DbContextOptions)
+                         || IsOptionsConfigurationFor<CatalogDbContext>(d.ServiceType))
                 .ToList();
             foreach (var registration in registrations)
             {
@@ -38,6 +39,14 @@ public sealed class SchoolSearchApiFactory : WebApplicationFactory<Program>
             services.AddDbContext<CatalogDbContext>(options => options.UseInMemoryDatabase(_databaseName));
         });
     }
+
+    // EF Core 9+ registers IDbContextOptionsConfiguration<TContext> next to the options; the
+    // app's InMemory name would otherwise be applied after ours and win. Matched by name to
+    // avoid referencing the internal-API namespace.
+    private static bool IsOptionsConfigurationFor<TContext>(Type serviceType) =>
+        serviceType.IsGenericType
+        && serviceType.GetGenericTypeDefinition().Name.StartsWith("IDbContextOptionsConfiguration", StringComparison.Ordinal)
+        && serviceType.GenericTypeArguments[0] == typeof(TContext);
 
     public async Task SeedSchoolsAsync(int count)
     {

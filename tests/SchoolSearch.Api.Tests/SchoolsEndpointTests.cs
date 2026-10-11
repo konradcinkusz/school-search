@@ -38,11 +38,11 @@ public sealed class SchoolsEndpointTests : IDisposable
     }
 
     [Fact]
-    public async Task Negative_page_is_rejected_with_the_uniform_error_shape()
+    public async Task Unknown_school_returns_404_with_the_uniform_error_shape()
     {
-        var response = await _factory.CreateClient().GetAsync("/api/v1/schools?page=-1");
+        var response = await _factory.CreateClient().GetAsync("/api/v1/schools/no-such-school");
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         var root = await JsonTestHelpers.ReadJsonAsync(response);
 
         // Exactly one top-level key: "error".
@@ -55,6 +55,18 @@ public sealed class SchoolsEndpointTests : IDisposable
         Assert.False(string.IsNullOrWhiteSpace(error.GetProperty("code").GetString()));
         Assert.False(string.IsNullOrWhiteSpace(error.GetProperty("message").GetString()));
         Assert.False(string.IsNullOrWhiteSpace(error.GetProperty("traceId").GetString()));
+    }
+
+    [Fact]
+    public async Task Negative_page_is_clamped_to_the_first_page()
+    {
+        await _factory.SeedSchoolsAsync(3);
+
+        var response = await _factory.CreateClient().GetAsync("/api/v1/schools?page=-1");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var root = await JsonTestHelpers.ReadJsonAsync(response);
+        Assert.Equal(3, JsonTestHelpers.CountPageItems(root));
     }
 
     [Fact]

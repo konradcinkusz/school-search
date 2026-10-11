@@ -19,6 +19,7 @@ internal static class Solution
     public static IEnumerable<Assembly> AllProductionAssemblies() =>
         new[] { ServiceDefaults, CatalogData, Api, Contracts }.Select(Load);
 
-    public static string Describe(IEnumerable<Type> types) =>
-        string.Join(", ", types.Select(t => t.FullName ?? t.Name));
+    // NetArchTest returns a null FailingTypes when nothing failed.
+    public static string Describe(IEnumerable<Type>? types) =>
+        string.Join(", ", (types ?? Enumerable.Empty<Type>()).Select(t => t.FullName ?? t.Name));
 }
