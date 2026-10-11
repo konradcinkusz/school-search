@@ -162,6 +162,18 @@ test.describe("public journey on the synthetic demo gmina", () => {
     await expect(status).toContainText(/token/i);
   });
 
+  test("AI explain degrades honestly when no key is configured and the score stays complete", async ({ page }) => {
+    await page.goto("/szkoly/demo-sp-1");
+
+    await page.getByRole("button", { name: "Wyjaśnij ten wynik" }).click();
+
+    await expect(page.getByText(/Wyjaśnienie AI jest teraz niedostępne/)).toBeVisible();
+    // The structured result is untouched by the AI failure: interval, cohort and version remain.
+    await expect(page.getByText(/±/).first()).toBeVisible();
+    await expect(page.getByText(/metodologia/i).first()).toBeVisible();
+    await expect(page.getByText("Wygenerowano przez AI", { exact: false })).toHaveCount(0);
+  });
+
   test("methodology page states that the portal is not an official ranking", async ({ page }) => {
     await page.goto("/metodologia");
 

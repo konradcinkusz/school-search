@@ -161,6 +161,22 @@ jobs:
         run: |
           docker run -d --name api -p 8080:8080 school-search-api:ci
           curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8080/health
+      - name: Build MCP image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/SchoolSearch.Mcp/Dockerfile
+          push: false
+          load: true
+          tags: school-search-mcp:ci
+          cache-from: type=gha,scope=mcp
+          cache-to: type=gha,mode=max,scope=mcp
+      - name: Smoke-test the MCP image on :8081
+        # Host port 8081: the API container above still holds 8080. No catalog is reachable in this job,
+        # so /health must answer 200 without it.
+        run: |
+          docker run -d --name mcp -p 8081:8080 school-search-mcp:ci
+          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8081/health
       - name: Build Import image (no push)
         uses: docker/build-push-action@v6
         with:

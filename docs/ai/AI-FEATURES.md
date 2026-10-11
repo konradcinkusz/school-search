@@ -1,6 +1,29 @@
 # AI features proposal: Anthropic API in school-search
 
-> Status: **Proposed** (design only, no code). Owner: Konrad Cinkusz. Companion to ADR-0011 (draft in section 12).
+> Status: **Feature 1 implemented in PR 4** (not compiled in the authoring environment, not deployed); features 2 to 7 **Proposed**.
+> Owner: Konrad Cinkusz. The accepted record is [ADR-0011](../adr/0011-anthropic-api-usage-boundaries.md); section 12 below is the original draft.
+
+## Status table (updated at PR 4)
+
+| # | Feature | State | Where | Notes |
+|---|---|---|---|---|
+| 1 | Wyjaśnij ten wynik | **Implemented (PR 4), not deployed** | `POST /api/v1/schools/{slug}/explain` in `src/SchoolSearch.Api/Ai/`; button and panel in `web/app` on `/szkoly/[slug]` | Model `claude-haiku-5-5`. Behind `ANTHROPIC_API_KEY` and `AI_ENABLED`; without them 503 `ai_unavailable`. ADR-0011 open items O1 (retention) and O2 (payload allowlist) must close before public launch. |
+| 2 | NL question to filters | Proposed | none | Needs eval harness at 100% on constraint scenarios first. |
+| 3 | Catchment-resolution extractor | Proposed | none | Offline; needs human verification queue. |
+| 4 | Review moderation triage | Proposed (Phase E) | none | Depends on reviews, DSA notice mechanism, legal review D3. |
+| 5 | Correction triage and reply draft | Proposed | none | Needs admin credential and moderator queue. |
+| 6 | Preschool czesne extraction | Proposed (Phase D) | none | Needs preschool source list and spot-check process. |
+| 7 | Methodology Q&A | Proposed | none | Needs eval set; model choice open. |
+
+**Deviations from the proposal as implemented in PR 4 (feature 1):**
+
+- `MaxTokens` is 1500, not the 400 in section 4. Adaptive thinking is on by default and counts against the limit, so 400 would truncate. Chosen at PR 4; the eval gate may change it.
+- The daily token budget is an in-memory process-wide counter (`AI_DAILY_TOKEN_BUDGET`, default 200000), not the Postgres `ai_usage` table in section 3.3. It resets on restart. See ADR-0011 item 11.
+- The response cache is in memory (24 h), not the `ai_cache` table in section 7.
+- Payload source is the Api's `SchoolProfile` for the slug. The allowlist in section 4 (feature 1) excludes the school name and gmina name; this must be checked against the implementation (ADR-0011 O2).
+- Config keys `AI_ENABLED` and `AI_DAILY_TOKEN_BUDGET` (open item D5) are now in the PR 4 SPEC and in `flyio/SECRETS.md`.
+
+Not re-verified for this update: model prices in section 2 and the retention status (D2). Both are open.
 > Product UI copy is Polish; this document is English. Polish UI labels are quoted as they would appear.
 
 ## 0. Sources and scope
@@ -513,7 +536,7 @@ Ordered by risk, dependency and the phase gates.
 
 ## 12. ADR-0011 draft: Anthropic API usage boundaries
 
-- **Status:** Proposed (draft inside this document; the ADR file is not written here because `docs/adr/` belongs to another workstream).
+- **Status:** Superseded in form by [`docs/adr/0011-anthropic-api-usage-boundaries.md`](../adr/0011-anthropic-api-usage-boundaries.md) (Accepted for feature 1 only). The text below is the original draft and is kept for history.
 - **Context.** The product may use Claude through the Anthropic API for seven text-based features (section 4). The product scores schools with a counter-metric and confidence (MASTER-PROMPT §4), publishes moderated user content (Phase E), and must not expose pupil or private-individual personal data (MASTER-PROMPT §5). Optional dependencies must degrade (P8). Metrics must not carry identifying labels (MASTER-PROMPT §7).
 - **Decision.**
   1. The Anthropic API is the only LLM provider. No other provider is added without a new ADR.

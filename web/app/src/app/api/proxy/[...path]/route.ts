@@ -12,12 +12,13 @@ const MAX_BODY_BYTES = 16 * 1024;
 const MAX_QUERY_LENGTH = 512;
 
 type Route = "GET" | "POST";
+type RouteMatcher = readonly string[] | ((segments: readonly string[]) => boolean);
 
 /**
  * Explicit allowlist. Each entry is a fixed segment list, with a validator for any dynamic segment.
  * Anything not listed is a 404, including every admin path.
  */
-const GET_ROUTES: ReadonlyArray<readonly string[] | ((segments: readonly string[]) => boolean)> = [
+const GET_ROUTES: ReadonlyArray<RouteMatcher> = [
   ["api", "v1", "schools"],
   (s) => s.length === 4 && s[0] === "api" && s[1] === "v1" && s[2] === "schools" && isSlug(s[3] ?? ""),
   ["api", "v1", "ranking"],
@@ -30,15 +31,16 @@ const GET_ROUTES: ReadonlyArray<readonly string[] | ((segments: readonly string[
     s.length === 4 && s[0] === "api" && s[1] === "v1" && s[2] === "corrections" && isToken(s[3] ?? ""),
 ];
 
-const POST_ROUTES: ReadonlyArray<readonly string[]> = [["api", "v1", "corrections"]];
+/** AI explain (feature 1): POST /api/v1/schools/{slug}/explain, body optional. Nothing else is POST-able besides corrections. */
+const isExplainPath = (s: readonly string[]): boolean =>
+  s.length === 5 && s[0] === "api" && s[1] === "v1" && s[2] === "schools" && isSlug(s[3] ?? "") && s[4] === "explain";
+
+const POST_ROUTES: ReadonlyArray<RouteMatcher> = [["api", "v1", "corrections"], isExplainPath];
 
 const SAFE_SEGMENT = /^[A-Za-z0-9._~-]{1,200}$/;
 const QUERY_PATTERN = /^[\x20-\x7E]*$/;
 
-function matchesRoute(
-  segments: readonly string[],
-  routes: ReadonlyArray<readonly string[] | ((s: readonly string[]) => boolean)>,
-): boolean {
+function matchesRoute(segments: readonly string[], routes: ReadonlyArray<RouteMatcher>): boolean {
   return routes.some((route) => {
     if (typeof route === "function") return route(segments);
     return route.length === segments.length && route.every((part, i) => segments[i] === part);
@@ -57,8 +59,9 @@ function segmentsAreSafe(path: readonly string[]): boolean {
   return path.every((segment) => SAFE_SEGMENT.test(segment) && segment !== "." && segment !== "..");
 }
 
-/** Public data is cacheable at the edge for a short time; errors and corrections are not. */
-function cacheControlFor(path: readonly string[], status: number): string {
+/** Public GET data is cacheable at the edge for a short time; errors, every POST and corrections are not. */
+function cacheControlFor(path: readonly string[], method: Route, status: number): string {
+  if (method === "POST") return "no-store";
   if (status !== 200) return "no-store";
   if (path[2] === "corrections") return "no-store";
   return "public, s-maxage=300, stale-while-revalidate=600";
@@ -94,7 +97,7 @@ async function forward(
     .split(",")[0]
     ?.trim();
   const headers: Record<string, string> = { accept: "application/json" };
-  if (method === "POST") headers["content-type"] = "application/json";
+  if (body !== null) headers["content-type"] = "application/json";
   const bffSecret = process.env.BFF_SHARED_SECRET;
   if (bffSecret && clientIp && /^[0-9a-fA-F:.]{3,45}$/.test(clientIp)) {
     headers["x-client-ip"] = clientIp;
@@ -109,7 +112,7 @@ async function forward(
       const upstream = await fetch(`${candidate.url}/${suffix}${search}`, {
         method,
         headers,
-        body: method === "POST" ? body : undefined,
+        body: body ?? undefined,
         cache: "no-store",
         signal: controller.signal,
       });
@@ -127,7 +130,7 @@ async function forward(
       const responseHeaders = new Headers();
       const contentType = upstream.headers.get("content-type");
       if (contentType) responseHeaders.set("content-type", contentType);
-      responseHeaders.set("cache-control", cacheControlFor(path, upstream.status));
+      responseHeaders.set("cache-control", cacheControlFor(path, method, upstream.status));
       responseHeaders.set("x-content-type-options", "nosniff");
       return new NextResponse(text, { status: upstream.status, headers: responseHeaders });
     } catch (err) {
@@ -167,16 +170,23 @@ export async function POST(
     return errorResponse(403, "forbidden_origin", "Żądanie z tej domeny nie jest dozwolone.");
   }
   const contentType = request.headers.get("content-type") ?? "";
-  if (!contentType.toLowerCase().startsWith("application/json")) {
+  const isJson = contentType.toLowerCase().startsWith("application/json");
+  const optionalBody = isExplainPath(path);
+  const declared = Number(request.headers.get("content-length") ?? "0");
+  // The explain body is optional: a request without a body is forwarded without one.
+  if (!isJson && !(optionalBody && declared === 0)) {
     return errorResponse(415, "unsupported_media_type", "Oczekiwano danych w formacie JSON.");
   }
-  const declared = Number(request.headers.get("content-length") ?? "0");
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
     return errorResponse(413, "payload_too_large", "Zgłoszenie jest za duże.");
   }
   const body = await request.text();
   if (new TextEncoder().encode(body).byteLength > MAX_BODY_BYTES) {
     return errorResponse(413, "payload_too_large", "Zgłoszenie jest za duże.");
+  }
+  if (optionalBody && body === "") return forward(request, path, "POST", null);
+  if (!isJson) {
+    return errorResponse(415, "unsupported_media_type", "Oczekiwano danych w formacie JSON.");
   }
   return forward(request, path, "POST", body);
 }

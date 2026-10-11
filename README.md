@@ -21,6 +21,12 @@ how much confidence the data supports, alongside the other schools a family can 
 the Fly.io definitions and the CI workflows. Phase B adds the import job and the scoring engine (ingest and
 scoring, under review). No user accounts exist yet. No score is shown on any public surface: that is Phase C.
 
+**PR 4 (MCP and AI explanation), not deployed.** A read-only MCP server (`src/SchoolSearch.Mcp`) and one AI feature
+("Wyjaśnij ten wynik", a plain-Polish explanation of a school's score, built from the API's own data and labelled as AI)
+are written. Neither is compiled in the authoring environment, neither is deployed, and the MCP protocol test has not run in CI.
+The planned MCP URL is `https://school-search-mcp-dev.fly.dev/mcp` and it does not resolve yet. See
+[`docs/mcp/MCP.md`](docs/mcp/MCP.md) for connecting an agent and [`docs/adr/0011-anthropic-api-usage-boundaries.md`](docs/adr/0011-anthropic-api-usage-boundaries.md) for the AI boundaries.
+
 ## What this is not
 
 - Not an official ranking. The portal does not present itself as one, and it never uses the phrase.
@@ -62,6 +68,9 @@ Run the tests with `dotnet test SchoolSearch.sln`. The end-to-end journey is in 
 | `src/SchoolSearch.Catalog.Data` | Catalog persistence: `CatalogDbContext` and the school entity. Owns the `catalogdb` schema. |
 | `src/SchoolSearch.Api` | The catalog API (`/api/v1/schools`, `/api/v1/meta`), `/health` and `/alive`. Listens on 8080. |
 | `src/SchoolSearch.Api/Scoring` | The scoring engine and ranking builder (Phase B, in review). Pure functions, no I/O. |
+| `src/SchoolSearch.Mcp` | Read-only MCP server over streamable HTTP (PR 4, not deployed). Six tools, two resources, one guided prompt. Calls the catalog API over its public URL and owns no database (ADR-0006). Rate limit 60 requests per minute per IP on `/mcp`. |
+| `tests/SchoolSearch.Mcp.Tests` | Protocol-level tests of the MCP server, raw JSON-RPC over HTTP against a stub catalog (PR 4, not yet run in CI). |
+| `src/SchoolSearch.Api/Ai` | The one AI feature so far: `POST /api/v1/schools/{slug}/explain` (PR 4). Needs `ANTHROPIC_API_KEY`; without it returns 503 and the rest of the product is unchanged (ADR-0011). |
 | `src/SchoolSearch.Import` | Import console app (Phase B, in review): `sio`, `cke`, `baseline`, `geo` and `check-schema` commands. Writes `catalogdb` directly (ADR-0013). Runs as a one-shot job, not a service. |
 | `tests/SchoolSearch.Import.Tests` | Import tests, xUnit with the InMemory database and synthetic inputs built in the test. |
 | `web/app` | Next.js product surface, reading the API through a server-side proxy. Listens on 3000. |
@@ -71,7 +80,7 @@ Run the tests with `dotnet test SchoolSearch.sln`. The end-to-end journey is in 
 | `flyio/` | Fly.io app definitions and the infrastructure analysis. |
 | `docs/` | Architecture, ADRs, UX backlog, data sources, methodology, diagrams, overview paper. |
 
-The MCP server is a later phase and is not in this tree yet. The import job is a second deployable of the
+The MCP server is in this tree (PR 4) but is not deployed. The import job is a second deployable of the
 catalog context (ADR-0007).
 
 ## Documentation
@@ -80,6 +89,9 @@ catalog context (ADR-0007).
 - [`docs/architecture/00-ARCHITECTURE.md`](docs/architecture/00-ARCHITECTURE.md): this repository measured against the reference architecture, and its deviation register.
 - [`docs/adr/`](docs/adr/): architecture decision records.
 - [`docs/ux/UI-UX.md`](docs/ux/UI-UX.md): screens, flows and the ranked backlog.
+- [`docs/mcp/MCP.md`](docs/mcp/MCP.md): connecting an agent to the MCP server, tools, rate limits, privacy.
+- [`docs/ai/AI-FEATURES.md`](docs/ai/AI-FEATURES.md): the seven proposed AI features, with the status of each.
+- [`docs/proposals/MCP-SURFACE.md`](docs/proposals/MCP-SURFACE.md): a draft for the standards repository on exposing metrics through MCP. Not filed.
 - [`docs/data/SOURCES.md`](docs/data/SOURCES.md): data sources and the open questions about them.
 
 ## Licence

@@ -1,3 +1,4 @@
+using SchoolSearch.Api.Ai;
 using SchoolSearch.Api.Catchment;
 using SchoolSearch.Api.Corrections;
 using SchoolSearch.Api.Demo;
@@ -19,6 +20,7 @@ builder.Services.AddSearchServices();
 builder.Services.AddCorrectionServices();
 builder.Services.AddSecurityServices(builder.Configuration);
 builder.Services.AddDemoSeed(builder.Configuration);
+builder.Services.AddAiServices(builder.Configuration);
 
 var app = builder.Build();
 
@@ -30,6 +32,7 @@ app.MapCatchmentEndpoints();
 app.MapCorrectionEndpoints();
 app.MapKeyEndpoints();
 app.MapAdminEndpoints();
+app.MapAiEndpoints();
 
 app.Run();
 
