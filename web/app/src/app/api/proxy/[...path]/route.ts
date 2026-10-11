@@ -12,6 +12,8 @@ const ALLOWED_PREFIX = ["api", "v1"] as const;
 
 const PASSTHROUGH_HEADERS = ["content-type", "cache-control"] as const;
 
+const SAFE_SEGMENT = /^[A-Za-z0-9._~-]{1,200}$/;
+
 function errorResponse(status: number, code: string, message: string): NextResponse {
   return NextResponse.json({ error: { code, message } }, { status });
 }
@@ -27,7 +29,8 @@ export async function GET(
   const { path } = await context.params;
 
   const allowed = ALLOWED_PREFIX.every((segment, i) => path[i] === segment);
-  const safe = path.every((segment) => segment !== "" && segment !== "." && segment !== "..");
+  // Decoded segments may not carry a slash, a backslash or a percent sequence, and may not be dot-segments.
+  const safe = path.every((segment) => SAFE_SEGMENT.test(segment) && segment !== "." && segment !== "..");
   if (!allowed || !safe) {
     return errorResponse(404, "not_found", "Nie znaleziono zasobu.");
   }

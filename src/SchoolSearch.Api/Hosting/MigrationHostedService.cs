@@ -19,8 +19,8 @@ public sealed class MigrationHostedService(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        integrations.Register(IntegrationNames.CatalogDatabase, "degraded", "migrating");
-        integrations.Register(IntegrationNames.Scoring, "disabled", "Phase B: scoring engine not yet implemented");
+        integrations.Register(IntegrationNames.CatalogDatabase, IntegrationState.Degraded, "migrating");
+        integrations.Register(IntegrationNames.Scoring, IntegrationState.Disabled, "Phase B: scoring engine not yet implemented");
 
         try
         {
@@ -35,12 +35,12 @@ public sealed class MigrationHostedService(
             if (db.Database.IsRelational())
             {
                 await db.Database.MigrateAsync(stoppingToken);
-                integrations.Register(IntegrationNames.CatalogDatabase, "ok", "migrations applied");
+                integrations.Register(IntegrationNames.CatalogDatabase, IntegrationState.Ok, "migrations applied");
             }
             else
             {
                 await db.Database.EnsureCreatedAsync(stoppingToken);
-                integrations.Register(IntegrationNames.CatalogDatabase, "ok", "in-memory store");
+                integrations.Register(IntegrationNames.CatalogDatabase, IntegrationState.Ok, "in-memory store");
             }
 
             signal.Complete(true);
@@ -53,7 +53,7 @@ public sealed class MigrationHostedService(
         {
             // Logged server-side only: provider messages may echo connection details.
             logger.LogError(ex, "Catalog database migration failed");
-            integrations.Register(IntegrationNames.CatalogDatabase, "degraded", "migration failed; see server logs");
+            integrations.Register(IntegrationNames.CatalogDatabase, IntegrationState.Degraded, "migration failed; see server logs");
         }
         finally
         {

@@ -17,9 +17,9 @@ public sealed class HealthEndpointTests : IDisposable
     public async Task Health_lists_ok_degraded_and_disabled_integrations_with_their_state_and_detail()
     {
         var registry = _factory.Services.GetRequiredService<IntegrationStatusRegistry>();
-        registry.Register("test-ok-integration", "ok", "reachable");
-        registry.Register("test-degraded-integration", "degraded", "API key missing - AI features off");
-        registry.Register("test-disabled-integration", "disabled", "not configured");
+        registry.Register("test-ok-integration", IntegrationState.Ok, "reachable");
+        registry.Register("test-degraded-integration", IntegrationState.Degraded, "API key missing - AI features off");
+        registry.Register("test-disabled-integration", IntegrationState.Disabled, "not configured");
 
         var response = await _factory.CreateClient().GetAsync("/health");
 

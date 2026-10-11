@@ -1,13 +1,11 @@
 // Composition root for local development (P1). This is NOT the production topology:
 // production is described by flyio/*.fly.toml and the tag-driven workflow.
-// No secret literal lives here. The Postgres password is an Aspire parameter, sourced from
-// `dotnet user-secrets` (Parameters:postgres-password), which scripts/setup.sh generates (P5).
+// No secret literal lives here. Aspire generates a throwaway password for the local Postgres
+// container, so a fresh clone needs zero credentials (P8).
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var postgresPassword = builder.AddParameter("postgres-password", secret: true);
-
-var postgres = builder.AddPostgres("postgres", password: postgresPassword)
+var postgres = builder.AddPostgres("postgres")
     .WithDataVolume("school-search-postgres-data");
 
 var catalogDb = postgres.AddDatabase("catalogdb");

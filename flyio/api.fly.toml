@@ -13,6 +13,7 @@ primary_region = "waw"
   ASPNETCORE_ENVIRONMENT = "Production"
   ASPNETCORE_URLS = "http://+:8080"
   DATABASE_PROVIDER = "postgres"
+  SchoolSearch__TrustProxyClientIpHeader = "true"   # behind the Fly edge; see RateLimiting/ClientIpResolver.cs
   # ConnectionStrings__catalogdb is a Fly secret (flyio/SECRETS.md). Never put it here.
   # Browsers never call this API directly (BFF in web/), so no CORS origin is set here.
 
