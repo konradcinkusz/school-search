@@ -335,6 +335,9 @@ public static class SioLoader
             }
         }
 
+        // The whole file is refused when it carries a personal-data column, before anything is read.
+        PersonalDataGuard.EnsureNoPersonalColumns(columns.Keys, "SIO import");
+
         var required = map.RequiredHeaders();
 
         var missing = required

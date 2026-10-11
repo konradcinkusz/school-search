@@ -11,20 +11,31 @@ namespace SchoolSearch.Import;
 /// </summary>
 public sealed class ImportRunRecorder(CatalogDbContext db, TimeProvider wallClock)
 {
+    private const string RepositoryUrl = "https://github.com/konradcinkusz/school-search";
+
     public async Task<ImportRun> StartAsync(string kind, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(kind);
+
+        var now = wallClock.GetUtcNow();
 
         var run = new ImportRun
         {
             Id = Guid.NewGuid(),
             Kind = kind,
-            StartedAt = wallClock.GetUtcNow(),
+            StartedAt = now,
             FinishedAt = null,
             RowsRead = 0,
             RowsWritten = 0,
             RowsRejected = 0,
             SchemaVersion = CatalogSchema.LatestMigrationId,
+            Provenance = new Provenance
+            {
+                Source = $"school-search import run ({kind})",
+                SourceUrl = RepositoryUrl,
+                AsOf = DateOnly.FromDateTime(now.UtcDateTime),
+                Method = "importer run record",
+            },
         };
 
         db.ImportRuns.Add(run);

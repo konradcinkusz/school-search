@@ -16,7 +16,7 @@ internal static class CkeCsvSupport
     public const int MaxStoredRejectionReasons = 200;
 
     /// <summary>Header fragments that mark a pupil or person name column. Matched after lower-casing and removing diacritics and non-letters.</summary>
-    private static readonly string[] PersonNameFragments = ["imie", "nazwisko", "uczen", "pupil"];
+    private static readonly string[] PersonNameFragments = ["imie", "nazwisko", "uczen"];
 
     public static async Task<string> ReadTextAsync(Stream stream, CancellationToken ct)
     {

@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using SchoolSearch.Catalog.Data;
-using SchoolSearch.Import.Sio;
 using Xunit;
 
 namespace SchoolSearch.Import.Tests;
@@ -62,5 +61,20 @@ public sealed class CommonTests
         Assert.Equal(2, stored.RowsWritten);
         Assert.Equal(1, stored.RowsRejected);
         Assert.Equal("sio", stored.Kind);
+    }
+
+    [Theory]
+    [InlineData(140, true)]
+    [InlineData(130, false)]
+    [InlineData(141, false)]
+    public void Faith_is_derived_from_governing_body_type_140_only(int? code, bool expected)
+    {
+        Assert.Equal(expected, FaithDerivation.IsDerivedFromGoverningBody(code));
+    }
+
+    [Fact]
+    public void Faith_is_not_derived_without_a_governing_body_type()
+    {
+        Assert.False(FaithDerivation.IsDerivedFromGoverningBody(null));
     }
 }

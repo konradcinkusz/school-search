@@ -1,61 +1,53 @@
 namespace SchoolSearch.Import.Tests;
 
 /// <summary>
-/// Header names for the synthetic SIO workbook. The first eight are the UNVERIFIED defaults from the brief (§3.1).
-/// <see cref="ClassVIIIPupils"/> is a test-only header: align it with the class-level defaults of
-/// <c>SioColumnMap</c> when those are verified. No header here is a personal-data column.
+/// Synthetic SIO workbook layout. Headers come from <see cref="SioColumnMap"/> itself, so the fixture follows the
+/// map's (UNVERIFIED) defaults and the class-level placeholders. A test that needs a different layout passes its own map.
+/// Values are invented: school names only, no people.
 /// </summary>
 internal static class SioFixtures
 {
-    public const string IdPodmiot = "idPodmiot";
-    public const string TypPodmiotu = "TypPodmiotu";
-    public const string Nazwa = "Nazwa";
-    public const string TerytGmina = "TerytGmina";
-    public const string Publicznosc = "Publiczność";
-    public const string KategoriaUczniow = "KategoriaUczniow";
-    public const string SpecyfikaSzkoly = "SpecyfikaSzkoly";
-    public const string OrganProwTypeCode = "idTypOrgProw";
+    public static readonly SioColumnMap Map = new();
 
-    /// <summary>The organ-name column. The loader must never read it: the fixture puts a marker in it to prove that.</summary>
+    /// <summary>The organ-name column. The loader never reads it; the marker below must never be stored.</summary>
     public const string OrganName = "OrganProwadzacy";
 
-    /// <summary>Test-only class VIII pupil count header. Align with SioColumnMap.</summary>
-    public const string ClassVIIIPupils = "Uczniowie klasy VIII";
-
-    public const string PrimaryType = "Szkoła podstawowa";
-
-    /// <summary>A marker that must never appear in any stored field.</summary>
     public const string OrganNameMarker = "ORGAN-NAME-MUST-NOT-BE-STORED";
 
-    public static readonly string[] Headers =
-    [
-        IdPodmiot,
-        TypPodmiotu,
-        Nazwa,
-        TerytGmina,
-        Publicznosc,
-        KategoriaUczniow,
-        SpecyfikaSzkoly,
-        OrganProwTypeCode,
-        OrganName,
-        ClassVIIIPupils,
-    ];
+    /// <summary>Synthetic personal-data header used to prove the whole file is refused.</summary>
+    public const string PersonalDataHeader = "imie";
 
+    public static readonly string Nazwa = Map.Name;
+
+    public static readonly string[] Headers = Map.RequiredHeaders().Append(OrganName).ToArray();
+
+    /// <summary>One primary-school row. Class VIII carries <paramref name="pupilsClassVIII"/>; other levels are zero.</summary>
     public static Dictionary<string, string> School(
         string id,
         string name,
         string organTypeCode,
-        string pupilsClassVIII = "12") => new()
+        string pupilsClassVIII = "12")
+    {
+        var row = new Dictionary<string, string>
         {
-            [IdPodmiot] = id,
-            [TypPodmiotu] = PrimaryType,
-            [Nazwa] = name,
-            [TerytGmina] = "1465011",
-            [Publicznosc] = "publiczna",
-            [KategoriaUczniow] = "dzieci",
-            [SpecyfikaSzkoly] = "ogolnodostepna",
-            [OrganProwTypeCode] = organTypeCode,
+            [Map.IdPodmiot] = id,
+            [Map.TypPodmiotu] = Map.PrimarySchoolType,
+            [Map.Name] = name,
+            [Map.TerytGmina] = "1465011",
+            [Map.Publicznosc] = Map.PublicValue,
+            [Map.KategoriaUczniow] = "dzieci",
+            [Map.SpecyfikaSzkoly] = "ogolnodostepna",
+            [Map.OrganProwTypeCode] = organTypeCode,
             [OrganName] = OrganNameMarker,
-            [ClassVIIIPupils] = pupilsClassVIII,
         };
+
+        foreach (var level in SioColumnMap.ClassLevels)
+        {
+            var isEighth = level == "VIII";
+            row[Map.PupilColumns[level]] = isEighth ? pupilsClassVIII : "0";
+            row[Map.OddzialColumns[level]] = isEighth ? "1" : "0";
+        }
+
+        return row;
+    }
 }

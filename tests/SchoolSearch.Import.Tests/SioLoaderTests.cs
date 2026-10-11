@@ -2,7 +2,6 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using SchoolSearch.Catalog.Data;
 using SchoolSearch.Catalog.Data.Entities;
-using SchoolSearch.Import.Sio;
 using Xunit;
 
 namespace SchoolSearch.Import.Tests;
@@ -16,9 +15,10 @@ public sealed class SioLoaderTests
             db,
             xlsx,
             2025,
-            new SioColumnMap(),
+            SioFixtures.Map,
             FixedClock.OnDate(FileDate),
-            CancellationToken.None);
+            CancellationToken.None,
+            FileDate);
 
     [Fact]
     public async Task Running_twice_gives_identical_row_counts_and_values()
@@ -126,15 +126,15 @@ public sealed class SioLoaderTests
     public async Task Personal_data_column_aborts_the_whole_file()
     {
         await using var db = TestDb.Create();
-        var headers = SioFixtures.Headers.Append("imie").ToArray();
+        var headers = SioFixtures.Headers.Append(SioFixtures.PersonalDataHeader).ToArray();
         var row = SioFixtures.School("1001", "Szkola Podstawowa nr 1 w Testowie", "141");
-        row["imie"] = "TEST-VALUE";
+        row[SioFixtures.PersonalDataHeader] = "TEST-VALUE";
 
         var exception = await Record.ExceptionAsync(() =>
             RunAsync(db, SyntheticXlsx.Build(headers, [row])));
 
         Assert.NotNull(exception);
-        Assert.Contains("imie", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(SioFixtures.PersonalDataHeader, exception.Message, StringComparison.Ordinal);
         Assert.Equal(0, (await TestDb.CountAsync(db)).Schools);
     }
 

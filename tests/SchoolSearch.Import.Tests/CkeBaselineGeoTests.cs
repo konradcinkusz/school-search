@@ -8,17 +8,16 @@ using Xunit;
 namespace SchoolSearch.Import.Tests;
 
 /// <summary>
-/// CKE, baseline and geo loaders against synthetic CSV text. The CKE header set is a test fixture:
-/// align it with <c>CkeColumnMap</c> once the CKE export has been checked.
+/// CKE, baseline and geo loaders against synthetic CSV text. CKE uses the UNVERIFIED <c>CkeColumnMap</c> defaults
+/// (';' delimiter, one mean and one sat column per subject). Those defaults change with the real export.
 /// </summary>
 public sealed class CkeBaselineGeoTests
 {
     private static readonly DateOnly FileDate = new(2026, 7, 1);
 
     private const string CkeCsv =
-        "rspo,subject,meanPercent,pupilsSat\n" +
-        "1001,polish,62.5,11\n" +
-        "1001,mathematics,48.0,11\n";
+        "rspo;polish_mean;polish_sat;math_mean;math_sat;foreign_mean;foreign_sat\n" +
+        "1001;62,5;11;48,0;11;;\n";
 
     private const string BaselineCsv =
         "subject,nationalMeanPercent,pupilStdDevPoints\n" +
@@ -87,9 +86,9 @@ public sealed class CkeBaselineGeoTests
         await using var db = TestDb.Create();
         await SeedSchoolAsync(db, 1001);
         const string csv =
-            "rspo,subject,meanPercent,pupilsSat\n" +
-            "1001,polish,62.5,11\n" +
-            "9999,polish,40.0,9\n";
+            "rspo;polish_mean;polish_sat;math_mean;math_sat;foreign_mean;foreign_sat\n" +
+            "1001;62,5;11;;;;\n" +
+            "9999;40,0;9;;;;\n";
 
         var report = await CkeLoader.RunAsync(db, CsvStream.Of(csv), 2025, new CkeColumnMap(), TimeProvider.System, CancellationToken.None);
 
@@ -105,8 +104,8 @@ public sealed class CkeBaselineGeoTests
         await using var db = TestDb.Create();
         await SeedSchoolAsync(db, 1001);
         const string csv =
-            "rspo,imie,subject,meanPercent,pupilsSat\n" +
-            "1001,TEST-VALUE,polish,62.5,11\n";
+            "rspo;imie;polish_mean;polish_sat;math_mean;math_sat;foreign_mean;foreign_sat\n" +
+            "1001;TEST-VALUE;62,5;11;;;;\n";
 
         var exception = await Record.ExceptionAsync(() =>
             CkeLoader.RunAsync(db, CsvStream.Of(csv), 2025, new CkeColumnMap(), TimeProvider.System, CancellationToken.None));

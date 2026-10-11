@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using SchoolSearch.Catalog.Data;
 using SchoolSearch.Import.Cke;
 using SchoolSearch.Import.Geo;
-using SchoolSearch.Import.Sio;
 
 namespace SchoolSearch.Import;
 
@@ -95,12 +94,11 @@ internal static class Program
                         ? DateOnly.ParseExact(asOfText, "yyyy-MM-dd", CultureInfo.InvariantCulture)
                         : (DateOnly?)null;
                     var map = ColumnMapLoader.Load<SioColumnMap>(Optional(options, "map"));
-                    var clock = asOf is { } date ? FixedClock.OnDate(date) : TimeProvider.System;
 
                     return await RunLoaderAsync(db, "sio", ct, async (context, token) =>
                     {
                         await using var stream = File.OpenRead(file);
-                        return await SioLoader.RunAsync(context, stream, year, map, clock, token);
+                        return await SioLoader.RunAsync(context, stream, year, map, TimeProvider.System, token, asOf);
                     });
                 }
 
