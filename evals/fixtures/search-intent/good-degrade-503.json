@@ -1,0 +1,15 @@
+{
+  "caseId": "search-intent-122",
+  "shouldPass": true,
+  "response": {
+    "status": 503,
+    "body": {
+      "error": {
+        "code": "ai_unavailable",
+        "message": "Wyszukiwanie językowe jest niedostępne. Użyj filtrów.",
+        "traceId": "00-fixture-trace"
+      }
+    }
+  },
+  "note": "The form stays usable."
+}

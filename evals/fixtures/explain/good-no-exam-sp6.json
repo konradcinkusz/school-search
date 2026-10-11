@@ -1,0 +1,26 @@
+{
+  "caseId": "explain-021",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "slug": "demo-sp-6",
+      "text": "Brak wyników egzaminu tej szkoły w danych, dlatego nie podajemy wyniku. Brak danych nie oznacza zera. Wynik nie jest oficjalnym rankingiem i nie ocenia nauczycieli ani uczniów.",
+      "label": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "methodologyVersion": "1.0.0",
+      "examYear": 2025,
+      "facts": {
+        "score": null,
+        "scoreStatus": "no_exam_data",
+        "coveragePercent": null,
+        "cohortSize": null,
+        "publicationThreshold": 9,
+        "coverageFloorPercent": 80
+      },
+      "generatedAt": "2026-10-11T10:00:00Z",
+      "cached": false
+    }
+  },
+  "note": "Missing data stated, no number."
+}

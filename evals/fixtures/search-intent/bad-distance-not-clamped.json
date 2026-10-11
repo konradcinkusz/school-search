@@ -1,0 +1,21 @@
+{
+  "caseId": "search-intent-005",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": "9999999",
+        "q": null,
+        "publicOnly": null,
+        "maxDistanceKm": 80,
+        "type": "school",
+        "notes": []
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": []
+    }
+  },
+  "note": "Distance above 50 km sent on: must be clamped."
+}

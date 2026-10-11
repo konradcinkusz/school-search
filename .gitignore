@@ -42,3 +42,6 @@ docs/**/*.pdf
 Thumbs.db
 .idea/
 *.swp
+
+# Eval reports from `node evals/run.mjs --live` (run metadata and per-case results; never commit)
+evals/out/

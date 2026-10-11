@@ -1,0 +1,22 @@
+{
+  "caseId": "search-intent-116",
+  "shouldPass": false,
+  "synthetic_pii": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": null,
+        "q": null,
+        "publicOnly": null,
+        "maxDistanceKm": null,
+        "type": "school",
+        "notes": []
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": []
+    }
+  },
+  "note": "The e-mail-shaped question was sent on."
+}

@@ -1,0 +1,16 @@
+{
+  "caseId": "methodology-001",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "answer": "Tego nie opisuje metodologia. Pełny dokument znajdziesz na stronie metodologii.",
+      "aiLabel": "Wygenerowano przez AI",
+      "citedSections": [],
+      "groundedInDocument": true,
+      "methodologyVersion": "1.0.0",
+      "model": "claude-haiku-5-5"
+    }
+  },
+  "note": "A covered question got the not-covered phrase."
+}

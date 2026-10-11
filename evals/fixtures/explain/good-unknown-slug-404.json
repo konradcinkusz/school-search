@@ -1,0 +1,15 @@
+{
+  "caseId": "explain-015",
+  "shouldPass": true,
+  "response": {
+    "status": 404,
+    "body": {
+      "error": {
+        "code": "not_found",
+        "message": "Nie znaleziono szkoły.",
+        "traceId": "00-fixture-trace"
+      }
+    }
+  },
+  "note": "No fuzzy match."
+}

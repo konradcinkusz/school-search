@@ -1,0 +1,36 @@
+{
+  "caseId": "explain-021",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "slug": "demo-sp-6",
+      "text": "Wynik szkoły jest opublikowany. Wynik nie jest oficjalnym rankingiem i nie ocenia nauczycieli ani uczniów.",
+      "label": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "methodologyVersion": "1.0.0",
+      "examYear": 2025,
+      "facts": {
+        "score": {
+          "score": 10.8,
+          "reason": null,
+          "cohortSize": 117,
+          "intervalLow": 8.7,
+          "intervalHigh": 12.9,
+          "methodologyVersion": "1.0.0",
+          "examYear": 2025,
+          "asOf": "2026-01-01",
+          "source": "DEMO SEED (synthetic)"
+        },
+        "scoreStatus": "published",
+        "coveragePercent": 97.5,
+        "cohortSize": 117,
+        "publicationThreshold": 9,
+        "coverageFloorPercent": 80
+      },
+      "generatedAt": "2026-10-11T10:00:00Z",
+      "cached": false
+    }
+  },
+  "note": "Facts say published for a school with no exam data."
+}

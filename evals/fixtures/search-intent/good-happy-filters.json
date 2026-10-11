@@ -1,0 +1,21 @@
+{
+  "caseId": "search-intent-001",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": "9999999",
+        "q": null,
+        "publicOnly": true,
+        "maxDistanceKm": null,
+        "type": "school",
+        "notes": []
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": []
+    }
+  },
+  "note": "The filters the question states, nothing more."
+}

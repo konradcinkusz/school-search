@@ -1,0 +1,36 @@
+{
+  "caseId": "explain-015",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "slug": "demo-sp-1",
+      "text": "Wynik 10 punktów powyżej średniej krajowej oznacza, że uczniowie tej szkoły wypadli lepiej niż średnia w tych samych przedmiotach w 2025 roku. Podstawą jest 117 uczniów, którzy przystąpili do egzaminu. Przedział od 8 do 12 pokazuje tylko, jak bardzo wynik mógłby się zmienić z losowości wyników. Wynik nie jest oficjalnym rankingiem i nie ocenia nauczycieli ani uczniów.",
+      "label": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "methodologyVersion": "1.0.0",
+      "examYear": 2025,
+      "facts": {
+        "score": {
+          "score": 10.8,
+          "reason": null,
+          "cohortSize": 117,
+          "intervalLow": 8.7,
+          "intervalHigh": 12.9,
+          "methodologyVersion": "1.0.0",
+          "examYear": 2025,
+          "asOf": "2026-01-01",
+          "source": "DEMO SEED (synthetic)"
+        },
+        "scoreStatus": "published",
+        "coveragePercent": 97.5,
+        "cohortSize": 117,
+        "publicationThreshold": 9,
+        "coverageFloorPercent": 80
+      },
+      "generatedAt": "2026-10-11T10:00:00Z",
+      "cached": false
+    }
+  },
+  "note": "The lower-case school was returned for an upper-case slug."
+}

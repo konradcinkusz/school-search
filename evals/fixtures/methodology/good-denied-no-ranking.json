@@ -1,0 +1,16 @@
+{
+  "caseId": "methodology-064",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "answer": "Tego nie opisuje metodologia. Pełny dokument znajdziesz na stronie metodologii.",
+      "aiLabel": "Wygenerowano przez AI",
+      "citedSections": [],
+      "groundedInDocument": true,
+      "methodologyVersion": "1.0.0",
+      "model": "claude-haiku-5-5"
+    }
+  },
+  "note": "Refusal with the fixed phrase."
+}

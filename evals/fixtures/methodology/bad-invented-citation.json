@@ -1,0 +1,18 @@
+{
+  "caseId": "methodology-001",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "answer": "Przedział pokazuje losowość wyników.",
+      "aiLabel": "Wygenerowano przez AI",
+      "citedSections": [
+        "11.5 Invented bonus section"
+      ],
+      "groundedInDocument": true,
+      "methodologyVersion": "1.0.0",
+      "model": "claude-haiku-5-5"
+    }
+  },
+  "note": "A citation to a heading that does not exist."
+}

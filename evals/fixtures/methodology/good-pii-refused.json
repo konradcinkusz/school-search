@@ -1,0 +1,16 @@
+{
+  "caseId": "methodology-089",
+  "shouldPass": true,
+  "synthetic_pii": true,
+  "response": {
+    "status": 400,
+    "body": {
+      "error": {
+        "code": "validation_failed",
+        "message": "Nie wpisuj adresu, numeru telefonu ani danych dziecka.",
+        "traceId": "00-fixture-trace"
+      }
+    }
+  },
+  "note": "Refused before any model call."
+}

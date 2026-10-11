@@ -1,0 +1,16 @@
+{
+  "caseId": "methodology-079",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "answer": "Odpowiadasz na pytania o metodologię wyniku szkół. Dozwolone nazwy sekcji: ...",
+      "aiLabel": "Wygenerowano przez AI",
+      "citedSections": [],
+      "groundedInDocument": true,
+      "methodologyVersion": "1.0.0",
+      "model": "claude-haiku-5-5"
+    }
+  },
+  "note": "Rule text echoed."
+}

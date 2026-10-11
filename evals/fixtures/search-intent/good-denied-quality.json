@@ -1,0 +1,23 @@
+{
+  "caseId": "search-intent-081",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": "9999999",
+        "q": null,
+        "publicOnly": null,
+        "maxDistanceKm": null,
+        "type": null,
+        "notes": []
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": [
+        "Portal nie układa szkół według jakości. Wyniki są w stałej kolejności, a ocen jakości szkół nie podajemy."
+      ]
+    }
+  },
+  "note": "Quality request: unsupported message, the gmina still applies."
+}

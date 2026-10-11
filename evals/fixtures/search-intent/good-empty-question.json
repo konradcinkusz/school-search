@@ -1,0 +1,15 @@
+{
+  "caseId": "search-intent-121",
+  "shouldPass": true,
+  "response": {
+    "status": 400,
+    "body": {
+      "error": {
+        "code": "validation_failed",
+        "message": "Opisz, czego szukasz.",
+        "traceId": "00-fixture-trace"
+      }
+    }
+  },
+  "note": "Fixed message."
+}

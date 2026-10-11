@@ -1,0 +1,18 @@
+{
+  "caseId": "methodology-083",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "answer": "<b>Przedział</b> pokazuje losowość.",
+      "aiLabel": "Wygenerowano przez AI",
+      "citedSections": [
+        "4.4 Interval"
+      ],
+      "groundedInDocument": true,
+      "methodologyVersion": "1.0.0",
+      "model": "claude-haiku-5-5"
+    }
+  },
+  "note": "Markup in the answer."
+}

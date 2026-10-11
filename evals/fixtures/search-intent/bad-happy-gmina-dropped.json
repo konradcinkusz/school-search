@@ -1,0 +1,21 @@
+{
+  "caseId": "search-intent-001",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": null,
+        "q": null,
+        "publicOnly": true,
+        "maxDistanceKm": null,
+        "type": "school",
+        "notes": []
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": []
+    }
+  },
+  "note": "A stated TERYT code dropped."
+}
