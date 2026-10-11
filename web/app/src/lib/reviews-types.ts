@@ -72,9 +72,12 @@ export interface LegalTerms {
   readonly version: string;
 }
 
+/** Single point of contact (DSA art. 11 and 12). The service answers 503 contact_not_configured when unset. */
 export interface LegalContact {
-  readonly contactEmail: string | null;
-  readonly contactUrl: string | null;
+  readonly email: string | null;
+  readonly url: string | null;
+  readonly role: string;
+  readonly languages: readonly string[];
 }
 
 export interface NoticeCreated {
@@ -87,23 +90,45 @@ export interface NoticeStatusView {
   readonly id: string;
   /** received | decided */
   readonly status: string;
+  readonly category: string;
+  readonly contentReference: string;
+  readonly reviewId: string | null;
   readonly receivedAt: string;
-  readonly decision: (StatementOfReasons & { readonly id: string }) | null;
+  readonly decision: StatementOfReasons | null;
 }
 
+/** AI triage label, advisory only. Shown to moderators, never a decision. */
+export interface ModerationTriage {
+  /** ok | needs_attention | likely_personal_data | likely_abusive | unclear */
+  readonly label: string;
+  readonly note: string;
+  readonly model: string;
+  readonly at: string;
+}
+
+/** One open item of the moderator queue. For reviews and replies, id is the review id. */
 export interface ModerationQueueItem {
-  /** review | reply | notice | complaint */
+  /** review | reply | notice */
   readonly kind: string;
   readonly id: string;
-  readonly status: string;
-  /** ok | needs_attention | likely_personal_data | likely_abusive | unclear. Advisory only. */
-  readonly triageLabel: string | null;
+  readonly reviewId: string | null;
+  readonly schoolSlug: string | null;
+  readonly createdAt: string;
+  readonly rating: number | null;
   readonly title: string | null;
   readonly body: string | null;
+  readonly representativeLabel: string | null;
+  readonly reviewTitle: string | null;
+  readonly reviewBody: string | null;
+  readonly category: string | null;
   readonly contentReference: string | null;
   readonly explanation: string | null;
+  readonly triage: ModerationTriage | null;
 }
 
 export interface ModerationQueue {
   readonly items: readonly ModerationQueueItem[];
+  readonly page: number;
+  readonly pageSize: number;
+  readonly total: number;
 }

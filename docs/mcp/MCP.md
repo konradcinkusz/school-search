@@ -154,6 +154,31 @@ The profile has the address, public or non-public status, the governing body as 
 has `source`, `sourceUrl`, `asOf`, `method` and `confidence`. `confidence` is `reported` (from a primary public source)
 or `unverified` (submitted and not checked). An unknown fact is `null` and is never estimated.
 
+### get_school_reviews
+
+Returns the user-generated opinions about one school. Maps to `GET /api/v1/schools/{slug}/reviews` on the Reviews
+service (`REVIEWS_BASE_URL`). Phase E: available once the Reviews service is deployed.
+
+| Argument | Type | Required | Meaning |
+|---|---|---|---|
+| `slug` | string | yes | School slug, as returned by `find_schools`. |
+| `page` | integer | no | Page number. |
+| `pageSize` | integer | no | Page size, as the Reviews service accepts it. |
+
+The reply is the Reviews envelope, returned as received. Its fields are:
+
+- `userGenerated`: always `true`.
+- `notice`: a fixed Polish sentence: opinions come from logged-in users with a verified e-mail address; authorship is not
+  verified as parent or guardian; opinions do not affect the school's result.
+- `items`: published opinions only. Each has `rating` (1 to 5), `title`, `body`, `schoolYear`, `reviewedMonth`,
+  `authorLabel` (always "Rodzic/opiekun (niezweryfikowany)") and an optional `reply` (a school's answer, with its
+  `verificationState`, which is `unverified` unless a moderator confirmed it).
+- `total`, `page`, `pageSize`.
+
+**Opinions are not a quality measure.** An agent must present them separately from any score, must not average the
+ratings, and must not describe them as verified parent reviews. Unavailability is a tool error, `reviews_unavailable`,
+and never an empty list that could be read as "no opinions".
+
 ## 3. Resources and prompt
 
 | Name | URI | Content |
@@ -236,6 +261,8 @@ On 429, wait for `Retry-After` seconds and retry. Do not retry in a tight loop.
 - The server holds **no database**. Rate-limit counters are held in memory per IP and are lost on restart.
 - Requests carry the caller's query arguments to the catalog API. Metrics are never labelled by school identifier,
   address or query string (MASTER-PROMPT §7).
+- Opinions returned by `get_school_reviews` are **user-generated**. They are labelled `userGenerated: true` and are
+  never merged into a score, a ranking or an explanation (MASTER-PROMPT: UGC labelled and separated).
 - Nothing is sent to any AI model by the MCP server. The AI explanation feature is a separate endpoint in the API
   (`docs/adr/0011-anthropic-api-usage-boundaries.md`).
 

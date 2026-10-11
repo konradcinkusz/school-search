@@ -81,20 +81,20 @@ type Resolved =
 type SessionRotation = { readonly payload: SessionPayload } | null;
 
 async function resolveSession(request: NextRequest, access: ReviewsAccess): Promise<Resolved> {
-  const session = readSession(request);
   if (access === "anonymous") return { kind: "anonymous" };
 
+  if (!accountsConfigured()) {
+    if (access === "optional") return { kind: "anonymous" };
+    return { kind: "respond", response: accountsUnavailable() };
+  }
+
+  const session = readSession(request);
   if (session === null) {
     if (access === "optional") return { kind: "anonymous" };
     return {
       kind: "respond",
       response: bffError(401, "unauthenticated", "Zaloguj się, aby kontynuować."),
     };
-  }
-
-  if (!accountsConfigured()) {
-    if (access === "optional") return { kind: "anonymous" };
-    return { kind: "respond", response: accountsUnavailable() };
   }
 
   const fresh = await ensureFresh(session);

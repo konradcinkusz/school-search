@@ -14,6 +14,7 @@ primary_region = "waw"
   ASPNETCORE_ENVIRONMENT = "Production"
   ASPNETCORE_URLS = "http://+:8080"
   CATALOG_API_URL = "https://school-search-api-dev.fly.dev"   # public URL, so the proxy can wake a stopped api
+  REVIEWS_BASE_URL = "https://school-search-reviews-dev.fly.dev"   # get_school_reviews (Phase E); public URL, same reason
   SchoolSearch__TrustProxyClientIpHeader = "true"   # behind the Fly edge: the per-IP limit reads Fly-Client-IP (same key as api.fly.toml)
 
 [http_service]

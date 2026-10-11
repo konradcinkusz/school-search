@@ -64,7 +64,7 @@ pass "JWKS publishes $(jq '.keys | length' "$WORK_DIR/jwks.json") RS256 key(s)"
 
 # 4. Enforcement: the account endpoint refuses an anonymous call (401). Any other answer means the API is not
 #    enforcing authentication.
-STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' "${RETRY_ARGS[@]}" "$BASE/api/v1/auth/me")"
+STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' "${RETRY_ARGS[@]}" "$BASE/api/v1/auth/me" || true)"
 [[ "$STATUS" == "401" ]] || fail "GET /api/v1/auth/me without a token answered $STATUS, expected 401"
 pass "GET /api/v1/auth/me answers 401 without a token"
 
