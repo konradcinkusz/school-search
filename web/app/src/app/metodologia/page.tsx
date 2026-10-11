@@ -1,91 +1,116 @@
 import type { Metadata } from "next";
+import { catalog, type Methodology } from "@/lib/api";
+import { formatPercent } from "@/lib/format";
+
+// Live values come from /api/v1/methodology per request; the fallback is the documented 1.0.0 set.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Metodologia",
   description:
-    "Jak liczymy wyniki szkół: wynik z poziomem pewności, wskaźnik kontrolny pokrycia kohorty, znane ograniczenia. Nie jest oficjalnym rankingiem.",
+    "Jak liczymy wyniki szkół: wynik z przedziałem, wskaźnik pokrycia kohorty, próg liczebności i znane ograniczenia. Nie jest oficjalnym rankingiem.",
+  alternates: { canonical: "/metodologia" },
 };
 
-const METHODOLOGY_VERSION = "0.0-draft";
+/** Fallback when the API cannot be reached. Matches docs/methodology/RANKING-METHODOLOGY.md (1.0.0). */
+const FALLBACK: Methodology = {
+  version: "1.0.0",
+  publicationThreshold: 9,
+  coverageFloor: 0.8,
+  weights: "equal",
+  intervalZ: 1.96,
+  description: "",
+  docsUrl: "",
+};
 
-export default function MethodologyPage() {
+function intervalZLabel(value: number): string {
+  return value.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export default async function MethodologyPage() {
+  const result = await catalog.methodology();
+  const live = result.ok ? result.data : null;
+  const m = live ?? FALLBACK;
+  const version = m.version;
+
   return (
     <article>
       <h1>Metodologia</h1>
       <div className="notice" role="note">
-        Wersja metodologii: <strong>{METHODOLOGY_VERSION}</strong> (szkic). Ten dokument zmienia się wraz
-        z wersją i każda zmiana jest opisana. Nie jest oficjalnym rankingiem.
+        Wersja metodologii: <strong>{version}</strong>. Ten dokument zmienia się wraz z wersją i każda zmiana jest
+        opisana. Nie jest oficjalnym rankingiem.
+        {live ? null : (
+          <>
+            {" "}
+            Nie udało się pobrać bieżących wartości z usługi, dlatego pokazujemy wartości z opisu wersji {FALLBACK.version}.
+          </>
+        )}
       </div>
 
       <h2>Czym jest ta strona</h2>
       <p>
-        To niezależne narzędzie, które zestawia publicznie dostępne dane o szkołach podstawowych.
-        Nie jest oficjalnym rankingiem, nie jest zaleceniem ani opinią organu prowadzącego, kuratorium
-        ani ministerstwa. Pomaga zrozumieć dane, a nie zastępuje rozmowy z nauczycielami i wizyty
-        w szkole.
+        To niezależne narzędzie, które zestawia publicznie dostępne dane o szkołach podstawowych. Nie jest oficjalnym
+        rankingiem, nie jest zaleceniem ani opinią organu prowadzącego, kuratorium ani ministerstwa. Pomaga zrozumieć
+        dane, a nie zastępuje rozmowy z nauczycielami i wizyty w szkole.
       </p>
 
       <h2>Wynik i poziom pewności</h2>
-      <p>
-        Każdy wynik szkoły występuje zawsze razem z poziomem pewności. Nigdy nie pokazujemy samej
-        liczby bez informacji o tym, na czym się opiera. Każdy wynik zawiera:
-      </p>
+      <p>Każdy wynik szkoły występuje zawsze razem z poziomem pewności. Każdy wynik zawiera:</p>
       <ul>
         <li>wartość wyniku, czyli wskaźnik wartości dodanej opisany poniżej,</li>
         <li>liczebność kohorty, czyli liczbę uczniów, na której wynik został obliczony,</li>
-        <li>przedział niepewności,</li>
+        <li>przedział niepewności 95%,</li>
         <li>wersję metodologii, według której wynik został policzony,</li>
         <li>datę danych (stan na dzień) oraz źródło.</li>
       </ul>
       <p>
-        Jeżeli kohorta jest zbyt mała, wynik nie jest pokazywany. Zamiast liczby pojawia się
-        informacja o zbyt małej kohorcie. Brak wyniku nie oznacza zera ani gorszej oceny. Próg
-        liczebności jest zapisany w jednym miejscu, a jego uzasadnienie zostanie opublikowane razem
-        z wersją metodologii.
+        Wynik publikujemy od <strong>{m.publicationThreshold}</strong> uczniów w kohorcie. Poniżej tego progu wyniku nie
+        pokazujemy: zamiast liczby pojawia się informacja o zbyt małej kohorcie. Brak wyniku nie oznacza zera ani gorszej
+        oceny. Próg liczebności jest zapisany w jednym miejscu, a jego uzasadnienie jest opublikowane razem z wersją
+        metodologii.
       </p>
 
       <h2>Składowe wyniku</h2>
       <p>
-        Składowa egzaminacyjna porównuje wyniki szkoły z średnią krajową dla danego przedmiotu i roku
-        (standaryzacja). Obejmuje trzy przedmioty z równymi wagami: język polski, matematykę oraz język
-        obcy nowożytny.
+        Składowa egzaminacyjna porównuje wyniki szkoły z średnią krajową dla danego przedmiotu i roku (standaryzacja).
+        Obejmuje trzy przedmioty z równymi wagami: język polski, matematykę oraz język obcy nowożytny. Przedział
+        niepewności 95% liczymy ze współczynnikiem z = <strong>{intervalZLabel(m.intervalZ)}</strong>.
       </p>
 
       <h2>Wskaźnik kontrolny: pokrycie kohorty</h2>
       <p>
-        Sam wynik egzaminu może być zawyżony, jeśli szkoła przystępuje do egzaminu tylko część uczniów
-        albo jeśli zmienia się skład przystępujących. Dlatego wynik uwzględnia wskaźnik pokrycia
-        kohorty, czyli udział uczniów rocznika, którzy przystąpili do egzaminu. Wskaźnik jest wplatany
-        w składową egzaminacyjną, a nie pokazywany obok jako osobna odznaka. Gdy pokrycie spada, wynik
-        powinien spaść, nawet jeśli średnia rośnie.
+        Wynik egzaminu może być zawyżony, jeśli szkoła przystępuje do egzaminu tylko część uczniów albo zmienia się
+        skład przystępujących. Dlatego wynik uwzględnia udział uczniów rocznika, którzy przystąpili do egzaminu. Wskaźnik
+        jest wplatany w składową egzaminacyjną, a nie pokazywany obok jako osobna odznaka. Poniżej pokrycia{" "}
+        <strong>{formatPercent(m.coverageFloor * 100)}</strong> wynik jest proporcjonalnie obniżany, nawet jeśli średnia
+        rośnie.
       </p>
 
       <h2>Znane ograniczenia i obciążenia</h2>
       <ul>
         <li>
-          <strong>Wartość dodana, a nie jakość nauczania.</strong> Wynik nie mierzy wszystkiego, co
-          szkoła daje uczniom: wychowania, zajęć pozalekcyjnych, atmosfery ani wsparcia dla dzieci
-          ze specjalnymi potrzebami.
+          <strong>Wartość dodana, a nie jakość nauczania.</strong> Wynik nie mierzy wszystkiego, co szkoła daje uczniom:
+          wychowania, zajęć pozalekcyjnych, atmosfery ani wsparcia dla dzieci ze specjalnymi potrzebami.
         </li>
         <li>
-          <strong>Skład uczniów.</strong> Szkoły o innym składzie społecznym i ekonomicznym uczniów nie
-          są w pełni porównywalne. Nie korygujemy tego w wersji {METHODOLOGY_VERSION}.
+          <strong>Skład uczniów.</strong> Szkoły o innym składzie społecznym i ekonomicznym uczniów nie są w pełni
+          porównywalne. Nie korygujemy tego w wersji {version}.
         </li>
         <li>
-          <strong>Selekcja do egzaminu.</strong> Nawet z wskaźnikiem pokrycia część zniekształceń
-          pozostaje, zwłaszcza w małych kohortach.
+          <strong>Selekcja do egzaminu.</strong> Nawet z wskaźnikiem pokrycia część zniekształceń pozostaje, zwłaszcza w
+          małych kohortach.
         </li>
         <li>
-          <strong>Jeden rok danych.</strong> Pojedynczy rok bywa przypadkowy. Wyniki należy czytać
-          razem z poziomem pewności i kohortą.
+          <strong>Jeden rok danych.</strong> Pojedynczy rok bywa przypadkowy. Wyniki czytamy razem z poziomem pewności i
+          kohortą.
         </li>
         <li>
-          <strong>Obwód a wybór szkoły.</strong> Obwód szkolny nie zawsze odpowiada temu, co
-          rodzic faktycznie wybiera. Wskazanie szkoły w zasięgu nie jest rekomendacją.
+          <strong>Obwód a wybór szkoły.</strong> Obwód szkolny nie zawsze odpowiada temu, co rodzic faktycznie wybiera.
+          Wskazanie szkoły w zasięgu nie jest rekomendacją.
         </li>
         <li>
-          <strong>Dane i ich jakość.</strong> Dane pochodzą od instytucji zewnętrznych i mogą zawierać
-          błędy. Każda wartość ma źródło, a szkoła może zgłosić korektę.
+          <strong>Dane i ich jakość.</strong> Dane pochodzą od instytucji zewnętrznych i mogą zawierać błędy. Każda
+          wartość ma źródło, a szkoła może zgłosić korektę.
         </li>
       </ul>
 
@@ -99,9 +124,8 @@ export default function MethodologyPage() {
 
       <h2>Korekty i kontakt</h2>
       <p>
-        Jeżeli dane dotyczące szkoły są błędne, szkoła lub każdy inny zainteresowany może zgłosić
-        korektę na <a href="/dla-szkol">stronie dla szkół</a>. Zgłoszenia są sprawdzane, a zmiany
-        opisywane w historii wersji.
+        Jeżeli dane dotyczące szkoły są błędne, szkoła lub każdy inny zainteresowany może zgłosić korektę na{" "}
+        <a href="/dla-szkol">stronie dla szkół</a>. Zgłoszenia są sprawdzane, a zmiany opisywane w historii wersji.
       </p>
     </article>
   );

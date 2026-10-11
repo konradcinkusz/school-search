@@ -10,6 +10,9 @@ export function SiteHeader() {
         <nav className="site-nav" aria-label="Główna">
           <ul>
             <li>
+              <Link href="/ranking/country">Ranking</Link>
+            </li>
+            <li>
               <Link href="/porownaj">Porównaj</Link>
             </li>
             <li>

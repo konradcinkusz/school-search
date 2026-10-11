@@ -5,12 +5,13 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using SchoolSearch.Api.Errors;
 using SchoolSearch.Api.Options;
+using SchoolSearch.Api.Security;
 
 namespace SchoolSearch.Api.RateLimiting;
 
 /// <summary>
-/// Anonymous traffic only (no accounts until Phase E). Two layers, chained:
-/// a fixed window per resolved client IP, then a process-wide concurrency bound.
+/// Two layers, chained: a fixed window per caller (valid API key digest, otherwise resolved client IP),
+/// then a process-wide concurrency bound. No accounts exist yet (Phase E).
 /// Rejections are immediate (QueueLimit = 0) and use the uniform error shape with Retry-After.
 /// Health and liveness probes are exempt: a 429 on a probe takes the machine out of rotation.
 /// </summary>
@@ -42,6 +43,11 @@ public static class RateLimitingExtensions
         return services;
     }
 
+    /// <summary>
+    /// One window per caller. A request with an active API key (resolved by <c>ApiKeyResolutionMiddleware</c>
+    /// before this limiter runs) uses the key's digest and the higher free-tier limit; every other request uses
+    /// its client IP and the anonymous limit. The two namespaces are prefixed so an IP can never collide with a digest.
+    /// </summary>
     private static PartitionedRateLimiter<HttpContext> PerClientWindow() =>
         PartitionedRateLimiter.Create<HttpContext, string>(context =>
         {
@@ -51,10 +57,23 @@ public static class RateLimitingExtensions
             }
 
             var services = context.RequestServices;
+
+            if (context.Items.TryGetValue(ApiKeyBucket.ItemKey, out var item) && item is ApiKeyBucket bucket)
+            {
+                var freePerMinute = services.GetRequiredService<IOptions<SecurityOptions>>().Value.FreeKeyPerMinute;
+
+                return RateLimitPartition.GetFixedWindowLimiter("key:" + bucket.KeyHash, _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = freePerMinute,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                });
+            }
+
             var limits = services.GetRequiredService<IOptions<CatalogApiOptions>>().Value.RateLimiting;
             var clientIp = services.GetRequiredService<ClientIpResolver>().Resolve(context);
 
-            return RateLimitPartition.GetFixedWindowLimiter(clientIp, _ => new FixedWindowRateLimiterOptions
+            return RateLimitPartition.GetFixedWindowLimiter("ip:" + clientIp, _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = limits.PerIpPerMinute,
                 Window = TimeSpan.FromMinutes(1),

@@ -7,12 +7,14 @@
 
   <!--
     Owns the catalog schema (P3: database per service). Provider selection and the
-    Npgsql/SqlServer packages are the kernel's job (AddDatabaseContext); this project
-    only needs the EF Core abstractions for the model and the migrations.
+    SqlServer package are the kernel's job (AddDatabaseContext). Npgsql is referenced only for
+    the PostgreSQL migrations (Migrations/Npgsql), which name NpgsqlValueGenerationStrategy for
+    identity columns. The model itself stays provider-agnostic.
   -->
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
 
 </Project>

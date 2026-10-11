@@ -1,21 +1,163 @@
+import Link from "next/link";
 import type { Metadata } from "next";
+import { ScoreBadge } from "@/components/score-badge";
+import { ServiceUnavailable } from "@/components/service-unavailable";
+import { catalog, type SchoolProfile } from "@/lib/api";
+import { formatStudents } from "@/lib/format";
+import { firstParam, parseSlugList } from "@/lib/validation";
+
+// Data-driven: rendered per request.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Porównaj szkoły",
-  description: "Porównanie szkół obok siebie z wynikami, pewnością i metodologią.",
+  description:
+    "Porównanie 2 do 4 szkół obok siebie: wynik z przedziałem, liczebność kohorty i wersja metodologii. Nie jest oficjalnym rankingiem.",
+  alternates: { canonical: "/porownaj" },
 };
 
-export default function ComparePage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export default async function ComparePage({ searchParams }: { searchParams: SearchParams }) {
+  const sp = await searchParams;
+  const raw = firstParam(sp.slugs, 400) ?? firstParam(sp.s, 400);
+  const slugs = parseSlugList(raw);
+
   return (
     <section>
       <h1>Porównaj szkoły</h1>
       <p>
-        Tu porównasz wybrane szkoły obok siebie: wyniki, poziom pewności, liczebność kohorty
-        i wersję metodologii. Każda pozycja ma źródło i datę.
+        Porównujesz od 2 do 4 szkół obok siebie. Każda pozycja ma wynik z przedziałem, liczebność kohorty i wersję
+        metodologii.
       </p>
-      <div className="notice" role="note">
-        Porównywarka jest w przygotowaniu.
-      </div>
+
+      <form method="get" action="/porownaj" className="address-form">
+        <div className="field">
+          <label htmlFor="slugs">Identyfikatory szkół (slug), oddzielone przecinkami</label>
+          <input
+            id="slugs"
+            name="slugs"
+            type="text"
+            placeholder="np. szkola-podstawowa-nr-1-warszawa,szkola-podstawowa-nr-2-warszawa"
+            defaultValue={raw ?? ""}
+          />
+        </div>
+        <button type="submit" className="button">
+          Porównaj
+        </button>
+      </form>
+      <p className="muted">
+        Identyfikator szkoły znajdziesz w adresie jej profilu. Na profilu jest też przycisk „Dodaj do porównania”.
+      </p>
+
+      {raw !== undefined && slugs === null ? (
+        <div className="notice" role="alert">
+          Podaj od 2 do 4 różnych identyfikatorów szkół (małe litery, cyfry i myślniki).
+        </div>
+      ) : null}
+
+      {slugs ? <CompareResults slugs={slugs} /> : null}
     </section>
+  );
+}
+
+async function CompareResults({ slugs }: { slugs: string[] }) {
+  const result = await catalog.compare(slugs);
+  if (!result.ok) {
+    if (result.reason === "unavailable") return <ServiceUnavailable what="porównanie szkół" />;
+    return (
+      <div className="notice" role="alert">
+        Nie udało się porównać tych szkół. {result.message ?? ""}
+      </div>
+    );
+  }
+  const items: readonly SchoolProfile[] = result.data.items;
+  const versions = new Set(items.map((item) => item.methodologyVersion));
+  const sameVersion = versions.size <= 1;
+
+  return (
+    <>
+      {!sameVersion ? (
+        <div className="notice" role="alert">
+          Wybrane szkoły mają wyniki z różnych wersji metodologii. Nie porównujemy takich wyników bezpośrednio.
+        </div>
+      ) : null}
+      <div className="table-wrap">
+        <table>
+          <caption>Porównanie szkół: te same cechy dla każdej szkoły</caption>
+          <thead>
+            <tr>
+              <th scope="col">Cecha</th>
+              {items.map((school) => (
+                <th scope="col" key={school.slug}>
+                  <Link href={`/szkoly/${school.slug}`}>{school.name}</Link>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Gmina</th>
+              {items.map((school) => (
+                <td key={school.slug}>{school.gminaName ?? `TERYT ${school.gminaTeryt}`}</td>
+              ))}
+            </tr>
+            <tr>
+              <th scope="row">Rodzaj szkoły</th>
+              {items.map((school) => (
+                <td key={school.slug}>
+                  {school.isPublic ? "publiczna" : "niepubliczna"}
+                  {school.isSpecial ? ", specjalna" : ""}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <th scope="row">Wynik z przedziałem</th>
+              {items.map((school) => (
+                <td key={school.slug}>
+                  <ScoreBadge
+                    status={school.scoreStatus}
+                    block={school.score}
+                    fallbackMethodologyVersion={school.methodologyVersion}
+                  />
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <th scope="row">Liczebność kohorty</th>
+              {items.map((school) => (
+                <td key={school.slug}>{school.score ? formatStudents(school.score.cohortSize) : "brak danych"}</td>
+              ))}
+            </tr>
+            <tr>
+              <th scope="row">Rok egzaminu</th>
+              {items.map((school) => (
+                <td key={school.slug}>{school.score ? school.score.examYear : "brak danych"}</td>
+              ))}
+            </tr>
+            <tr>
+              <th scope="row">Typ organu prowadzącego</th>
+              {items.map((school) => (
+                <td key={school.slug}>
+                  {school.governingBody.typeLabel ??
+                    (school.governingBody.typeCode !== null
+                      ? `kod ${school.governingBody.typeCode} (opis niezweryfikowany)`
+                      : "brak danych")}
+                </td>
+              ))}
+            </tr>
+            <tr>
+              <th scope="row">Wersja metodologii</th>
+              {items.map((school) => (
+                <td key={school.slug}>{school.methodologyVersion}</td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="muted">
+        Wersja metodologii: {[...versions].join(", ") || "brak"}. Wynik nie jest oficjalnym rankingiem.
+      </p>
+    </>
   );
 }

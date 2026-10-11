@@ -1,5 +1,10 @@
+using SchoolSearch.Api.Catchment;
+using SchoolSearch.Api.Corrections;
+using SchoolSearch.Api.Demo;
 using SchoolSearch.Api.Endpoints;
 using SchoolSearch.Api.Extensions;
+using SchoolSearch.Api.Search;
+using SchoolSearch.Api.Security;
 using SchoolSearch.Catalog.Data;
 using SchoolSearch.ServiceDefaults;
 
@@ -10,12 +15,21 @@ builder.AddServiceDefaults();
 builder.Services.AddCorsPolicy(builder.Configuration, CorsPolicies.Frontend);
 builder.Services.AddDatabaseContext<CatalogDbContext>(builder.Configuration, "catalogdb", "CatalogInMemory");
 builder.Services.AddCatalogApi(builder.Configuration);
+builder.Services.AddSearchServices();
+builder.Services.AddCorrectionServices();
+builder.Services.AddSecurityServices(builder.Configuration);
+builder.Services.AddDemoSeed(builder.Configuration);
 
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
 app.UseCatalogApi();
 app.MapCatalogEndpoints();
+app.MapSearchEndpoints();
+app.MapCatchmentEndpoints();
+app.MapCorrectionEndpoints();
+app.MapKeyEndpoints();
+app.MapAdminEndpoints();
 
 app.Run();
 

@@ -19,7 +19,7 @@ public sealed class MetaEndpointTests : IDisposable
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var root = await JsonTestHelpers.ReadJsonAsync(response);
-        Assert.Equal("0.0-draft", root.GetProperty("methodologyVersion").GetString());
+        Assert.Equal(SchoolSearch.Api.Scoring.ScoringPolicy.MethodologyVersion, root.GetProperty("methodologyVersion").GetString());
         Assert.Equal(JsonValueKind.Null, root.GetProperty("dataVintage").ValueKind);
     }
 }
@@ -53,9 +53,12 @@ public sealed class RankingContractTests : IDisposable
 
         var sortLikeNames = parameters
             .Select(p => p.GetProperty("name").GetString() ?? string.Empty)
-            .Where(name => name.Contains("sort", StringComparison.OrdinalIgnoreCase)
-                        || name.Contains("order", StringComparison.OrdinalIgnoreCase)
-                        || name.Contains("direction", StringComparison.OrdinalIgnoreCase))
+            .Where(name => name.Contains("order", StringComparison.OrdinalIgnoreCase)
+                        || name.Contains("direction", StringComparison.OrdinalIgnoreCase)
+                        || name.Equals("dir", StringComparison.OrdinalIgnoreCase)
+                        || name.Equals("asc", StringComparison.OrdinalIgnoreCase)
+                        || name.Equals("desc", StringComparison.OrdinalIgnoreCase)
+                        || name.Equals("reverse", StringComparison.OrdinalIgnoreCase))
             .ToList();
         Assert.Empty(sortLikeNames);
 
@@ -63,5 +66,9 @@ public sealed class RankingContractTests : IDisposable
         var operationText = get.GetRawText();
         Assert.DoesNotContain("composite_asc", operationText, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("composite-asc", operationText, StringComparison.OrdinalIgnoreCase);
+
+        // 'sort' exists (name|score) but is descending-only: no ascending/reverse vocabulary in the operation.
+        Assert.DoesNotContain("ascending", operationText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("reverse", operationText, StringComparison.OrdinalIgnoreCase);
     }
 }

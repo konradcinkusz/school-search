@@ -2,6 +2,7 @@ using SchoolSearch.Api.Errors;
 using SchoolSearch.Api.Hosting;
 using SchoolSearch.Api.Options;
 using SchoolSearch.Api.RateLimiting;
+using SchoolSearch.Api.Security;
 using SchoolSearch.ServiceDefaults;
 
 namespace SchoolSearch.Api.Extensions;
@@ -22,11 +23,18 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
-    /// <summary>Pipeline order: error shape (outermost), CORS, rate limiter. Routing is added by the host.</summary>
+    /// <summary>
+    /// Pipeline order: error shape (outermost), security headers, body limit, CORS, API key resolution,
+    /// rate limiter. Key resolution must precede the limiter, which partitions on its result.
+    /// Routing is added by the host.
+    /// </summary>
     public static WebApplication UseCatalogApi(this WebApplication app)
     {
         app.UseMiddleware<ApiErrorMiddleware>();
+        app.UseMiddleware<SecurityHeadersMiddleware>();
+        app.UseMiddleware<RequestBodyLimitMiddleware>();
         app.UseCors(CorsPolicies.Frontend);
+        app.UseMiddleware<ApiKeyResolutionMiddleware>();
         app.UseRateLimiter();
         return app;
     }
