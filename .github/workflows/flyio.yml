@@ -6,6 +6,7 @@ name: flyio
 #   - a service whose Fly app does not exist is always selected
 #   - kernel/contracts changes invalidate every image
 #   - one image per changed service, pushed to GHCR, then deployed by reference
+#   - import (ghcr.io/konradcinkusz/school-search-import) is built and pushed only; it is never deployed
 #   - order: postgres -> authservice (Phase E, gated) -> api -> web -> mcp
 #   - every gate accepts success || skipped from its upstream
 #   - app and volume creation is idempotent and lives here, not in a shell
@@ -113,11 +114,19 @@ jobs:
             if want_missing_or_changed '^flyio/authservice\.fly\.toml$' school-search-authservice-dev; then DEPLOY_AUTHSERVICE=true; fi
           fi
 
+          # Import is a one-shot console job (no Fly app, never deployed): its image is built and pushed
+          # when its code or the catalog model it compiles against changes, and no deploy job consumes it.
+          BUILD_IMPORT=false
+          if [ -f src/SchoolSearch.Import/Dockerfile ]; then
+            if [ "$KERNEL" = true ] || hit '^src/SchoolSearch\.(Import|Catalog\.Data|Contracts)/'; then BUILD_IMPORT=true; fi
+          fi
+
           MATRIX='[]'
           add_build() { MATRIX="$(jq -c --arg s "$1" --arg d "$2" '. + [{service: $s, dockerfile: $d}]' <<< "$MATRIX")"; }
           if [ "$DEPLOY_API" = true ]; then add_build api src/SchoolSearch.Api/Dockerfile; fi
           if [ "$DEPLOY_WEB" = true ]; then add_build web web/app/Dockerfile; fi
           if [ "$DEPLOY_MCP" = true ]; then add_build mcp src/SchoolSearch.Mcp/Dockerfile; fi
+          if [ "$BUILD_IMPORT" = true ]; then add_build import src/SchoolSearch.Import/Dockerfile; fi
 
           {
             echo "build_matrix=$MATRIX"

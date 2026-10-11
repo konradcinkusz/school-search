@@ -22,6 +22,21 @@ jobs:
     name: dotnet build and test
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      # Throwaway CI database for PostgresMigrationTests (CATALOG_TEST_PG). Trust auth: no password, no secret.
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: school_search
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: school_search_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U school_search -d school_search_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -32,6 +47,8 @@ jobs:
       - name: Build (warnings as errors)
         run: dotnet build SchoolSearch.sln --no-restore -c Release -warnaserror
       - name: Test
+        env:
+          CATALOG_TEST_PG: Host=localhost;Port=5432;Database=school_search_test;Username=school_search
         run: dotnet test SchoolSearch.sln --no-build -c Release
 
   kernel-size:
@@ -141,6 +158,15 @@ jobs:
         run: |
           docker run -d --name api -p 8080:8080 school-search-api:ci
           curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8080/health
+      - name: Build Import image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/SchoolSearch.Import/Dockerfile
+          push: false
+          tags: school-search-import:ci
+          cache-from: type=gha,scope=import
+          cache-to: type=gha,mode=max,scope=import
       - name: Build web image
         uses: docker/build-push-action@v6
         with:
