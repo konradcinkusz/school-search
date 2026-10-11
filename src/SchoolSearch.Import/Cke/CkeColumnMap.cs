@@ -52,7 +52,7 @@ public sealed record CkeColumnMap
         var names = new List<string> { Key };
         names.AddRange(SubjectColumns().SelectMany(s => new[] { s.MeanPercentColumn, s.PupilsSatColumn }));
 
-        if (names.Any(string.IsNullOrWhiteSpace))
+        if (names.Any(n => string.IsNullOrWhiteSpace(n)))
         {
             throw new InvalidOperationException("Invalid CKE column map: every column name must be non-blank.");
         }
@@ -73,9 +73,9 @@ public sealed record CkeColumnMap
     /// <summary>The mapped subject columns, in a fixed order.</summary>
     internal IReadOnlyList<CkeSubjectColumns> SubjectColumns() =>
     [
-        new(ExamSubjects.Polish, PolishMeanPercent, PolishPupilsSat),
-        new(ExamSubjects.Mathematics, MathematicsMeanPercent, MathematicsPupilsSat),
-        new(ExamSubjects.ForeignLanguage, ForeignLanguageMeanPercent, ForeignLanguagePupilsSat),
+        new CkeSubjectColumns(ExamSubjects.Polish, PolishMeanPercent, PolishPupilsSat),
+        new CkeSubjectColumns(ExamSubjects.Mathematics, MathematicsMeanPercent, MathematicsPupilsSat),
+        new CkeSubjectColumns(ExamSubjects.ForeignLanguage, ForeignLanguageMeanPercent, ForeignLanguagePupilsSat),
     ];
 }
 

@@ -71,7 +71,7 @@ Per the product brief (not re-verified against the publishers):
 | Code | Meaning | Action |
 |---|---|---|
 | 0 | Run finished. Rejected rows are counted and listed, and do not change the code. | Read the rejection reasons. |
-| 1 | Error: bad arguments, configuration, a missing mapped column, a personal-data column, an unmatched join rule, or an I/O or database failure. Nothing from the failed loader's validation step is written. | Fix the input or the setting and re-run. |
+| 1 | Error: bad arguments, configuration, a missing mapped column, a personal-data column, or an I/O or database failure. No catalog rows are written; the ImportRun row stays unfinished (empty FinishedAt). | Fix the input or the setting and re-run. |
 | 2 | Schema mismatch: `__EFMigrationsHistory` lacks the expected migration. Nothing is written. | Apply the Api migration first. |
 
 ## 7. Rules the importer enforces
@@ -82,5 +82,5 @@ Per the product brief (not re-verified against the publishers):
 - **Faith flag** is derived from governing body type 140 only, never from a school name or patron.
 - **Join keys are exact.** A CKE row whose key does not match a school exactly is rejected and counted, never
   matched fuzzily. The CKE join key is UNRESOLVED (ADR-0012 pending).
-- **Missing mapped column:** the run aborts with the list of missing headers and writes nothing.
+- **Missing mapped column:** the run aborts with the list of missing headers and writes no catalog rows (the ImportRun row stays unfinished).
 - **Provenance:** every written row carries source, source URL, as-of date and method.
