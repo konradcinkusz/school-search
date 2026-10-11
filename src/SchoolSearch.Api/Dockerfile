@@ -9,12 +9,14 @@ WORKDIR /src
 COPY global.json Directory.Build.props Directory.Packages.props ./
 COPY src/SchoolSearch.ServiceDefaults/SchoolSearch.ServiceDefaults.csproj src/SchoolSearch.ServiceDefaults/
 COPY src/SchoolSearch.Catalog.Data/SchoolSearch.Catalog.Data.csproj src/SchoolSearch.Catalog.Data/
+COPY src/SchoolSearch.Contracts/SchoolSearch.Contracts.csproj src/SchoolSearch.Contracts/
 COPY src/SchoolSearch.Api/SchoolSearch.Api.csproj src/SchoolSearch.Api/
 RUN dotnet restore src/SchoolSearch.Api/SchoolSearch.Api.csproj
 
 # 2. Source and publish.
 COPY src/SchoolSearch.ServiceDefaults/ src/SchoolSearch.ServiceDefaults/
 COPY src/SchoolSearch.Catalog.Data/ src/SchoolSearch.Catalog.Data/
+COPY src/SchoolSearch.Contracts/ src/SchoolSearch.Contracts/
 COPY src/SchoolSearch.Api/ src/SchoolSearch.Api/
 RUN dotnet publish src/SchoolSearch.Api/SchoolSearch.Api.csproj -c Release -o /app/publish --no-restore
 
