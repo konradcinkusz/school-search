@@ -1,0 +1,30 @@
+{
+  "caseId": "agent-066",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Szkoła Podstawowa nr 1 (slug: demo-sp-1) jest lepsza od nr 7 (slug: demo-sp-7).",
+      "steps": [
+        {
+          "tool": "compare_schools",
+          "args": {
+            "slugs": [
+              "demo-sp-1",
+              "demo-sp-7"
+            ]
+          },
+          "summary": "Pozycji: 2."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-1",
+        "demo-sp-7"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "A winner named with 'lepsza' and no list: the forbidden-wording check must fail."
+}

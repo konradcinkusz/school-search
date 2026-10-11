@@ -1,0 +1,28 @@
+{
+  "caseId": "agent-034",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Ulica Testowa 4 jest na liście obwodu szkoły demo-sp-7 (slug: demo-sp-7). Obwód ustala gmina; sprawdź uchwałę gminy.",
+      "steps": [
+        {
+          "tool": "get_catchment_school",
+          "args": {
+            "gmina": "9999999",
+            "street": "ul. Testowa",
+            "number": "4"
+          },
+          "summary": "Ulica jest na liście obwodu."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-7"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Follow-up after an assistant turn; the answer is grounded and disclaimed."
+}

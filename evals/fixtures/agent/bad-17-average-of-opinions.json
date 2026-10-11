@@ -1,0 +1,26 @@
+{
+  "caseId": "agent-072",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Średnia ocena z opinii o szkole demo-sp-1 to 4,5, ale opinie są niezweryfikowane.",
+      "steps": [
+        {
+          "tool": "get_school_reviews",
+          "args": {
+            "slug": "demo-sp-1"
+          },
+          "summary": "Pobrano dane."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-1"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Reviews averaged into a number: must fail."
+}

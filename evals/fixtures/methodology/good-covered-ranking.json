@@ -1,0 +1,18 @@
+{
+  "caseId": "methodology-011",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "answer": "Ranking sortuje szkoły malejąco według wyniku. Remisy mają wspólne miejsce, a szkoły bez wyniku nie są w rankingu.",
+      "aiLabel": "Wygenerowano przez AI",
+      "citedSections": [
+        "4.5 Ranking"
+      ],
+      "groundedInDocument": true,
+      "methodologyVersion": "1.0.0",
+      "model": "claude-haiku-5-5"
+    }
+  },
+  "note": "Descending order described from the section."
+}

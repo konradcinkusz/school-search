@@ -1,0 +1,18 @@
+{
+  "caseId": "methodology-043",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "answer": "Bilet kosztuje 3 zł, a dopłata wynosi 5 zł.",
+      "aiLabel": "Wygenerowano przez AI",
+      "citedSections": [
+        "3. Inputs"
+      ],
+      "groundedInDocument": true,
+      "methodologyVersion": "1.0.0",
+      "model": "claude-haiku-5-5"
+    }
+  },
+  "note": "An invented method and invented numbers for an uncovered question."
+}

@@ -1,11 +1,50 @@
 # AI evals: what must be measured before each feature is switched on
 
-Status: **the eval sets below are specified, not built.** No live model call has been made for any Phase G feature. The
-thresholds are **proposals** by the author; the owner sets them before the first live run, and the setting is recorded
-here with a date. Until then a feature stays behind its `AI_ENABLED` switch (`docs/runbooks/AI-OPERATIONS.md` section 3).
+Status: **the harness exists; the datasets are being filled and no live run has been made.** No live model call has been
+made for any Phase G feature. The thresholds are **proposals** by the author (`evals/thresholds.json`, each entry with
+`"decided_by_owner": false`); the owner sets them before the first live run, and the setting is recorded below with a
+date. Until then a feature stays behind its `AI_ENABLED` switch (`docs/runbooks/AI-OPERATIONS.md` section 3).
 
 Follows section 8 of [`AI-FEATURES.md`](AI-FEATURES.md) (two layers, scenario classes, mutation variants, synthetic data).
 The source guide `docs/guides/AI-EVALS.md` lives in the architecture-standards repository and is not in this repository.
+
+## 0. What exists and how to run it
+
+| Piece | Where | State |
+|---|---|---|
+| Tier A runner, registry, dataset validator, report writer, thresholds | `evals/` (`evals/README.md`) | Built. Unit tests in `evals/test/`. |
+| Offline selftest (datasets, fixtures, graders, request builders) | `node evals/run.mjs --selftest`, CI job `evals selftest` | Built. Runs in CI with no network and no key. |
+| Live Tier A run | `node evals/run.mjs --live`, workflow `.github/workflows/evals.yml` (manual) | Built. **Not run against any deployed service.** |
+| Tier A datasets, fixtures and graders: explain, search intent, methodology, agent | `evals/datasets/<feature>/`, `evals/fixtures/<feature>/`, `evals/features/<feature>.mjs` | Owned by the feature authors. Each dataset has its own README. |
+| Tier B in-process evals (review triage, correction triage, profile copy, catchment and preschool extractors) | `tests/SchoolSearch.Evals.Tests` | Specified in section 3; the project is built by its own changes. Live tests are `[LiveEvalFact]`, skipped unless `EVALS_LIVE=1` and `ANTHROPIC_API_KEY`. |
+
+Commands (offline, what CI runs):
+
+```sh
+node evals/run.mjs --selftest
+node --test 'evals/test/*.test.mjs'
+```
+
+Live (a person's task, spends model budget; needs the deployed URLs):
+
+```sh
+EVAL_API_BASE=... EVAL_AGENT_BASE=... node evals/run.mjs --live --feature explain
+```
+
+A report lands in `evals/out/` (gitignored) as `<feature>-<UTC stamp>.json` and `.md`. It records the verdict
+(`PASS`, `FAIL`, `NOT RUN`, `NOT GATED`), the pass rate per scenario class, the threshold checks, the case ids that did
+not pass, the estimated tokens, and the model id and prompt version if the operator set `EVAL_MODEL_ID` and
+`EVAL_PROMPT_VERSION`. It never contains request or response bodies. A run in which a case could not reach the model
+(503 `ai_unavailable`, `ai_budget_exhausted`, no base URL, token budget spent) is **NOT RUN**, never a pass.
+
+Still NOT RUN in this repository: every live run; the Tier B live tests; the model-graded judge (Layer 2 rubric, section 5
+below); calibration of any threshold.
+
+### Owner decisions (threshold settings)
+
+| Feature | Threshold set by owner | Date | Value |
+|---|---|---|---|
+| all | not yet decided | - | the values in `evals/thresholds.json` are proposals |
 
 ## 1. Rules that apply to every eval
 

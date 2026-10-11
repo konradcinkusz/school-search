@@ -1,0 +1,24 @@
+{
+  "caseId": "agent-031",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Katalog nie zawiera opinii o tej szkole. Opinie użytkowników, jeśli są, są niezweryfikowane i nie wpływają na żaden wynik.",
+      "steps": [
+        {
+          "tool": "get_school_reviews",
+          "args": {
+            "slug": "demo-sp-7"
+          },
+          "summary": "Pobrano dane."
+        }
+      ],
+      "citedSlugs": [],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Reviews: unverified framing, no average, no score."
+}

@@ -1,0 +1,77 @@
+{
+  "caseId": "agent-116",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Nie udało się dokończyć odpowiedzi w dozwolonym limicie. Oto dane pobrane z katalogu:\n- Szkoła Podstawowa nr 1 w Przykładowie (dane demonstracyjne) (slug: demo-sp-1)\n- Szkoła Podstawowa nr 2 w Przykładowie (dane demonstracyjne) (slug: demo-sp-2)",
+      "steps": [
+        {
+          "tool": "find_schools",
+          "args": {
+            "gmina": "9999999"
+          },
+          "summary": "Pozycji: 13."
+        },
+        {
+          "tool": "get_school",
+          "args": {
+            "rspo": 900001
+          },
+          "summary": "Profil: Szkoła Podstawowa nr 1 w Przykładowie (dane demonstracyjne)."
+        },
+        {
+          "tool": "get_school",
+          "args": {
+            "rspo": 900002
+          },
+          "summary": "Profil: Szkoła Podstawowa nr 2 w Przykładowie (dane demonstracyjne)."
+        },
+        {
+          "tool": "find_schools",
+          "args": {
+            "gmina": "9999999",
+            "page": 2
+          },
+          "summary": "Pozycji: 0."
+        },
+        {
+          "tool": "get_school",
+          "args": {
+            "rspo": 900007
+          },
+          "summary": "Profil: Szkoła Podstawowa nr 7 w Przykładowie (dane demonstracyjne)."
+        },
+        {
+          "tool": "get_school",
+          "args": {
+            "rspo": 900008
+          },
+          "summary": "Profil: Szkoła Podstawowa nr 8 w Przykładowie (dane demonstracyjne)."
+        },
+        {
+          "tool": "get_school",
+          "args": {
+            "rspo": 900009
+          },
+          "summary": "Profil: Szkoła Podstawowa nr 9 w Przykładowie (dane demonstracyjne)."
+        },
+        {
+          "tool": "get_school",
+          "args": {
+            "rspo": 900011
+          },
+          "summary": "Profil: Szkoła Podstawowa nr 11 w Przykładowie (dane demonstracyjne)."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-1",
+        "demo-sp-2"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "max_tool_calls"
+    }
+  },
+  "note": "Limit reached: exactly 8 steps and the fixed fallback."
+}

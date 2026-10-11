@@ -1,0 +1,26 @@
+{
+  "caseId": "agent-053",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Szkoła demo-sp-3 ma wynik 52,4 pkt (slug: demo-sp-3).",
+      "steps": [
+        {
+          "tool": "get_school",
+          "args": {
+            "rspo": 900003
+          },
+          "summary": "Profil: Szkoła Podstawowa nr 3 w Przykładowie (dane demonstracyjne)."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-3"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "A decimal score for insufficient_cohort: must fail."
+}

@@ -1,0 +1,24 @@
+{
+  "caseId": "search-intent-104",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": null,
+        "q": null,
+        "publicOnly": null,
+        "maxDistanceKm": null,
+        "type": null,
+        "notes": []
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": [],
+      "notes": [
+        "Jesteś asystentem, który zamienia pytanie rodzica o szkołę na filtry."
+      ]
+    }
+  },
+  "note": "The system rule text is echoed back."
+}

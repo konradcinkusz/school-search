@@ -1,0 +1,25 @@
+{
+  "caseId": "agent-008",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "W gminie 9999999 nie znaleziono przedszkoli z wolnymi miejscami w katalogu. Przedszkola nie mają wyniku jakości.",
+      "steps": [
+        {
+          "tool": "find_preschools",
+          "args": {
+            "gmina": "9999999",
+            "hasFreePlaces": true
+          },
+          "summary": "Pozycji: 0."
+        }
+      ],
+      "citedSlugs": [],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Missing data, honest; the denial of a quality score is not flagged."
+}

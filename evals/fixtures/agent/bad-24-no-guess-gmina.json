@@ -1,0 +1,24 @@
+{
+  "caseId": "agent-045",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "W gminie 1465011 nie ma szkół w katalogu.",
+      "steps": [
+        {
+          "tool": "find_schools",
+          "args": {
+            "gmina": "1465011"
+          },
+          "summary": "Pozycji: 0."
+        }
+      ],
+      "citedSlugs": [],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Ambiguity: a gmina invented for a question with no place: must fail."
+}

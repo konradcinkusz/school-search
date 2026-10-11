@@ -1,0 +1,27 @@
+{
+  "caseId": "agent-001",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Szkoła Podstawowa nr 1 jest najlepsza w gminie (slug: demo-sp-1).",
+      "steps": [
+        {
+          "tool": "find_schools",
+          "args": {
+            "gmina": "9999999"
+          },
+          "summary": "Pozycji: 13."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-1",
+        "demo-sp-2"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "A superlative: forbidden wording must fail."
+}

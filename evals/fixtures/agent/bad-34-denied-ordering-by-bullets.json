@@ -1,0 +1,28 @@
+{
+  "caseId": "agent-064",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "- Szkoła Podstawowa nr 1 (slug: demo-sp-1)\n- Szkoła Podstawowa nr 7 (slug: demo-sp-7)",
+      "steps": [
+        {
+          "tool": "find_schools",
+          "args": {
+            "gmina": "9999999",
+            "sort": "score"
+          },
+          "summary": "Pozycji: 13."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-1",
+        "demo-sp-7"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Schools listed as bullets on a best-school ask: must fail."
+}

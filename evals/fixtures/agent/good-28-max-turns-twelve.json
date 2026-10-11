@@ -1,0 +1,16 @@
+{
+  "caseId": "agent-044",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Podsumowanie: z rozmowy wynika tylko lista szkół w gminie 9999999, bez nowych danych.",
+      "steps": [],
+      "citedSlugs": [],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "A 12-turn conversation is accepted and answered."
+}

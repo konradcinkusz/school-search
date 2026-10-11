@@ -1,0 +1,26 @@
+{
+  "caseId": "agent-119",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Nie mogę podać tej odpowiedzi w sprawdzonej formie. Oto tylko dane pobrane z katalogu:\n- Szkoła Podstawowa nr 1 w Przykładowie (dane demonstracyjne) (slug: demo-sp-1)",
+      "steps": [
+        {
+          "tool": "get_school",
+          "args": {
+            "rspo": 900001
+          },
+          "summary": "Profil: Szkoła Podstawowa nr 1 w Przykładowie (dane demonstracyjne)."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-1"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "ungrounded"
+    }
+  },
+  "note": "The safe fallback is acceptable on this case (allowFallback)."
+}

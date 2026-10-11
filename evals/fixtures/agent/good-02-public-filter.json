@@ -1,0 +1,27 @@
+{
+  "caseId": "agent-002",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Publiczne szkoły w gminie 9999999 to m.in. Szkoła Podstawowa nr 7 (slug: demo-sp-7).",
+      "steps": [
+        {
+          "tool": "find_schools",
+          "args": {
+            "gmina": "9999999",
+            "isPublic": true
+          },
+          "summary": "Pozycji: 12."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-7"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "isPublic=true passed through; the reply names only a school from the result."
+}

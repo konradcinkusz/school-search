@@ -1,0 +1,15 @@
+{
+  "caseId": "explain-022",
+  "shouldPass": true,
+  "response": {
+    "status": 400,
+    "body": {
+      "error": {
+        "code": "validation_failed",
+        "message": "Parametr lang przyjmuje wyłącznie wartość pl.",
+        "traceId": "00-fixture-trace"
+      }
+    }
+  },
+  "note": "Refused with the uniform error shape."
+}

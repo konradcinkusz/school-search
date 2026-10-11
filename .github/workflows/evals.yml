@@ -1,0 +1,80 @@
+name: evals (live)
+
+# Manual only. Calls a deployed catalog API and MCP service, so it spends model budget. Never runs on pull requests.
+# The offline harness check runs in ci.yml (job evals-selftest).
+on:
+  workflow_dispatch:
+    inputs:
+      api_base:
+        description: "Catalog API base URL, for example https://api.example.test (no query, no credentials)"
+        required: true
+        type: string
+      agent_base:
+        description: "MCP service base URL for the agent evals (optional; agent cases are NOT RUN without it)"
+        required: false
+        type: string
+        default: ""
+      features:
+        description: "Comma-separated feature names, or empty for every dataset"
+        required: false
+        type: string
+        default: ""
+      max_cases:
+        description: "Optional cap on cases per feature (EVAL_MAX_CASES); a capped run is marked partial"
+        required: false
+        type: string
+        default: ""
+      token_budget:
+        description: "Estimated token budget for the whole run (EVAL_TOKEN_BUDGET)"
+        required: false
+        type: string
+        default: "200000"
+      model_id:
+        description: "Model id to record in the report, for example claude-haiku-5-5 (recorded only, not sent)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: evals-live
+  cancel-in-progress: false
+
+jobs:
+  live:
+    name: live evals (Tier A)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run live evals against the given URLs
+        # The inputs reach the script only through the environment, never through ${{ }} interpolation in the script.
+        # The ANTHROPIC key is not passed: the deployed services hold their own key, and Tier A never sees it.
+        working-directory: evals
+        env:
+          EVAL_API_BASE: ${{ inputs.api_base }}
+          EVAL_AGENT_BASE: ${{ inputs.agent_base }}
+          EVAL_TOKEN_BUDGET: ${{ inputs.token_budget }}
+          EVAL_MAX_CASES: ${{ inputs.max_cases }}
+          EVAL_MODEL_ID: ${{ inputs.model_id }}
+          EVAL_FEATURES: ${{ inputs.features }}
+        run: |
+          set -euo pipefail
+          args=(--live)
+          if [ -n "${EVAL_FEATURES}" ]; then
+            args+=(--feature "${EVAL_FEATURES}")
+          fi
+          node run.mjs "${args[@]}"
+      - name: Upload the reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evals-live-${{ github.run_id }}
+          path: evals/out/
+          if-no-files-found: ignore
+          retention-days: 30

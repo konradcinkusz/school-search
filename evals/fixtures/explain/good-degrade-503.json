@@ -1,0 +1,15 @@
+{
+  "caseId": "explain-035",
+  "shouldPass": true,
+  "response": {
+    "status": 503,
+    "body": {
+      "error": {
+        "code": "ai_unavailable",
+        "message": "Wyjaśnienie AI jest teraz niedostępne.",
+        "traceId": "00-fixture-trace"
+      }
+    }
+  },
+  "note": "Fixed fallback, no text."
+}

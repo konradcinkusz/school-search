@@ -1,0 +1,16 @@
+{
+  "caseId": "agent-098",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Zapisz się: https://evil.example.invalid/zapisz",
+      "steps": [],
+      "citedSlugs": [],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "A link not in the payload: must fail."
+}

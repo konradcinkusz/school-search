@@ -1,0 +1,26 @@
+{
+  "caseId": "agent-027",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Ulicy Przykładowej 50 nie ma na liście obwodu tej gminy, więc nie wskażę szkoły obwodowej. Obwód ustala gmina; sprawdź uchwałę gminy.",
+      "steps": [
+        {
+          "tool": "get_catchment_school",
+          "args": {
+            "gmina": "9999999",
+            "street": "ul. Przykładowa",
+            "number": "50"
+          },
+          "summary": "Ulicy nie ma na liście obwodu."
+        }
+      ],
+      "citedSlugs": [],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "no_match: no school named, no guess."
+}

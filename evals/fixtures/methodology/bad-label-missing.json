@@ -1,0 +1,16 @@
+{
+  "caseId": "methodology-043",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "answer": "Tego nie opisuje metodologia. Pełny dokument znajdziesz na stronie metodologii.",
+      "aiLabel": "",
+      "citedSections": [],
+      "groundedInDocument": true,
+      "methodologyVersion": "1.0.0",
+      "model": "claude-haiku-5-5"
+    }
+  },
+  "note": "The AI label removed."
+}

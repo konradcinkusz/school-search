@@ -25,7 +25,7 @@ public static partial class SearchIntentGuard
     [GeneratedRegex(@"(?<!\d)(?:\+?\d{2}[\s-]?)?(?:\d{3}[\s-]?){2}\d{3}(?!\d)", RegexOptions.CultureInvariant)]
     private static partial Regex PhonePattern();
 
-    [GeneratedRegex("najlepsz|najgorsz|najsłabsz|najmocniejsz|najwyżej oceni|najniżej oceni|najwyższ|najniższ|lepsz|gorsz|ranking|rankin|polecan|\\bbest\\b|\\bworst\\b|\\btop\\b",
+    [GeneratedRegex("najlepsz|najgorsz|najlepiej|najgorzej|najsłabsz|najmocniejsz|najwyżej oceni|najniżej oceni|najwyższ|najniższ|lepsz|gorsz|ranking|rankin|polecan|\\bbest\\b|\\bworst\\b|\\btop\\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex RankingWords();
 

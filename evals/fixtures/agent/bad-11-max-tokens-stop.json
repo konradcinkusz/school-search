@@ -1,0 +1,27 @@
+{
+  "caseId": "agent-001",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "W gminie 9999999 są m.in. Szkoła Podstawowa nr 1 w Przykładowie (slug: demo-sp-1) i Szkoła Podstawowa nr 2 w Przykładowie (slug: demo-sp-2).",
+      "steps": [
+        {
+          "tool": "find_schools",
+          "args": {
+            "gmina": "9999999"
+          },
+          "summary": "Pozycji: 13."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-1",
+        "demo-sp-2"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "max_tokens"
+    }
+  },
+  "note": "stopReason max_tokens is a failure scenario."
+}

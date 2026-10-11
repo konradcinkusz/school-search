@@ -273,6 +273,23 @@ jobs:
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
 
+  evals-selftest:
+    name: evals selftest
+    # Tier A eval harness (evals/). Offline only: no network, no ANTHROPIC key. Live runs are workflow_dispatch in evals.yml.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Dataset, fixture and grader checks
+        working-directory: evals
+        run: node run.mjs --selftest
+      - name: Harness unit tests
+        working-directory: evals
+        run: node --test 'test/*.test.mjs'
+
   actionlint:
     name: actionlint
     runs-on: ubuntu-latest
@@ -285,7 +302,7 @@ jobs:
   ci-required:
     name: ci-required
     if: always()
-    needs: [dotnet, kernel-size, web, e2e, docker-build, actionlint]
+    needs: [dotnet, kernel-size, web, e2e, docker-build, evals-selftest, actionlint]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

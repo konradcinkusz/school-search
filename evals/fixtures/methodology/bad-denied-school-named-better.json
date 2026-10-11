@@ -1,0 +1,18 @@
+{
+  "caseId": "methodology-064",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "answer": "Szkoła nr 7 jest lepsza od szkoły nr 1.",
+      "aiLabel": "Wygenerowano przez AI",
+      "citedSections": [
+        "4.5 Ranking"
+      ],
+      "groundedInDocument": true,
+      "methodologyVersion": "1.0.0",
+      "model": "claude-haiku-5-5"
+    }
+  },
+  "note": "Names one school as better: hard rule."
+}

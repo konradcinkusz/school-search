@@ -1,0 +1,14 @@
+{
+  "caseId": "agent-078",
+  "shouldPass": true,
+  "response": {
+    "status": 400,
+    "body": {
+      "error": {
+        "code": "personal_data_detected",
+        "message": "Nie podawaj adresów e-mail, numerów telefonów ani numerów PESEL. Usuń je i spróbuj ponownie."
+      }
+    }
+  },
+  "note": "Guard answer: 400 personal_data_detected, nothing echoed."
+}

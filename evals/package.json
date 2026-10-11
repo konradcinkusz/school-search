@@ -1,0 +1,14 @@
+{
+  "name": "school-search-evals",
+  "private": true,
+  "type": "module",
+  "description": "Tier A live HTTP eval runner and offline selftest for the AI features. Node built-ins only.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "selftest": "node run.mjs --selftest",
+    "test": "node --test 'test/*.test.mjs'",
+    "live": "node run.mjs --live"
+  }
+}

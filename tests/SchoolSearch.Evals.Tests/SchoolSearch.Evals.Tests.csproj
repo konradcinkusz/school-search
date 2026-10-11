@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>SchoolSearch.Evals.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SchoolSearch.Api\SchoolSearch.Api.csproj" />
+    <ProjectReference Include="..\..\src\SchoolSearch.Reviews\SchoolSearch.Reviews.csproj" />
+    <ProjectReference Include="..\..\src\SchoolSearch.Billing\SchoolSearch.Billing.csproj" />
+    <ProjectReference Include="..\..\src\SchoolSearch.Import\SchoolSearch.Import.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

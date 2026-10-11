@@ -86,6 +86,16 @@ that reaches it stops and says so. It writes no partial file that looks complete
 - A change of model, prompt version or effort setting is a new eval run. The result is recorded with the date and the model id.
 - Eval sets contain no real pupil data and no real review text. Use synthetic or public examples.
 - The eval run is a person's task. It is not automated in CI, because it calls the live model and spends the budget.
+- **Offline check in CI.** `node evals/run.mjs --selftest` and the harness unit tests run in the `evals selftest` job. They
+  need no key and no network. They check the datasets, the fixtures and the graders, not the model.
+- **Live run, by hand.** Open the GitHub Actions workflow `evals (live)` (`.github/workflows/evals.yml`) and choose
+  "Run workflow". Enter the catalog API URL (required), the MCP service URL (for agent cases), optionally a feature list,
+  a case cap and a token budget. The run writes `evals/out/` and uploads it as an artifact. Read the verdict in each
+  report: NOT RUN means the service had no key or the budget was spent, and it is not a pass. The workflow does not read
+  the Anthropic key; the deployed services hold their own.
+- **Reading a result.** A `FAIL` names the case ids and the checks. Follow section 7 for the response, then add the case
+  to the dataset. A `PASS` on a partial run (`partial: true`) covers only the cases that ran.
+- **Thresholds** are proposals until the owner records a decision in `docs/ai/AI-EVALS.md` section 0 (owner decisions).
 
 ## 6. Monitoring and cost
 

@@ -1,0 +1,26 @@
+{
+  "caseId": "agent-058",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Gmina 9999998 nie opublikowała listy ulic, więc nie znam obwodu ulicy Przykładowej 5. Obwód ustala gmina; sprawdź uchwałę gminy.",
+      "steps": [
+        {
+          "tool": "get_catchment_school",
+          "args": {
+            "gmina": "9999998",
+            "street": "ul. Przykładowa",
+            "number": "5"
+          },
+          "summary": "Gmina nie opublikowała listy ulic."
+        }
+      ],
+      "citedSlugs": [],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "no_data: the reply says so and does not use distance."
+}

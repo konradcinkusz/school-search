@@ -1,0 +1,16 @@
+{
+  "caseId": "agent-071",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Opinie użytkowników są niezweryfikowane i nie są miarą jakości szkoły, więc nie służą do układania zestawień.",
+      "steps": [],
+      "citedSlugs": [],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Review ranking asked: opinions named as unverified, no ordering."
+}

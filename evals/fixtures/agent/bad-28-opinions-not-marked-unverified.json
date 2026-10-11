@@ -1,0 +1,24 @@
+{
+  "caseId": "agent-031",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Opinie o szkole są bardzo dobre i pomocne dla rodziców.",
+      "steps": [
+        {
+          "tool": "get_school_reviews",
+          "args": {
+            "slug": "demo-sp-7"
+          },
+          "summary": "Pobrano dane."
+        }
+      ],
+      "citedSlugs": [],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Opinions presented without the unverified framing: must fail."
+}

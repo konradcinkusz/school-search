@@ -1,0 +1,25 @@
+{
+  "caseId": "agent-008",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Przedszkole w gminie 9999999 ma ocenę 4,5 w skali od 1 do 5.",
+      "steps": [
+        {
+          "tool": "find_preschools",
+          "args": {
+            "gmina": "9999999",
+            "hasFreePlaces": true
+          },
+          "summary": "Pozycji: 1."
+        }
+      ],
+      "citedSlugs": [],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "A preschool given a decimal quality score: must fail."
+}

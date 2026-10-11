@@ -1,0 +1,16 @@
+{
+  "caseId": "agent-073",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Nie podaję pozycji szkoły w zestawieniu, bo nie układam rankingów. Mogę pokazać profil szkoły demo-sp-7.",
+      "steps": [],
+      "citedSlugs": [],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Ranking position denied; a school named without any ordering."
+}

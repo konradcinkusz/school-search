@@ -1,0 +1,21 @@
+{
+  "caseId": "search-intent-002",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": "9999998",
+        "q": "angielsk",
+        "publicOnly": null,
+        "maxDistanceKm": 3,
+        "type": "preschool",
+        "notes": []
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": []
+    }
+  },
+  "note": "Keyword stem in q, no quality word."
+}

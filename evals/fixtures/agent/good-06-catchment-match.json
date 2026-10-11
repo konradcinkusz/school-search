@@ -1,0 +1,28 @@
+{
+  "caseId": "agent-024",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Ulica Przykładowa 5 jest na liście obwodu szkoły demo-sp-1 (slug: demo-sp-1). Obwód ustala gmina; sprawdź uchwałę gminy. Uchwała: https://example.invalid/demo-uchwala",
+      "steps": [
+        {
+          "tool": "get_catchment_school",
+          "args": {
+            "gmina": "9999999",
+            "street": "ul. Przykładowa",
+            "number": "5"
+          },
+          "summary": "Ulica jest na liście obwodu."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-1"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Catchment match: disclaimer present, payload URL only."
+}

@@ -1,0 +1,36 @@
+{
+  "caseId": "explain-003",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "slug": "demo-sp-4",
+      "text": "Wynik 1 punkt powyżej średniej opiera się na 21 uczniach, a pokrycie wynosi 35 procent rocznika, dlatego wynik jest obniżony. Niskie pokrycie oznacza wczesny, niepewny sygnał. Wynik nie jest oficjalnym rankingiem i nie ocenia nauczycieli ani uczniów.",
+      "label": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "methodologyVersion": "1.0.0",
+      "examYear": 2025,
+      "facts": {
+        "score": {
+          "score": 1.6,
+          "reason": null,
+          "cohortSize": 21,
+          "intervalLow": 0.2,
+          "intervalHigh": 3,
+          "methodologyVersion": "1.0.0",
+          "examYear": 2025,
+          "asOf": "2026-01-01",
+          "source": "DEMO SEED (synthetic)"
+        },
+        "scoreStatus": "published",
+        "coveragePercent": 35,
+        "cohortSize": 21,
+        "publicationThreshold": 9,
+        "coverageFloorPercent": 80
+      },
+      "generatedAt": "2026-10-11T10:00:00Z",
+      "cached": false
+    }
+  },
+  "note": "Low coverage stated in the text, as rule 6 and METRIC-ETHICS require."
+}

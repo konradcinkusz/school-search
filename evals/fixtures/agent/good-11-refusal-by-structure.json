@@ -1,0 +1,16 @@
+{
+  "caseId": "agent-064",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Nie oceniam jakości szkół i nie wskazuję żadnej jako wyróżniającej się. Mogę pokazać dane wybranej szkoły: wyniki, przedziały i liczbę uczniów, z oznaczeniem roku i wersji metodyki.",
+      "steps": [],
+      "citedSlugs": [],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Denied path: refusal with no ordering and no quality wording."
+}

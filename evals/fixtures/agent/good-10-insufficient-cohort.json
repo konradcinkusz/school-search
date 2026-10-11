@@ -1,0 +1,26 @@
+{
+  "caseId": "agent-053",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Szkoła demo-sp-3 nie ma wyniku, bo w ostatnim roku przystąpiło do egzaminu za mało uczniów (8). Liczba uczniów w klasie VIII: 8.",
+      "steps": [
+        {
+          "tool": "get_school",
+          "args": {
+            "rspo": 900003
+          },
+          "summary": "Profil: Szkoła Podstawowa nr 3 w Przykładowie (dane demonstracyjne)."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-3"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "insufficient_cohort: no decimal score on the school's line."
+}

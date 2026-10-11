@@ -1,0 +1,36 @@
+{
+  "caseId": "explain-020",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "slug": "demo-sp-3",
+      "text": "Liczba uczniów, którzy przystąpili do egzaminu, to 8 i jest poniżej progu 9, dlatego wynik nie jest podawany. To nie jest zero ani ocena szkoły. Wynik nie jest oficjalnym rankingiem i nie ocenia nauczycieli ani uczniów.",
+      "label": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "methodologyVersion": "1.0.0",
+      "examYear": 2025,
+      "facts": {
+        "score": {
+          "score": null,
+          "reason": "insufficient_cohort",
+          "cohortSize": 8,
+          "intervalLow": null,
+          "intervalHigh": null,
+          "methodologyVersion": "1.0.0",
+          "examYear": 2025,
+          "asOf": "2026-01-01",
+          "source": "DEMO SEED (synthetic)"
+        },
+        "scoreStatus": "insufficient_cohort",
+        "coveragePercent": 100,
+        "cohortSize": 8,
+        "publicationThreshold": 9,
+        "coverageFloorPercent": 80
+      },
+      "generatedAt": "2026-10-11T10:00:00Z",
+      "cached": false
+    }
+  },
+  "note": "No score shown; the threshold and the cohort are stated."
+}

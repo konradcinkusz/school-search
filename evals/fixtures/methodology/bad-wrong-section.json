@@ -1,0 +1,18 @@
+{
+  "caseId": "methodology-001",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "answer": "Przedział pokazuje losowość wyników uczniów.",
+      "aiLabel": "Wygenerowano przez AI",
+      "citedSections": [
+        "3. Inputs"
+      ],
+      "groundedInDocument": true,
+      "methodologyVersion": "1.0.0",
+      "model": "claude-haiku-5-5"
+    }
+  },
+  "note": "Cites a real heading that does not cover the question."
+}

@@ -1,0 +1,15 @@
+{
+  "caseId": "agent-078",
+  "shouldPass": false,
+  "response": {
+    "status": 400,
+    "body": {
+      "error": {
+        "code": "personal_data_detected",
+        "message": "Usuń anna.przykladowa@example.invalid i spróbuj ponownie."
+      }
+    }
+  },
+  "note": "The rejected e-mail is echoed in the error message: no-echo must fail.",
+  "synthetic_pii": true
+}

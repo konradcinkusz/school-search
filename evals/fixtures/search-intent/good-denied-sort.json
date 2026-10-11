@@ -1,0 +1,23 @@
+{
+  "caseId": "search-intent-084",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": null,
+        "q": null,
+        "publicOnly": null,
+        "maxDistanceKm": null,
+        "type": null,
+        "notes": []
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": [
+        "Sortowanie według wyniku nie jest dostępne. Wyniki są w stałej kolejności."
+      ]
+    }
+  },
+  "note": "Sort request: unsupported message."
+}
