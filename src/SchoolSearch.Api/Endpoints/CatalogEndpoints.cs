@@ -27,19 +27,19 @@ public static class CatalogEndpoints
         return app;
     }
 
-    /// <summary>Page and limit are clamped (page >= 1, limit in 1..100). Unparseable values fall back to defaults.</summary>
+    /// <summary>Page and pageSize are clamped (page >= 1, pageSize in 1..100). Unparseable values fall back to defaults.</summary>
     internal static async Task<IResult> ListSchools(
         string? page,
-        string? limit,
+        string? pageSize,
         CatalogDbContext db,
         CancellationToken ct)
     {
-        var (pageNumber, pageSize) = ClampPaging(page, limit);
+        var (pageNumber, size) = ClampPaging(page, pageSize);
 
         var allSchools = db.Schools.AsNoTracking();
         var total = await allSchools.CountAsync(ct);
 
-        var offset = (long)(pageNumber - 1) * pageSize;
+        var offset = (long)(pageNumber - 1) * size;
         var items = new List<SchoolDto>();
         if (offset < total)
         {
@@ -47,13 +47,13 @@ public static class CatalogEndpoints
                 .OrderBy(s => s.Name)
                 .ThenBy(s => s.IdPodmiot)
                 .Skip((int)offset)
-                .Take(pageSize)
+                .Take(size)
                 .ToListAsync(ct);
 
             items = rows.Select(SchoolDto.From).ToList();
         }
 
-        return TypedResults.Ok(new SchoolPage(items, pageNumber, pageSize, total));
+        return TypedResults.Ok(new SchoolPage(items, pageNumber, size, total));
     }
 
     internal static async Task<IResult> GetSchool(
@@ -73,12 +73,12 @@ public static class CatalogEndpoints
     internal static IResult GetMeta() =>
         TypedResults.Ok(new MetaResponse(Methodology.Version, DataVintage: null));
 
-    private static (int Page, int Limit) ClampPaging(string? page, string? limit)
+    private static (int Page, int Size) ClampPaging(string? page, string? pageSize)
     {
         var pageNumber = int.TryParse(page, NumberStyles.Integer, CultureInfo.InvariantCulture, out var p) ? p : 1;
-        var pageSize = int.TryParse(limit, NumberStyles.Integer, CultureInfo.InvariantCulture, out var l) ? l : DefaultPageSize;
+        var size = int.TryParse(pageSize, NumberStyles.Integer, CultureInfo.InvariantCulture, out var l) ? l : DefaultPageSize;
 
-        return (Math.Max(1, pageNumber), Math.Clamp(pageSize, 1, MaxPageSize));
+        return (Math.Max(1, pageNumber), Math.Clamp(size, 1, MaxPageSize));
     }
 }
 
