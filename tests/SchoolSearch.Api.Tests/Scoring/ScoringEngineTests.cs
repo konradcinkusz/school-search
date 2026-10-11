@@ -245,8 +245,14 @@ public sealed class ScoringEngineTests
             }
         }
 
+        // An input with no subject in common throws (data bug), so every generated school lists at least one subject.
+        if (subjects.Count == 0)
+        {
+            subjects.Add(new SubjectResult(Subject.Polish, random.NextDouble() * 100.0, random.Next(1, 151)));
+        }
+
         var headcount = random.Next(0, 201);
-        var expectedCohort = subjects.Count == 0 ? 0 : subjects.Max(s => s.PupilsSat);
+        var expectedCohort = subjects.Max(s => s.PupilsSat);
         var expectedSuppressed = headcount <= 0 || expectedCohort < ScoringPolicy.PublicationThreshold;
 
         var result = ScoringEngine.Score(new SchoolExamInput(Year, subjects, headcount), baseline);

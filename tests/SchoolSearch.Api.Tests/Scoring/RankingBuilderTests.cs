@@ -23,7 +23,7 @@ public sealed class RankingBuilderTests
             ("school-a", Published(12.0)),
         };
 
-        var ranked = RankingBuilder.RankDescending(schools, out var unranked);
+        var ranked = RankingBuilder.RankDescending(schools, out _);
 
         Assert.Equal(3, ranked.Count);
         Assert.Equal(new[] { "school-a", "school-b", "school-c" }, ranked.Select(r => r.Slug).ToArray());
