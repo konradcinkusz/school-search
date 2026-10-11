@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { CorrectionForm } from "@/components/correction-form";
 
 // Reads ?slug= to prefill the form; no data is fetched here.
@@ -7,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Dla szkół",
   description:
-    "Zgłoś korektę danych szkoły. Pozycja szkoły w wynikach nie jest do kupienia. Nie jest oficjalnym rankingiem.",
+    "Profil rozszerzony dla szkół: co można kupić, a czego nie. Płatność nie wpływa na wynik, ranking ani opinie. Zgłoś korektę danych szkoły.",
   alternates: { canonical: "/dla-szkol" },
 };
 
@@ -29,6 +30,35 @@ export default async function ForSchoolsPage({ searchParams }: { searchParams: S
         <strong>Pozycja szkoły nie jest do kupienia.</strong> Płatność nie wpływa na wynik, kolejność ani sposób
         prezentacji szkoły.
       </div>
+
+      <h2>Profil rozszerzony</h2>
+      <p>
+        Dla szkoły możemy udostępnić płatny profil rozszerzony: krótki opis przygotowany przez przedstawiciela szkoły
+        i formularz kontaktu dla rodziców. Profil jest zawsze oznaczony jako <strong>treść sponsorowana</strong> i pokazany
+        osobno, pod wynikiem i opiniami.
+      </p>
+
+      <h3>Jak to działa</h3>
+      <ol>
+        <li>
+          Zaloguj się, potwierdź adres e-mail i zgłoś swoją rolę w szkole na <Link href="/konto/szkola">stronie konta szkoły</Link>.
+        </li>
+        <li>Redakcja sprawdza zgłoszenie poza systemem. Dopiero po zatwierdzeniu możesz wykupić plan i edytować profil.</li>
+        <li>Zapisany profil pojawia się na stronie szkoły z oznaczeniem treści sponsorowanej.</li>
+        <li>Rodzice mogą wysłać wiadomość do szkoły. Wiadomość widzisz tylko Ty, w swoim koncie.</li>
+      </ol>
+      <p>
+        Ceny i plany: <Link href="/cennik">cennik</Link>.
+      </p>
+
+      <h3>Czego nie sprzedajemy</h3>
+      <ul>
+        <li>Wyniku szkoły, pozycji w rankingu ani kolejności wyników.</li>
+        <li>Usuwania, ograniczania ani ukrywania opinii i danych o szkole.</li>
+        <li>Odznak „najlepsza”, „zweryfikowana” czy podobnych. Potwierdzenie przedstawiciela przez redakcję nie jest do kupienia.</li>
+        <li>Wpływu płatności na listy, porównania, sortowanie wyników i opinie użytkowników.</li>
+      </ul>
+
       <h2>Zgłoszenie korekty</h2>
       <CorrectionForm initialSlug={slug} />
     </article>

@@ -7,7 +7,8 @@ name: flyio
 #   - kernel/contracts changes invalidate every image
 #   - one image per changed service, pushed to GHCR, then deployed by reference
 #   - import (ghcr.io/konradcinkusz/school-search-import) is built and pushed only; it is never deployed
-#   - order: postgres -> authservice (Phase E, gated) -> reviews (Phase E) -> api -> web -> mcp
+#   - order: postgres -> authservice (Phase E, gated) -> reviews (Phase E) -> billing (Phase F, gated) -> api -> web -> mcp
+#   - billing (Phase F) exists only once src/SchoolSearch.Billing/Dockerfile and flyio/billing.fly.toml both exist (like MCP and Reviews)
 #   - every gate accepts success || skipped from its upstream
 #   - app and volume creation is idempotent and lives here, not in a shell
 #   - secrets reach flyctl on stdin (`flyctl secrets import --stage`), never on the command line (flyio/SECRETS.md §2)
@@ -59,6 +60,7 @@ jobs:
       deploy_postgres: ${{ steps.select.outputs.deploy_postgres }}
       deploy_authservice: ${{ steps.select.outputs.deploy_authservice }}
       deploy_reviews: ${{ steps.select.outputs.deploy_reviews }}
+      deploy_billing: ${{ steps.select.outputs.deploy_billing }}
       deploy_api: ${{ steps.select.outputs.deploy_api }}
       deploy_web: ${{ steps.select.outputs.deploy_web }}
       deploy_mcp: ${{ steps.select.outputs.deploy_mcp }}
@@ -116,6 +118,12 @@ jobs:
             if [ "$KERNEL" = true ] || want_missing_or_changed '^(src/SchoolSearch\.Reviews/|flyio/reviews\.fly\.toml$)' school-search-reviews-dev; then DEPLOY_REVIEWS=true; fi
           fi
 
+          # Billing is Phase F: needs its Dockerfile and its fly.toml, like Reviews and MCP.
+          DEPLOY_BILLING=false
+          if [ -f src/SchoolSearch.Billing/Dockerfile ] && [ -f flyio/billing.fly.toml ]; then
+            if [ "$KERNEL" = true ] || want_missing_or_changed '^(src/SchoolSearch\.Billing/|flyio/billing\.fly\.toml$)' school-search-billing-dev; then DEPLOY_BILLING=true; fi
+          fi
+
           # authservice is Phase E: skipped unless the file exists AND the repo variable enables it.
           # Its image comes from the authservice repository; this repo never builds it.
           DEPLOY_AUTHSERVICE=false
@@ -136,6 +144,7 @@ jobs:
           if [ "$DEPLOY_WEB" = true ]; then add_build web web/app/Dockerfile; fi
           if [ "$DEPLOY_MCP" = true ]; then add_build mcp src/SchoolSearch.Mcp/Dockerfile; fi
           if [ "$DEPLOY_REVIEWS" = true ]; then add_build reviews src/SchoolSearch.Reviews/Dockerfile; fi
+          if [ "$DEPLOY_BILLING" = true ]; then add_build billing src/SchoolSearch.Billing/Dockerfile; fi
           if [ "$BUILD_IMPORT" = true ]; then add_build import src/SchoolSearch.Import/Dockerfile; fi
 
           {
@@ -143,12 +152,13 @@ jobs:
             echo "deploy_postgres=$DEPLOY_POSTGRES"
             echo "deploy_authservice=$DEPLOY_AUTHSERVICE"
             echo "deploy_reviews=$DEPLOY_REVIEWS"
+            echo "deploy_billing=$DEPLOY_BILLING"
             echo "deploy_api=$DEPLOY_API"
             echo "deploy_web=$DEPLOY_WEB"
             echo "deploy_mcp=$DEPLOY_MCP"
           } >> "$GITHUB_OUTPUT"
           echo "Build matrix: $MATRIX"
-          echo "postgres=$DEPLOY_POSTGRES authservice=$DEPLOY_AUTHSERVICE reviews=$DEPLOY_REVIEWS api=$DEPLOY_API web=$DEPLOY_WEB mcp=$DEPLOY_MCP"
+          echo "postgres=$DEPLOY_POSTGRES authservice=$DEPLOY_AUTHSERVICE reviews=$DEPLOY_REVIEWS billing=$DEPLOY_BILLING api=$DEPLOY_API web=$DEPLOY_WEB mcp=$DEPLOY_MCP"
 
   build:
     name: build ${{ matrix.service }}
@@ -354,6 +364,69 @@ jobs:
       - name: Post-deploy health check
         run: curl --fail --silent --show-error --retry 20 --retry-delay 5 --retry-all-errors "https://${APP}.fly.dev/health"
 
+  deploy_billing:
+    name: deploy billing (Phase F)
+    # Billing validates authservice tokens, so it waits for authservice. Web (the BFF caller) waits for it below.
+    needs: [detect-changes, test, build, deploy_postgres, deploy_authservice]
+    if: >-
+      always() && !cancelled()
+      && needs.test.result == 'success'
+      && needs.detect-changes.result == 'success'
+      && (needs.build.result == 'success' || needs.build.result == 'skipped')
+      && (needs.deploy_postgres.result == 'success' || needs.deploy_postgres.result == 'skipped')
+      && (needs.deploy_authservice.result == 'success' || needs.deploy_authservice.result == 'skipped')
+      && needs.detect-changes.outputs.deploy_billing == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: dev
+    permissions:
+      contents: read
+      packages: read
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      APP: school-search-billing-dev
+      DB_NAME: billingdb
+      IMAGE: ghcr.io/konradcinkusz/school-search-billing:${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Ensure app and secrets (idempotent, staged)
+        # The subject pepper must never change: it keys every stored subject hash (claims and subscriptions).
+        # The database billingdb is created once by hand (docs/runbooks/BILLING.md section 2).
+        # The webhook secret is optional until a payment provider is chosen (ADR-0016). Without it every webhook is
+        # rejected in Production, which is the correct failure (never accept unsigned requests).
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          SUBJECT_PEPPER: ${{ secrets.BILLING_SUBJECT_PEPPER }}
+          WEBHOOK_SECRET: ${{ secrets.BILLING_WEBHOOK_SECRET }}
+        run: |
+          set -euo pipefail
+          apps="$(flyctl apps list --json)"
+          if ! jq -e --arg a "$APP" '(. // []) | any(.[]; (.Name // .name) == $a)' <<< "$apps" >/dev/null; then
+            flyctl apps create "$APP" --org "$FLY_ORG" --yes
+          fi
+          : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set in the dev environment}"
+          : "${SUBJECT_PEPPER:?BILLING_SUBJECT_PEPPER is not set in the dev environment}"
+          {
+            printf 'ConnectionStrings__billingdb=Host=school-search-postgres.internal;Port=5432;Database=%s;Username=%s;Password=%s\n' \
+              "$DB_NAME" "$POSTGRES_USER" "$POSTGRES_PASSWORD"
+            printf 'Billing__SubjectPepper=%s\n' "$SUBJECT_PEPPER"
+            if [ -n "${WEBHOOK_SECRET:-}" ]; then
+              printf 'Billing__WebhookSecret=%s\n' "$WEBHOOK_SECRET"
+            else
+              echo "BILLING_WEBHOOK_SECRET is not set in the dev environment: every webhook is rejected until it is set" >&2
+            fi
+          } | flyctl secrets import --stage --app "$APP"
+      - name: Deploy the built image (no rebuild)
+        run: flyctl deploy --config flyio/billing.fly.toml --app school-search-billing-dev --image "$IMAGE" --yes
+      - name: Post-deploy health check
+        run: curl --fail --silent --show-error --retry 20 --retry-delay 5 --retry-all-errors "https://${APP}.fly.dev/health"
+
   deploy_api:
     name: deploy api
     needs: [detect-changes, test, build, deploy_postgres, deploy_authservice]
@@ -408,7 +481,7 @@ jobs:
 
   deploy_web:
     name: deploy web
-    needs: [detect-changes, test, build, deploy_postgres, deploy_authservice, deploy_reviews, deploy_api]
+    needs: [detect-changes, test, build, deploy_postgres, deploy_authservice, deploy_reviews, deploy_billing, deploy_api]
     if: >-
       always() && !cancelled()
       && needs.test.result == 'success'
@@ -417,6 +490,7 @@ jobs:
       && (needs.deploy_postgres.result == 'success' || needs.deploy_postgres.result == 'skipped')
       && (needs.deploy_authservice.result == 'success' || needs.deploy_authservice.result == 'skipped')
       && (needs.deploy_reviews.result == 'success' || needs.deploy_reviews.result == 'skipped')
+      && (needs.deploy_billing.result == 'success' || needs.deploy_billing.result == 'skipped')
       && (needs.deploy_api.result == 'success' || needs.deploy_api.result == 'skipped')
       && needs.detect-changes.outputs.deploy_web == 'true'
     runs-on: ubuntu-latest

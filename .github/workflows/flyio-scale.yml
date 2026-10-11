@@ -51,6 +51,7 @@ jobs:
               scale school-search-api-dev 1
               scale school-search-authservice-dev 1
               scale school-search-reviews-dev 1
+              scale school-search-billing-dev 1
               scale school-search-web-dev 1
               scale school-search-mcp-dev 1
               ;;
@@ -64,6 +65,7 @@ jobs:
               scale school-search-api-dev 0
               scale school-search-authservice-dev 0
               scale school-search-reviews-dev 0
+              scale school-search-billing-dev 0
               ;;
           esac
           echo "Postgres (school-search-postgres) deliberately not touched."

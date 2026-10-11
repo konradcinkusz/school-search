@@ -1,0 +1,8 @@
+web/
+tests/
+docs/
+flyio/
+.github/
+**/node_modules
+**/bin
+**/obj

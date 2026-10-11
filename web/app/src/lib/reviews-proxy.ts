@@ -1,9 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { clearSessionCookie, ensureFresh, readSession, setSessionCookie } from "@/lib/bff-auth";
-import { accountsConfigured, bffSharedSecret, reviewsBaseUrl } from "@/lib/bff-config";
-import { accountsUnavailable, bffError, reviewsUnavailable } from "@/lib/bff-http";
+import { resolveSession, withRotatedCookie, type ServiceAccess, type SessionRotation } from "@/lib/bff-gate";
+import { bffSharedSecret, reviewsBaseUrl } from "@/lib/bff-config";
+import { bffError, reviewsUnavailable } from "@/lib/bff-http";
 import { decodeClaims, hasModeratorRole } from "@/lib/jwt-claims";
-import type { SessionPayload } from "@/lib/session";
 import { isSlug } from "@/lib/validation";
 
 // BFF forwarding for the Reviews service (SPEC-E §E3). Exact-path allowlist, server-side Bearer injection and the
@@ -15,13 +14,7 @@ const QUERY_PATTERN = /^[\x20-\x7E]*$/;
 const UUID_PATTERN = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 const MODERATION_KINDS: ReadonlySet<string> = new Set(["reviews", "replies", "notices", "complaints"]);
 
-/**
- * anonymous: no session needed.
- * optional: a session is attached when present (complaints may also be filed with a notice token instead).
- * required: a session is needed; the service itself enforces email verification and ownership.
- * moderator: a session plus a moderator role claim. Gating only: the service re-checks every call.
- */
-export type ReviewsAccess = "anonymous" | "optional" | "required" | "moderator";
+export type ReviewsAccess = ServiceAccess;
 
 export interface ReviewsRoute {
   readonly method: "GET" | "POST" | "DELETE";
@@ -70,53 +63,6 @@ function segmentsAreSafe(path: readonly string[]): boolean {
 
 export function reviewsPathAllowed(path: readonly string[], method: string): boolean {
   return segmentsAreSafe(path) && reviewsRouteFor(path, method) !== null;
-}
-
-/** Session failures for a required or moderator route. Returns a response to send, or the session to use. */
-type Resolved =
-  | { readonly kind: "anonymous" }
-  | { readonly kind: "session"; readonly accessToken: string; readonly rotated: SessionRotation }
-  | { readonly kind: "respond"; readonly response: NextResponse };
-
-type SessionRotation = { readonly payload: SessionPayload } | null;
-
-async function resolveSession(request: NextRequest, access: ReviewsAccess): Promise<Resolved> {
-  if (access === "anonymous") return { kind: "anonymous" };
-
-  if (!accountsConfigured()) {
-    if (access === "optional") return { kind: "anonymous" };
-    return { kind: "respond", response: accountsUnavailable() };
-  }
-
-  const session = readSession(request);
-  if (session === null) {
-    if (access === "optional") return { kind: "anonymous" };
-    return {
-      kind: "respond",
-      response: bffError(401, "unauthenticated", "Zaloguj się, aby kontynuować."),
-    };
-  }
-
-  const fresh = await ensureFresh(session);
-  if (fresh.kind === "fresh") {
-    return {
-      kind: "session",
-      accessToken: fresh.session.accessToken,
-      rotated: fresh.rotated ? { payload: fresh.session } : null,
-    };
-  }
-  if (access === "optional") return { kind: "anonymous" };
-  if (fresh.kind === "expired") {
-    const response = bffError(401, "unauthenticated", "Sesja wygasła. Zaloguj się ponownie.");
-    clearSessionCookie(response);
-    return { kind: "respond", response };
-  }
-  return { kind: "respond", response: accountsUnavailable() };
-}
-
-function withRotatedCookie(response: NextResponse, rotated: SessionRotation): NextResponse {
-  if (rotated) setSessionCookie(response, rotated.payload);
-  return response;
 }
 
 /**

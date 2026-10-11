@@ -17,7 +17,7 @@ public sealed class IdentityBoundaryTests
     private const string ReviewsNamespace = "SchoolSearch.Reviews";
     private const string ScoringNamespace = "SchoolSearch.Api.Scoring";
 
-    // SchoolSearch.Reviews is referenced only once its project exists (see the csproj); it is loaded when present.
+    // SchoolSearch.Reviews and SchoolSearch.Billing are referenced only once their projects exist (see the csproj); each is loaded when present.
     private static readonly string[] SourceAssemblyNames =
     {
         "SchoolSearch.Api",
@@ -26,6 +26,8 @@ public sealed class IdentityBoundaryTests
         "SchoolSearch.Contracts",
         "SchoolSearch.Import",
         ReviewsNamespace,
+        // Phase F (ADR-0016): Billing validates authservice tokens too. It is loaded only when its project exists.
+        "SchoolSearch.Billing",
     };
 
     private static readonly string[] ScoreContractTypeNames = { "ScoreBlock", "ScoreDto" };

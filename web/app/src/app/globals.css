@@ -451,3 +451,90 @@ td {
   margin: 0.5rem 0 0;
 }
 
+
+/* ---- Monetisation (Phase F, SPEC-F): sponsored profile, enquiries, owner area, pricing ---- */
+
+.sponsored {
+  margin-top: 2rem;
+}
+
+.sponsored__card {
+  border-left: 4px solid var(--color-warn-fg);
+}
+
+.sponsored__label {
+  display: inline-block;
+  margin: 0 0 0.5rem;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  background: var(--color-warn-bg);
+  color: var(--color-warn-fg);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.sponsored__headline {
+  margin-bottom: 0.25rem;
+}
+
+.sponsored__body {
+  white-space: pre-line;
+}
+
+.sponsored__verified {
+  font-size: 0.95rem;
+}
+
+.enquiry-form {
+  max-width: 36rem;
+}
+
+/* Honeypot: off-screen for people, present in the DOM for bots. */
+.hp-field {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tabs__tab {
+  font: inherit;
+  padding: 0.5rem 0.9rem;
+  background: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.tabs__tab--active {
+  color: var(--color-fg);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.pricing {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 40rem) {
+  .pricing {
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  }
+}
+
+.pricing__plan h3 {
+  margin-top: 0;
+}

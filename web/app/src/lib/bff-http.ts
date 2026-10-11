@@ -20,6 +20,10 @@ export function reviewsUnavailable(): NextResponse {
   return bffError(503, "reviews_unavailable", "Opinie są chwilowo niedostępne.");
 }
 
+export function billingUnavailable(): NextResponse {
+  return bffError(503, "billing_unavailable", "Płatne profile są chwilowo niedostępne.");
+}
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

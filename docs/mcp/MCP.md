@@ -265,6 +265,10 @@ On 429, wait for `Retry-After` seconds and retry. Do not retry in a tight loop.
   never merged into a score, a ranking or an explanation (MASTER-PROMPT: UGC labelled and separated).
 - Nothing is sent to any AI model by the MCP server. The AI explanation feature is a separate endpoint in the API
   (`docs/adr/0011-anthropic-api-usage-boundaries.md`).
+- **No billing data.** The MCP server has no tool, resource or prompt for premium profiles, sponsored text, claims,
+  subscriptions or parent enquiries, and it does not call the Billing service. A paid profile never appears in a tool
+  reply, a score block or a ranking (ADR-0016). `get_school` returns the school as the catalog holds it, without the
+  sponsored block.
 
 ## 8. Status and verification
 

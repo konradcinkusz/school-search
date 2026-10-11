@@ -1,0 +1,65 @@
+# school-search Billing service (src/SchoolSearch.Billing, listens :8080). Phase F: premium school profiles, parent
+# enquiries and the subscription entitlement. Own deployable and own database (billingdb on school-search-postgres).
+# Deploy uses --image only (built once in CI, flyio.yml build job). [build] is declared so a local build resolves
+# the same way as CI (paths relative to THIS file).
+# Deploy: `flyctl deploy --config flyio/billing.fly.toml --image ghcr.io/konradcinkusz/school-search-billing:<tag>`
+#
+# Scope (ADR-0016): this service owns entitlements. It holds the payment provider's webhook secret and the subject
+# pepper, and nothing else of the catalog or the reviews. Catalog Api, Reviews and scoring never reference it.
+# Identity: the Billing service VALIDATES access tokens issued by authservice (JWKS). It mints no tokens (ADR-0004,
+# ADR-0015). Auth__Authority is the public authservice origin, the same as Reviews.
+#
+# Payment provider: NOT CHOSEN (ADR-0016, docs/runbooks/BILLING.md section 1). Until a provider adapter exists, the
+# deployed service runs with Billing__MockMode = false: simulate answers 403 and checkout answers 503 billing_unavailable.
+# Nothing in this file names a provider, a checkout host or a signature header.
+
+app = "school-search-billing-dev"
+primary_region = "waw"
+
+[build]
+  dockerfile = "../src/SchoolSearch.Billing/Dockerfile"   # paths relative to THIS file
+  context = ".."
+
+[env]                               # public values only; secrets are listed in flyio/SECRETS.md
+  ASPNETCORE_ENVIRONMENT = "Production"
+  ASPNETCORE_URLS = "http://+:8080"
+  # Production default is MockMode = false. Stated here so the deployed mode is visible in git.
+  # Simulate (POST /api/v1/billing/simulate) answers 403 unconditionally while this is false (MONETIZATION-BRIEF 1c).
+  Billing__MockMode = "false"
+  # Token validation (ClockSkew 0, RequireHttpsMetadata true outside Development). Must equal authservice's Jwt__Issuer
+  # and Jwt__Audience (flyio/authservice.fly.toml). Service-to-service URL is the public one, not .internal.
+  Auth__Authority = "https://school-search-authservice-dev.fly.dev"
+  Auth__Issuer = "school-search"
+  Auth__Audience = "school-search"
+  # Client IP behind the Fly edge and the BFF (same key as api.fly.toml and reviews.fly.toml).
+  SchoolSearch__TrustProxyClientIpHeader = "true"
+  # Provider settings are deliberately absent until the provider is chosen (ADR-0016):
+  #   Billing__CheckoutBaseUrl   provider checkout origin, public, set with the adapter
+  #   Billing__SignatureHeader   default "X-Signature" in code; the real header name is NOT confirmed (runbook section 1)
+  #   Billing__Plans__*          plan catalogue, public; empty means the pricing page says "Cennik w przygotowaniu."
+  # Secrets (never here): ConnectionStrings__billingdb, Billing__SubjectPepper, Billing__WebhookSecret (flyio/SECRETS.md).
+  # ANTHROPIC_API_KEY (profile-copy assistant, F6) is a Fly secret set by hand, the same as api and reviews.
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # The school page reads the premium envelope in-request through the web BFF (anonymous GET), so a cold start would
+  # slow a public page. One machine stays up, the same reasoning as Reviews (Fly §7). Owner may lower it later.
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+  [[http_service.checks]]
+    path = "/health"                # kernel MapDefaultEndpoints(); lists optional integrations (authservice, billing-provider)
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "60s"            # covers cold start; migrations and the expiry service start after the listener (P4)
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

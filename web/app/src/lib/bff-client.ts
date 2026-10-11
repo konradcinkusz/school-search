@@ -10,7 +10,7 @@ const CLIENT_TIMEOUT_MS = 20_000;
 
 export async function bffRequest(
   url: string,
-  options: { readonly method?: "GET" | "POST" | "DELETE"; readonly body?: unknown } = {},
+  options: { readonly method?: "GET" | "POST" | "PUT" | "DELETE"; readonly body?: unknown } = {},
 ): Promise<BffResponse | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), CLIENT_TIMEOUT_MS);

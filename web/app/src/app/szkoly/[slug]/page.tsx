@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ExplainPanel } from "@/components/explain-panel";
+import { SponsoredProfile } from "@/components/billing/sponsored-profile";
 import { ReviewsSection } from "@/components/reviews/reviews-section";
 import { ScoreBadge } from "@/components/score-badge";
 import { ServiceUnavailable } from "@/components/service-unavailable";
@@ -158,6 +159,8 @@ export default async function SchoolPage({ params, searchParams }: Props) {
       </section>
 
       <ReviewsSection slug={school.slug} page={reviewsPage} />
+
+      <SponsoredProfile slug={school.slug} />
 
       <p className="muted">
         Widzisz błąd w danych tej szkoły?{" "}
