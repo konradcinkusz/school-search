@@ -9,5 +9,10 @@
     "build": "pnpm --filter @school-search/web build",
     "typecheck": "pnpm --filter @school-search/web typecheck",
     "start": "pnpm --filter @school-search/web start"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss": ">=8.5.18"
+    }
   }
 }
