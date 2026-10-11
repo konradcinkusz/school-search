@@ -1,7 +1,6 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using SchoolSearch.Catalog.Data;
-using SchoolSearch.Catalog.Data.Entities;
 using SchoolSearch.Import.Cke;
 using SchoolSearch.Import.Geo;
 using SchoolSearch.Import.Sio;

@@ -1,0 +1,36 @@
+# BuildKit reads <Dockerfile>.dockerignore beside the Dockerfile, in preference to the root .dockerignore.
+# Keep this list in step with the root .dockerignore: the import image needs only Contracts, Catalog.Data and Import.
+
+# Version control, editors, agent and CI configuration
+.git
+.github
+.claude
+.vs
+.idea
+.DS_Store
+
+# Secrets and local configuration: never in a context, never in a layer
+.env
+.env.*
+secrets.env*
+*.pfx
+*.p12
+*.pem
+**/*.user
+
+# Build output and dependencies are rebuilt inside the image
+**/bin
+**/obj
+**/TestResults
+**/node_modules
+
+# Trees the import image does not compile
+web
+tests
+docs
+flyio
+scripts
+src/SchoolSearch.Api
+src/SchoolSearch.ServiceDefaults
+src/SchoolSearch.AppHost
+src/SchoolSearch.Architecture.Tests
