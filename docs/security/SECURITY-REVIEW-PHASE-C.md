@@ -46,18 +46,18 @@ Roles: **anon** (no header), **key** (valid `X-Api-Key`), **admin ok** (`X-Admin
 
 | Endpoint | anon | key | admin ok | admin bad | admin unset | Source |
 |---|---|---|---|---|---|---|
-| GET /api/v1/schools, /schools/{slug}, /ranking, /compare, /methodology, /gminas, /catchment, /meta | 200 | 200, key bucket | n/a | n/a | n/a | `Search/SearchEndpoints.cs:40-47`, `Catchment/CatchmentEndpoints.cs:36`, `Endpoints/CatalogEndpoints.cs:19` |
-| POST /api/v1/keys | 201, IP limit 5/h | 201 | n/a | n/a | n/a | `Security/ApiKeyEndpoints.cs:18-20` |
-| POST /api/v1/corrections | 201, flood guard | 201 | n/a | n/a | n/a | `Corrections/CorrectionEndpoints.cs:34` |
-| GET /api/v1/corrections/{token} | 200 or uniform 404 | same | n/a | n/a | n/a | `Corrections/CorrectionEndpoints.cs:35` |
-| GET /api/v1/admin/corrections | 401 | 401 | 200 | 401 | 404 | `Security/AdminEndpoints.cs:40-42`, `Security/AdminKeyFilter.cs:38-50` |
-| PATCH /api/v1/admin/corrections/{id:guid} | 401 | 401 | 200 or 409 or 404 | 401 | 404 | `Security/AdminEndpoints.cs:43` |
-| POST /api/v1/admin/keys/{id:guid}/revoke | 401 | 401 | 200 or 404 | 401 | 404 | `Security/AdminEndpoints.cs:44` |
-| GET /health, /alive | 200 (exempt from limits) | same | n/a | n/a | n/a | `ServiceDefaults/ServiceDefaultsExtensions.cs:57-65` |
-| GET /openapi/v1.json | 200 (see F6) | 200 | n/a | n/a | n/a | `ServiceDefaults/ServiceDefaultsExtensions.cs:55` |
+| GET /api/v1/schools, /schools/{slug}, /ranking, /compare, /methodology, /gminas, /catchment, /meta | 200 | 200, key bucket | n/a | n/a | n/a | `src/SchoolSearch.Api/Search/SearchEndpoints.cs:40-47`, `src/SchoolSearch.Api/Catchment/CatchmentEndpoints.cs:36`, `src/SchoolSearch.Api/Endpoints/CatalogEndpoints.cs:19` |
+| POST /api/v1/keys | 201, IP limit 5/h | 201 | n/a | n/a | n/a | `src/SchoolSearch.Api/Security/ApiKeyEndpoints.cs:18-20` |
+| POST /api/v1/corrections | 201, flood guard | 201 | n/a | n/a | n/a | `src/SchoolSearch.Api/Corrections/CorrectionEndpoints.cs:34` |
+| GET /api/v1/corrections/{token} | 200 or uniform 404 | same | n/a | n/a | n/a | `src/SchoolSearch.Api/Corrections/CorrectionEndpoints.cs:35` |
+| GET /api/v1/admin/corrections | 401 | 401 | 200 | 401 | 404 | `src/SchoolSearch.Api/Security/AdminEndpoints.cs:40-42`, `src/SchoolSearch.Api/Security/AdminKeyFilter.cs:38-50` |
+| PATCH /api/v1/admin/corrections/{id:guid} | 401 | 401 | 200 or 409 or 404 | 401 | 404 | `src/SchoolSearch.Api/Security/AdminEndpoints.cs:43` |
+| POST /api/v1/admin/keys/{id:guid}/revoke | 401 | 401 | 200 or 404 | 401 | 404 | `src/SchoolSearch.Api/Security/AdminEndpoints.cs:44` |
+| GET /health, /alive | 200 (exempt from limits) | same | n/a | n/a | n/a | `src/SchoolSearch.ServiceDefaults/ServiceDefaultsExtensions.cs:57-65` |
+| GET /openapi/v1.json | 200 (see F6) | 200 | n/a | n/a | n/a | `src/SchoolSearch.ServiceDefaults/ServiceDefaultsExtensions.cs:55` |
 
 Deny by default: there is no global authorization. Public routes are an explicit list. The only privileged group
-(`/api/v1/admin`) carries an endpoint filter on the whole group (`Security/AdminEndpoints.cs:40`). The BFF forwards
+(`/api/v1/admin`) carries an endpoint filter on the whole group (`src/SchoolSearch.Api/Security/AdminEndpoints.cs:40`). The BFF forwards
 only allowlisted routes and never admin paths (`web/app/src/app/api/proxy/[...path]/route.ts:24-36`). **PASS.**
 
 ## 3. Checklist results
@@ -69,16 +69,16 @@ checked here).
 
 | # | Item | Result | Evidence |
 |---|---|---|---|
-| S1 | `q` requires two or more characters; matched as a parameterised ILike with escaped wildcards | PASS | `Search/SearchEndpoints.cs:26`, `:79`; `Search/SchoolReadModel.cs:159-160`, `:190` |
-| S2 | No explicit maximum length on `q`; bounded by the Kestrel request-line limit (default 8 KB) | PASS, note | `Search/SearchEndpoints.cs:78` |
-| S3 | Latitude, longitude and radius are parsed invariant-culture, bounded and clamped (radius 0.1 to 50 km) | PASS | `Search/SearchEndpoints.cs:30-31`, `:367-377`, `:380-393` |
-| S4 | `page` and `pageSize` clamped (page at least 1, pageSize 1 to 100) | PASS | `Search/SearchEndpoints.cs:395-399` |
-| S5 | `sort` accepts only `score` (descending) or the default; no direction parameter exists | PASS | `Search/SearchEndpoints.cs:91`; `Contracts/Public/RankingPage.cs:6-9`; test `Security/OpenApiSortParameterTests.cs` |
-| S6 | Gmina and TERYT validated as exactly seven digits | PASS | `Search/SearchEndpoints.cs:407`; `Catchment/CatchmentEndpoints.cs` (`IsTeryt`) |
-| S7 | Catchment street length, normalisation and house-number parsing bounded | PASS | `Catchment/CatchmentEndpoints.cs:37-45`, `TryParseHouseNumber` |
-| S8 | Corrections: slug length, field allowlist, message bounds, email shape | PASS | `Corrections/CorrectionRequestValidator.cs:20-27`, `:39`, `:53` |
-| S9 | Email shape regex is linear and carries a timeout | PASS | `Corrections/CorrectionRequestValidator.cs:39-41` |
-| S10 | Malformed JSON and oversize bodies return the uniform error, not a 500 | PASS | `Security/JsonBodyReader.cs:21-35` |
+| S1 | `q` requires two or more characters; matched as a parameterised ILike with escaped wildcards | PASS | `src/SchoolSearch.Api/Search/SearchEndpoints.cs:26`, `:79`; `src/SchoolSearch.Api/Search/SchoolReadModel.cs:159-160`, `:190` |
+| S2 | No explicit maximum length on `q`; bounded by the Kestrel request-line limit (default 8 KB) | PASS, note | `src/SchoolSearch.Api/Search/SearchEndpoints.cs:78` |
+| S3 | Latitude, longitude and radius are parsed invariant-culture, bounded and clamped (radius 0.1 to 50 km) | PASS | `src/SchoolSearch.Api/Search/SearchEndpoints.cs:30-31`, `:367-377`, `:380-393` |
+| S4 | `page` and `pageSize` clamped (page at least 1, pageSize 1 to 100) | PASS | `src/SchoolSearch.Api/Search/SearchEndpoints.cs:395-399` |
+| S5 | `sort` accepts only `score` (descending) or the default; no direction parameter exists | PASS | `src/SchoolSearch.Api/Search/SearchEndpoints.cs:91`; `src/SchoolSearch.Contracts/Public/RankingPage.cs:6-9`; test `tests/SchoolSearch.Api.Tests/Security/OpenApiSortParameterTests.cs` |
+| S6 | Gmina and TERYT validated as exactly seven digits | PASS | `src/SchoolSearch.Api/Search/SearchEndpoints.cs:407`; `src/SchoolSearch.Api/Catchment/CatchmentEndpoints.cs` (`IsTeryt`) |
+| S7 | Catchment street length, normalisation and house-number parsing bounded | PASS | `src/SchoolSearch.Api/Catchment/CatchmentEndpoints.cs:37-45`, `TryParseHouseNumber` |
+| S8 | Corrections: slug length, field allowlist, message bounds, email shape | PASS | `src/SchoolSearch.Api/Corrections/CorrectionRequestValidator.cs:20-27`, `:39`, `:53` |
+| S9 | Email shape regex is linear and carries a timeout | PASS | `src/SchoolSearch.Api/Corrections/CorrectionRequestValidator.cs:39-41` |
+| S10 | Malformed JSON and oversize bodies return the uniform error, not a 500 | PASS | `src/SchoolSearch.Api/Security/JsonBodyReader.cs:21-35` |
 
 ### 3.2 Imported-file path handling (Import CLI, `--file`)
 
@@ -86,90 +86,90 @@ The Import CLI is operator-run. It is not reachable over HTTP. The rows below co
 
 | # | Item | Result | Evidence |
 |---|---|---|---|
-| I1 | `--file` path used as given; no allowlisted directory or traversal check | PASS as operator tool, F10 | `Import/Program.cs:101`, `:114`, `:126` (`File.OpenRead(file)`) |
-| I2 | Column-map JSON rejects unknown members (a misspelt override cannot fall back silently) | PASS | `Import/Common/ColumnMapLoader.cs:16` |
-| I3 | Person-data headers refused before any row is read (whole file rejected) | PASS | `Import/Common/PersonalDataGuard.cs:21-36`; `Import/Sio/SioLoader.cs:336`; `Import/Cke/CkeLoader.cs:55-56`; `Import/Cke/BaselineLoader.cs:53-54`; `Import/Cke/CkeCsvSupport.cs:55` |
-| I4 | Governing-body name column is never read (absence): only the type code is mapped | PASS | `Import/Sio/SioLoader.cs:30` (doc), `Import/Sio/SioColumnMap.cs:40` (type code only) |
-| I5 | Error output: type and message only, no rows printed | PASS, note F10 | `Import/Program.cs:52` |
-| I6 | Spreadsheet input has no size cap (operator-supplied file, ClosedXML) | NOT VERIFIED, low risk | `Import/Sio/SioLoader.cs` (ClosedXML) |
+| I1 | `--file` path used as given; no allowlisted directory or traversal check | PASS as operator tool, F10 | `src/SchoolSearch.Import/Program.cs:101`, `:114`, `:126` (`File.OpenRead(file)`) |
+| I2 | Column-map JSON rejects unknown members (a misspelt override cannot fall back silently) | PASS | `src/SchoolSearch.Import/Common/ColumnMapLoader.cs:16` |
+| I3 | Person-data headers refused before any row is read (whole file rejected) | PASS | `src/SchoolSearch.Import/Common/PersonalDataGuard.cs:21-36`; `src/SchoolSearch.Import/Sio/SioLoader.cs:336`; `src/SchoolSearch.Import/Cke/CkeLoader.cs:55-56`; `src/SchoolSearch.Import/Cke/BaselineLoader.cs:53-54`; `src/SchoolSearch.Import/Cke/CkeCsvSupport.cs:55` |
+| I4 | Governing-body name column is never read (absence): only the type code is mapped | PASS | `src/SchoolSearch.Import/Sio/SioLoader.cs:30` (doc), `src/SchoolSearch.Import/Sio/SioColumnMap.cs:40` (type code only) |
+| I5 | Error output: type and message only, no rows printed | PASS, note F10 | `src/SchoolSearch.Import/Program.cs:52` |
+| I6 | Spreadsheet input has no size cap (operator-supplied file, ClosedXML) | NOT VERIFIED, low risk | `src/SchoolSearch.Import/Sio/SioLoader.cs` (ClosedXML) |
 | I7 | Import not referenced by the Api; no HTTP path to it | PASS | `src/SchoolSearch.Api/SchoolSearch.Api.csproj` |
 
 ### 3.3 User-generated content: output and encoding
 
 | # | Item | Result | Evidence |
 |---|---|---|---|
-| U1 | Correction text stored verbatim (control characters removed, edges trimmed), encoded at render | PASS | `Corrections/CorrectionRequestValidator.cs:92` (`NormalizeMessage`), `Corrections/CorrectionEndpoints.cs:109` |
-| U2 | API JSON uses the default encoder, which escapes `<`, `>`, `&`, quotes | PASS | `Errors/ApiError.cs:13` (`JsonSerializerDefaults.Web`) |
+| U1 | Correction text stored verbatim (control characters removed, edges trimmed), encoded at render | PASS | `src/SchoolSearch.Api/Corrections/CorrectionRequestValidator.cs:92` (`NormalizeMessage`), `src/SchoolSearch.Api/Corrections/CorrectionEndpoints.cs:109` |
+| U2 | API JSON uses the default encoder, which escapes `<`, `>`, `&`, quotes | PASS | `src/SchoolSearch.Api/Errors/ApiError.cs:13` (`JsonSerializerDefaults.Web`) |
 | U3 | Web renders user and API text as React text nodes; the only raw HTML is JSON-LD | PASS | `web/app/src/components/school-jsonld.tsx:32` (only `dangerouslySetInnerHTML` in `web/app`) |
 | U4 | JSON-LD escapes `<`, `>`, `&`, U+2028 and U+2029 before embedding | PASS | `web/app/src/components/school-jsonld.tsx:4-12` |
 | U5 | Links from API data (resolution, source) allow http and https only | PASS | `web/app/src/lib/validation.ts:37-46`; `web/app/src/components/coverage-badge.tsx:18`; `web/app/src/app/szkoly/[slug]/page.tsx:263` |
 | U6 | Markdown rendering of user text | N/A | section 1 proof grep |
-| U7 | Admin list returns message and contact email to the admin only; no admin UI exists in the web app | N/A now, F4 | `Security/AdminEndpoints.cs` (`AdminCorrectionItem`) |
-| U8 | Validation errors never echo the submitted value | PASS | `Corrections/CorrectionRequestValidator.cs` (error text names the field only); `Errors/ApiErrorMiddleware.cs:25` returns no exception text |
-| U9 | Error responses use one shape everywhere (404, 405, 413, 429, 500) | PASS | `Errors/ApiErrorMiddleware.cs:33-41`; `Security/RequestBodyLimitMiddleware.cs:21`; `RateLimiting/RateLimitingExtensions.cs:36` |
+| U7 | Admin list returns message and contact email to the admin only; no admin UI exists in the web app | N/A now, F4 | `src/SchoolSearch.Api/Security/AdminEndpoints.cs` (`AdminCorrectionItem`) |
+| U8 | Validation errors never echo the submitted value | PASS | `src/SchoolSearch.Api/Corrections/CorrectionRequestValidator.cs` (error text names the field only); `src/SchoolSearch.Api/Errors/ApiErrorMiddleware.cs:25` returns no exception text |
+| U9 | Error responses use one shape everywhere (404, 405, 413, 429, 500) | PASS | `src/SchoolSearch.Api/Errors/ApiErrorMiddleware.cs:33-41`; `src/SchoolSearch.Api/Security/RequestBodyLimitMiddleware.cs:21`; `src/SchoolSearch.Api/RateLimiting/RateLimitingExtensions.cs:36` |
 
 ### 3.4 Rate limits
 
 | # | Item | Result | Evidence |
 |---|---|---|---|
-| R1 | Anonymous fixed window per resolved client, 60 per minute by default | PASS in design, **FAIL in deployment (F1)** | `RateLimiting/RateLimitingExtensions.cs:76-82`; `Options/CatalogApiOptions.cs:21` |
-| R2 | Process-wide concurrency bound (64) beneath the window | PASS | `Options/CatalogApiOptions.cs:24`; `RateLimiting/RateLimitingExtensions.cs:95` |
-| R3 | Per-key bucket (300 per minute) keyed on the key digest, not the key | PASS | `RateLimiting/RateLimitingExtensions.cs:65`; `Security/SecurityOptions.cs:9` |
-| R4 | Key issuance: 5 per IP per hour, own policy | PASS, inherits F1 | `Security/SecurityServiceCollectionExtensions.cs` (policy); `Security/SecurityOptions.cs:12` |
-| R5 | Correction flood guard: 3 open requests per client, school and field per 24 hours | PASS, inherits F1 | `Corrections/CorrectionEndpoints.cs:25`, `:81` |
-| R6 | Probes `/health` and `/alive` exempt | PASS | `RateLimiting/RateLimitingExtensions.cs` (`IsProbe`) |
-| R7 | 429 carries Retry-After and the uniform body | PASS | `RateLimiting/RateLimitingExtensions.cs:29-37` |
-| R8 | Forwarded client address trusted only when configured | PASS in config, **FAIL in the BFF hop (F1)** | `RateLimiting/ClientIpResolver.cs:13`, `:19-29`; `flyio/api.fly.toml:16`; `web/app/src/app/api/proxy/[...path]/route.ts:92-95` |
-| R9 | Rate limiter chain order: key resolution before the limiter | PASS | `Extensions/ServiceCollectionExtensions.cs:33-38` |
+| R1 | Anonymous fixed window per resolved client, 60 per minute by default | PASS in design, **FAIL in deployment (F1)** | `src/SchoolSearch.Api/RateLimiting/RateLimitingExtensions.cs:76-82`; `src/SchoolSearch.Api/Options/CatalogApiOptions.cs:21` |
+| R2 | Process-wide concurrency bound (64) beneath the window | PASS | `src/SchoolSearch.Api/Options/CatalogApiOptions.cs:24`; `src/SchoolSearch.Api/RateLimiting/RateLimitingExtensions.cs:95` |
+| R3 | Per-key bucket (300 per minute) keyed on the key digest, not the key | PASS | `src/SchoolSearch.Api/RateLimiting/RateLimitingExtensions.cs:65`; `src/SchoolSearch.Api/Security/SecurityOptions.cs:9` |
+| R4 | Key issuance: 5 per IP per hour, own policy | PASS, inherits F1 | `src/SchoolSearch.Api/Security/SecurityServiceCollectionExtensions.cs` (policy); `src/SchoolSearch.Api/Security/SecurityOptions.cs:12` |
+| R5 | Correction flood guard: 3 open requests per client, school and field per 24 hours | PASS, inherits F1 | `src/SchoolSearch.Api/Corrections/CorrectionEndpoints.cs:25`, `:81` |
+| R6 | Probes `/health` and `/alive` exempt | PASS | `src/SchoolSearch.Api/RateLimiting/RateLimitingExtensions.cs` (`IsProbe`) |
+| R7 | 429 carries Retry-After and the uniform body | PASS | `src/SchoolSearch.Api/RateLimiting/RateLimitingExtensions.cs:29-37` |
+| R8 | Forwarded client address trusted only when configured | PASS in config, **FAIL in the BFF hop (F1)** | `src/SchoolSearch.Api/RateLimiting/ClientIpResolver.cs:13`, `:19-29`; `flyio/api.fly.toml:16`; `web/app/src/app/api/proxy/[...path]/route.ts:92-95` |
+| R9 | Rate limiter chain order: key resolution before the limiter | PASS | `src/SchoolSearch.Api/Extensions/ServiceCollectionExtensions.cs:33-38` |
 
 ### 3.5 Correction requests: IDOR surface
 
 | # | Item | Result | Evidence |
 |---|---|---|---|
-| C1 | Token from the CSPRNG, 16 bytes (128 bits), base64url, 22 characters, never a GUID or sequence | PASS | `Corrections/CorrectionEndpoints.cs:27-28`, `:190-194` |
-| C2 | Unknown, malformed and wrong-length tokens share one 404 | PASS | `Corrections/CorrectionEndpoints.cs:133-134`, `:196-208` |
-| C3 | Internal GUID is never returned or accepted as a lookup key | PASS | `Corrections/CorrectionEndpoints.cs` (`CorrectionStatusResponse`, `CorrectionCreatedResponse`); test `Security/CorrectionTests.cs` (`An_internal_guid_is_not_a_lookup_key`) |
-| C4 | No public listing or enumeration of corrections | PASS | `Corrections/CorrectionEndpoints.cs:34-35` (two routes only) |
-| C5 | Admin routes take a GUID target behind the admin key; no per-user ownership exists to check | PASS for authorisation; residual: one shared credential, no audit (F3) | `Security/AdminEndpoints.cs:43-44` |
-| C6 | Status moves are a fixed transition table; terminal states cannot move | PASS | `Security/AdminEndpoints.cs` (`Transitions`), `:134` |
-| C7 | Token appears in the URL path and is therefore logged | FAIL, F5 | `Corrections/CorrectionEndpoints.cs:35`; `ServiceDefaults/Observability.cs:32-34` |
-| C8 | Message and contact email never echoed by the status endpoint or the 201 body | PASS | `Corrections/CorrectionEndpoints.cs` (response records); test `Security/CorrectionTests.cs` |
+| C1 | Token from the CSPRNG, 16 bytes (128 bits), base64url, 22 characters, never a GUID or sequence | PASS | `src/SchoolSearch.Api/Corrections/CorrectionEndpoints.cs:27-28`, `:190-194` |
+| C2 | Unknown, malformed and wrong-length tokens share one 404 | PASS | `src/SchoolSearch.Api/Corrections/CorrectionEndpoints.cs:133-134`, `:196-208` |
+| C3 | Internal GUID is never returned or accepted as a lookup key | PASS | `src/SchoolSearch.Api/Corrections/CorrectionEndpoints.cs` (`CorrectionStatusResponse`, `CorrectionCreatedResponse`); test `tests/SchoolSearch.Api.Tests/Security/CorrectionTests.cs` (`An_internal_guid_is_not_a_lookup_key`) |
+| C4 | No public listing or enumeration of corrections | PASS | `src/SchoolSearch.Api/Corrections/CorrectionEndpoints.cs:34-35` (two routes only) |
+| C5 | Admin routes take a GUID target behind the admin key; no per-user ownership exists to check | PASS for authorisation; residual: one shared credential, no audit (F3) | `src/SchoolSearch.Api/Security/AdminEndpoints.cs:43-44` |
+| C6 | Status moves are a fixed transition table; terminal states cannot move | PASS | `src/SchoolSearch.Api/Security/AdminEndpoints.cs` (`Transitions`), `:134` |
+| C7 | Token appears in the URL path and is therefore logged | FAIL, F5 | `src/SchoolSearch.Api/Corrections/CorrectionEndpoints.cs:35`; `src/SchoolSearch.ServiceDefaults/Observability.cs:32-34` |
+| C8 | Message and contact email never echoed by the status endpoint or the 201 body | PASS | `src/SchoolSearch.Api/Corrections/CorrectionEndpoints.cs` (response records); test `tests/SchoolSearch.Api.Tests/Security/CorrectionTests.cs` |
 
 ### 3.6 Admin key handling
 
 | # | Item | Result | Evidence |
 |---|---|---|---|
-| A1 | Group answers 404 when `ADMIN_API_KEY` is unset, so its existence is not advertised | PASS | `Security/AdminKeyFilter.cs:38-41` |
-| A2 | Constant-time comparison over fixed-length SHA-256 digests | PASS | `Security/AdminKeyFilter.cs:43-46` (`FixedTimeEquals`) |
-| A3 | Key read from the `X-Admin-Key` header only (not the query string, not the body) | PASS | `Security/AdminKeyFilter.cs:43`; test `Security/AdminEndpointTests.cs` |
-| A4 | Missing or wrong key: identical uniform 401 | PASS | `Security/AdminKeyFilter.cs:48-50`; test `Security/AdminEndpointTests.cs` |
-| A5 | Admin responses carry `Cache-Control: no-store` | PASS | `Security/SecurityHeadersMiddleware.cs:21-22` |
-| A6 | Minimum length or entropy of the configured secret | **FAIL, F2** | `Security/AdminKeyFilter.cs:23-27` (any non-blank string accepted) |
-| A7 | Public key never grants admin | PASS | test `Security/AdminEndpointTests.cs` (`Public_api_key_is_not_an_admin_credential`) |
+| A1 | Group answers 404 when `ADMIN_API_KEY` is unset, so its existence is not advertised | PASS | `src/SchoolSearch.Api/Security/AdminKeyFilter.cs:38-41` |
+| A2 | Constant-time comparison over fixed-length SHA-256 digests | PASS | `src/SchoolSearch.Api/Security/AdminKeyFilter.cs:43-46` (`FixedTimeEquals`) |
+| A3 | Key read from the `X-Admin-Key` header only (not the query string, not the body) | PASS | `src/SchoolSearch.Api/Security/AdminKeyFilter.cs:43`; test `tests/SchoolSearch.Api.Tests/Security/AdminEndpointTests.cs` |
+| A4 | Missing or wrong key: identical uniform 401 | PASS | `src/SchoolSearch.Api/Security/AdminKeyFilter.cs:48-50`; test `tests/SchoolSearch.Api.Tests/Security/AdminEndpointTests.cs` |
+| A5 | Admin responses carry `Cache-Control: no-store` | PASS | `src/SchoolSearch.Api/Security/SecurityHeadersMiddleware.cs:21-22` |
+| A6 | Minimum length or entropy of the configured secret | **FAIL, F2** | `src/SchoolSearch.Api/Security/AdminKeyFilter.cs:23-27` (any non-blank string accepted) |
+| A7 | Public key never grants admin | PASS | test `tests/SchoolSearch.Api.Tests/Security/AdminEndpointTests.cs` (`Public_api_key_is_not_an_admin_credential`) |
 | A8 | No admin secret in the repository | PASS | `secrets.env.example:42` (empty placeholder) |
 
 ### 3.7 Random values (§5)
 
 | # | Item | Result | Evidence |
 |---|---|---|---|
-| K1 | API key: 32 bytes from `RandomNumberGenerator`, `ss_` prefix, base64url (256 bits) | PASS | `Security/ApiKeyService.cs` (`GenerateKey`, `KeyEntropyBytes = 32`) |
-| K2 | Stored as lower-case SHA-256 hex; unsalted digest is acceptable for 256-bit random input | PASS, note | `Security/ApiKeyService.cs` (`HashKey`) |
-| K3 | Only the digest is persisted; the key is returned once and never logged | PASS | `Security/ApiKeyService.cs:24-33`; `Security/ApiKeyEndpoints.cs:45-47`; test `Security/ApiKeyTests.cs` |
-| K4 | GUIDs only as identifiers, never as proof | PASS | `Corrections/CorrectionEndpoints.cs:103` (`Id = Guid.NewGuid()`); `Security/ApiKeyService.cs:21` |
+| K1 | API key: 32 bytes from `RandomNumberGenerator`, `ss_` prefix, base64url (256 bits) | PASS | `src/SchoolSearch.Api/Security/ApiKeyService.cs` (`GenerateKey`, `KeyEntropyBytes = 32`) |
+| K2 | Stored as lower-case SHA-256 hex; unsalted digest is acceptable for 256-bit random input | PASS, note | `src/SchoolSearch.Api/Security/ApiKeyService.cs` (`HashKey`) |
+| K3 | Only the digest is persisted; the key is returned once and never logged | PASS | `src/SchoolSearch.Api/Security/ApiKeyService.cs:24-33`; `src/SchoolSearch.Api/Security/ApiKeyEndpoints.cs:45-47`; test `tests/SchoolSearch.Api.Tests/Security/ApiKeyTests.cs` |
+| K4 | GUIDs only as identifiers, never as proof | PASS | `src/SchoolSearch.Api/Corrections/CorrectionEndpoints.cs:103` (`Id = Guid.NewGuid()`); `src/SchoolSearch.Api/Security/ApiKeyService.cs:21` |
 | K5 | Password hashing | N/A (no passwords, ADR-0004) | section 1 |
 
 ### 3.8 Output, errors and rendering (§7) and authorisation structure (§8)
 
 | # | Item | Result | Evidence |
 |---|---|---|---|
-| E1 | Unhandled exceptions log the route template only, never the raw path or body | PASS | `Errors/ApiErrorMiddleware.cs:20-22` |
-| E2 | Exception text is never returned | PASS | `Errors/ApiErrorMiddleware.cs:25` |
-| E3 | Swagger/OpenAPI off in production | **FAIL, F6** | `ServiceDefaults/ServiceDefaultsExtensions.cs:55`; `flyio/api.fly.toml:13` |
+| E1 | Unhandled exceptions log the route template only, never the raw path or body | PASS | `src/SchoolSearch.Api/Errors/ApiErrorMiddleware.cs:20-22` |
+| E2 | Exception text is never returned | PASS | `src/SchoolSearch.Api/Errors/ApiErrorMiddleware.cs:25` |
+| E3 | Swagger/OpenAPI off in production | **FAIL, F6** | `src/SchoolSearch.ServiceDefaults/ServiceDefaultsExtensions.cs:55`; `flyio/api.fly.toml:13` |
 | E4 | Ownership checks | N/A (no user-owned resources; corrections are capability tokens) | section 2 |
-| E5 | CORS origins explicit; fail closed when none configured | PASS | `ServiceDefaults/CorsPolicies.cs:26-30` |
-| E6 | CORS allows GET, HEAD, OPTIONS only; no credentials | PASS | `ServiceDefaults/CorsPolicies.cs:35` |
+| E5 | CORS origins explicit; fail closed when none configured | PASS | `src/SchoolSearch.ServiceDefaults/CorsPolicies.cs:26-30` |
+| E6 | CORS allows GET, HEAD, OPTIONS only; no credentials | PASS | `src/SchoolSearch.ServiceDefaults/CorsPolicies.cs:35` |
 | E7 | Production origins configured on purpose: none, because browsers only call the same-origin BFF | PASS (by design) | `flyio/api.fly.toml:21-22` (comment) |
-| E8 | Deny by default: explicit public list; admin group filtered as a whole | PASS | section 2; `Security/AdminEndpoints.cs:40` |
+| E8 | Deny by default: explicit public list; admin group filtered as a whole | PASS | section 2; `src/SchoolSearch.Api/Security/AdminEndpoints.cs:40` |
 | E9 | BFF checks Origin on the one write route | PASS | `web/app/src/app/api/proxy/[...path]/route.ts` (`originAllowed`) |
 | E10 | Cookies and Authorization never forwarded or set by the BFF | PASS | `web/app/src/app/api/proxy/[...path]/route.ts:4` (comment), `:97-103` |
 
@@ -177,33 +177,33 @@ The Import CLI is operator-run. It is not reachable over HTTP. The rows below co
 
 | # | Item | Result | Evidence |
 |---|---|---|---|
-| H1 | `X-Content-Type-Options: nosniff` | PASS | `Security/SecurityHeadersMiddleware.cs:16` |
-| H2 | `Referrer-Policy` | PASS | `Security/SecurityHeadersMiddleware.cs:17` (`no-referrer`) |
-| H3 | `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` | PASS | `Security/SecurityHeadersMiddleware.cs:10`, `:18` |
-| H4 | `X-Frame-Options` | **FAIL, F7** (CSP `frame-ancestors` covers modern browsers) | `Security/SecurityHeadersMiddleware.cs:16-18` |
-| H5 | `Permissions-Policy` | **FAIL, F7** (JSON API; low impact) | `Security/SecurityHeadersMiddleware.cs:16-18` |
+| H1 | `X-Content-Type-Options: nosniff` | PASS | `src/SchoolSearch.Api/Security/SecurityHeadersMiddleware.cs:16` |
+| H2 | `Referrer-Policy` | PASS | `src/SchoolSearch.Api/Security/SecurityHeadersMiddleware.cs:17` (`no-referrer`) |
+| H3 | `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` | PASS | `src/SchoolSearch.Api/Security/SecurityHeadersMiddleware.cs:10`, `:18` |
+| H4 | `X-Frame-Options` | **FAIL, F7** (CSP `frame-ancestors` covers modern browsers) | `src/SchoolSearch.Api/Security/SecurityHeadersMiddleware.cs:16-18` |
+| H5 | `Permissions-Policy` | **FAIL, F7** (JSON API; low impact) | `src/SchoolSearch.Api/Security/SecurityHeadersMiddleware.cs:16-18` |
 | H6 | Web frontend sends the full guide set (CSP, nosniff, DENY, referrer, permissions) | PASS | `web/app/next.config.ts:27-37` |
 | H7 | HSTS | PASS at the edge (`force_https`) | `flyio/api.fly.toml` (`http_service`) |
-| H8 | `Cache-Control: no-store` on key issuance and admin | PASS | `Security/SecurityHeadersMiddleware.cs:19-22` |
+| H8 | `Cache-Control: no-store` on key issuance and admin | PASS | `src/SchoolSearch.Api/Security/SecurityHeadersMiddleware.cs:19-22` |
 
 ### 3.10 Request body limits
 
 | # | Item | Result | Evidence |
 |---|---|---|---|
-| B1 | Declared Content-Length over 16 KB refused with 413 before the handler | PASS | `Security/RequestBodyLimitMiddleware.cs:14`, `:24-27` |
-| B2 | Chunked bodies capped by the Kestrel per-request limit | PASS | `Security/RequestBodyLimitMiddleware.cs:29-31` |
+| B1 | Declared Content-Length over 16 KB refused with 413 before the handler | PASS | `src/SchoolSearch.Api/Security/RequestBodyLimitMiddleware.cs:14`, `:24-27` |
+| B2 | Chunked bodies capped by the Kestrel per-request limit | PASS | `src/SchoolSearch.Api/Security/RequestBodyLimitMiddleware.cs:29-31` |
 | B3 | BFF refuses bodies over 16 KB | PASS | `web/app/src/app/api/proxy/[...path]/route.ts:19` |
 
 ### 3.11 Secrets in logs and telemetry
 
 | # | Item | Result | Evidence |
 |---|---|---|---|
-| L1 | API key, correction message and email never logged | PASS | no logger calls in `Security/ApiKeyEndpoints.cs` or `Corrections/CorrectionEndpoints.cs`; `Security/ApiKeyResolutionMiddleware.cs:32` logs the exception type only |
-| L2 | Admin key never logged | PASS | `Security/AdminKeyFilter.cs` (no logger) |
-| L3 | Token and path in traces | **FAIL, F5** | `ServiceDefaults/Observability.cs:32-34` |
-| L4 | Migration failures log the exception object | PASS, note | `Api/Hosting/MigrationHostedService.cs:55` |
-| L5 | Import CLI prints exception type and message | PASS, note F10 | `Import/Program.cs:52` |
-| L6 | Health body lists integration names, states and details to anonymous callers | FAIL, F8 | `ServiceDefaults/HealthChecks.cs:54-58` |
+| L1 | API key, correction message and email never logged | PASS | no logger calls in `src/SchoolSearch.Api/Security/ApiKeyEndpoints.cs` or `src/SchoolSearch.Api/Corrections/CorrectionEndpoints.cs`; `src/SchoolSearch.Api/Security/ApiKeyResolutionMiddleware.cs:32` logs the exception type only |
+| L2 | Admin key never logged | PASS | `src/SchoolSearch.Api/Security/AdminKeyFilter.cs` (no logger) |
+| L3 | Token and path in traces | **FAIL, F5** | `src/SchoolSearch.ServiceDefaults/Observability.cs:32-34` |
+| L4 | Migration failures log the exception object | PASS, note | `src/SchoolSearch.Api/Hosting/MigrationHostedService.cs:55` |
+| L5 | Import CLI prints exception type and message | PASS, note F10 | `src/SchoolSearch.Import/Program.cs:52` |
+| L6 | Health body lists integration names, states and details to anonymous callers | FAIL, F8 | `src/SchoolSearch.ServiceDefaults/HealthChecks.cs:54-58` |
 
 ### 3.12 Dependency and supply-chain state
 
@@ -211,8 +211,8 @@ The Import CLI is operator-run. It is not reachable over HTTP. The rows below co
 |---|---|---|---|
 | D1 | NuGet audit on, mode all (transitive included), level low; restore fails on known vulnerabilities | PASS (configuration); NOT VERIFIED (no restore run here) | `Directory.Build.props:13-15` |
 | D2 | Automated dependency updates | **FAIL, F11** (Dependabot declared off) | `.github/dependabot.yml:2-13`; ADR-0005 |
-| D3 | Web dependency audit in CI | **FAIL, F11** (no `audit` step in `ci.yml`) | `.github/workflows/ci.yml` (grep `audit`: none) |
-| D4 | Secret scanning and code scanning workflows exist | PASS (presence only; contents not reviewed here) | `.github/workflows/secret-scan.yml`, `codeql.yml`; `.gitleaks.toml` |
+| D3 | Web dependency audit in CI | **FAIL, F11** (no `audit` step in `.github/workflows/ci.yml`) | `.github/workflows/ci.yml` (grep `audit`: none) |
+| D4 | Secret scanning and code scanning workflows exist | PASS (presence only; contents not reviewed here) | `.github/workflows/secret-scan.yml`, `.github/workflows/codeql.yml`; `.gitleaks.toml` |
 | D5 | Packages pinned centrally, no version attributes in projects | PASS | `Directory.Packages.props` |
 
 ### 3.13 Injection and other classes
@@ -221,21 +221,21 @@ The Import CLI is operator-run. It is not reachable over HTTP. The rows below co
 |---|---|---|---|
 | J1 | SQL injection | PASS (no raw SQL; EF parameterised) | section 1 |
 | J2 | XML external entities | N/A (no XML parsed on HTTP) | section 1 |
-| J3 | SSRF | PASS (no outbound fetch driven by request input; BFF uses configured candidates) | `web/app/src/lib/catalog-url.ts` (configured); route allowlist `route.ts:24-36` |
-| J4 | CSRF | N/A for the API (no cookies); BFF checks Origin | `route.ts` (`originAllowed`) |
-| J5 | Deserialisation | PASS (System.Text.Json into fixed types; `UnmappedMemberHandling` disallowed for maps) | `Security/JsonBodyReader.cs`; `Import/Common/ColumnMapLoader.cs:16` |
-| J6 | Enumeration of schools | Intended (public catalogue) | `Search/SearchEndpoints.cs:42-43` |
+| J3 | SSRF | PASS (no outbound fetch driven by request input; BFF uses configured candidates) | `web/app/src/lib/catalog-url.ts` (configured); route allowlist `web/app/src/app/api/proxy/[...path]/route.ts:24-36` |
+| J4 | CSRF | N/A for the API (no cookies); BFF checks Origin | `web/app/src/app/api/proxy/[...path]/route.ts` (`originAllowed`) |
+| J5 | Deserialisation | PASS (System.Text.Json into fixed types; `UnmappedMemberHandling` disallowed for maps) | `src/SchoolSearch.Api/Security/JsonBodyReader.cs`; `src/SchoolSearch.Import/Common/ColumnMapLoader.cs:16` |
+| J6 | Enumeration of schools | Intended (public catalogue) | `src/SchoolSearch.Api/Search/SearchEndpoints.cs:42-43` |
 
 ### 3.14 Metric and anti-goal absences (cross-check with METRIC-ETHICS)
 
 | # | Item | Result | Evidence |
 |---|---|---|---|
-| M1 | No ascending or bottom ranking; no direction parameter | PASS | `Scoring/RankingBuilder.cs:9`; test `Architecture.Tests/AntiGoalTests.cs`; test `Security/OpenApiSortParameterTests.cs` |
-| M2 | Suppressed schools never ranked and never placed at the bottom | PASS | `Scoring/RankingBuilder.cs:14-15`, `:49-51`; test `Public/RankingContractTests.cs` |
-| M3 | Every score carries cohort size and methodology version | PASS | `Contracts/Public/ScoreBlock.cs`; test `Architecture.Tests/AntiGoalTests.cs` (ScoreBlock rule) |
-| M4 | Operator name never modelled or returned | PASS | `Contracts/Public/SchoolProfile.cs:26`; `Catalog.Data/Entities/School.cs` (remarks); test `Architecture.Tests/AntiGoalTests.cs` |
-| M5 | No teacher, pupil or nationality entity or member (aggregate counts allowed by an explicit list) | PASS | test `Architecture.Tests/AntiGoalTests.cs` |
-| M6 | Catchment never synthesised from distance | PASS | `Catchment/CatchmentEndpoints.cs:12-14` (doc), `:113-118` |
+| M1 | No ascending or bottom ranking; no direction parameter | PASS | `src/SchoolSearch.Api/Scoring/RankingBuilder.cs:9`; test `tests/SchoolSearch.Architecture.Tests/AntiGoalTests.cs`; test `tests/SchoolSearch.Api.Tests/Security/OpenApiSortParameterTests.cs` |
+| M2 | Suppressed schools never ranked and never placed at the bottom | PASS | `src/SchoolSearch.Api/Scoring/RankingBuilder.cs:14-15`, `:49-51`; test `tests/SchoolSearch.Api.Tests/Public/RankingContractTests.cs` |
+| M3 | Every score carries cohort size and methodology version | PASS | `src/SchoolSearch.Contracts/Public/ScoreBlock.cs`; test `tests/SchoolSearch.Architecture.Tests/AntiGoalTests.cs` (ScoreBlock rule) |
+| M4 | Operator name never modelled or returned | PASS | `src/SchoolSearch.Contracts/Public/SchoolProfile.cs:26`; `src/SchoolSearch.Catalog.Data/Entities/School.cs` (remarks); test `tests/SchoolSearch.Architecture.Tests/AntiGoalTests.cs` |
+| M5 | No teacher, pupil or nationality entity or member (aggregate counts allowed by an explicit list) | PASS | test `tests/SchoolSearch.Architecture.Tests/AntiGoalTests.cs` |
+| M6 | Catchment never synthesised from distance | PASS | `src/SchoolSearch.Api/Catchment/CatchmentEndpoints.cs:12-14` (doc), `:113-118` |
 
 ## 4. Findings
 
@@ -245,7 +245,7 @@ Format per SECURITY-REVIEW §2. Severity and priority per §3.
 
 - **Location:** `web/app/src/app/api/proxy/[...path]/route.ts:92-95`; `src/SchoolSearch.Api/RateLimiting/ClientIpResolver.cs:13`, `:19-29`; `src/SchoolSearch.Api/RateLimiting/RateLimitingExtensions.cs:76-82`; `flyio/api.fly.toml:16`.
 - **Issue:** The BFF forwards the first entry of `x-forwarded-for`. The API resolves the client only from `Fly-Client-IP`, and the BFF never sends that header. Every proxied request therefore carries the web machine's socket address as its client.
-- **Current code:** `if (clientIp) headers["x-forwarded-for"] = clientIp.split(",")[0]?.trim() ?? "";` (route.ts:95), against `private const string FlyClientIpHeader = "Fly-Client-IP";` (ClientIpResolver.cs:13).
+- **Current code:** `if (clientIp) headers["x-forwarded-for"] = clientIp.split(",")[0]?.trim() ?? "";` (web/app/src/app/api/proxy/[...path]/route.ts:95), against `private const string FlyClientIpHeader = "Fly-Client-IP";` (ClientIpResolver.cs:13).
 - **Risk:** High.
 - **Attack scenario:** One visitor sends more than 60 requests in a minute to `/api/v1/schools` through the site. Every other visitor's next request gets 429 until the window resets. For corrections, the flood-guard key is a salted hash of the shared address plus school plus field, so the whole site gets three correction submissions per school and field per day.
 - **Impact:** Site-wide denial of service for anonymous traffic from one client, and the anonymous limiter does not do the job it is configured for. If the API were later changed to read `x-forwarded-for` as the guide suggests, the first entry is client-supplied, so an attacker could pick their own bucket.
@@ -325,7 +325,7 @@ Format per SECURITY-REVIEW §2. Severity and priority per §3.
 
 ### F12. Well-formed unknown API keys cost one database query each, ahead of the limiter. Low. P3. OPEN.
 
-- **Location:** `src/SchoolSearch.Api/Security/ApiKeyService.cs:56` (`AnyAsync`); `ApiKeyResolutionMiddleware` runs before `UseRateLimiter` (`Extensions/ServiceCollectionExtensions.cs:37-38`).
+- **Location:** `src/SchoolSearch.Api/Security/ApiKeyService.cs:56` (`AnyAsync`); `ApiKeyResolutionMiddleware` runs before `UseRateLimiter` (`src/SchoolSearch.Api/Extensions/ServiceCollectionExtensions.cs:37-38`).
 - **Attack scenario:** A flood of random well-formed keys costs one query each, before the limiter rejects the request.
 - **Recommendation:** Cache negative lookups briefly, or apply the anonymous window before key resolution.
 
@@ -335,18 +335,18 @@ Legend: OPEN, FIXED, NOT APPLICABLE. Context column = what already exists that m
 
 | ID | Priority | Status | Evidence | Problem | Context | Action |
 |---|---|---|---|---|---|---|
-| F1 | P1 | OPEN | route.ts:92-95; ClientIpResolver.cs:13 | Shared anonymous bucket behind the BFF | Edge already sets Fly-Client-IP; resolver already gated by config | BFF forwards `fly-client-ip`; add a BFF test |
-| F2 | P2 | OPEN | AdminKeyFilter.cs:23-27 | No minimum admin secret strength | Digest comparison already in place | Length check and startup failure in Production |
-| F3 | P2 | OPEN | AdminEndpoints.cs:134-136, :163 | No admin audit trail | Admin filter already a single point | Append-only AdminAction table |
-| F4 | P2 | OPEN | CorrectionEndpoints.cs:109 | Emails kept indefinitely | Timestamps exist | Erase after closed status plus period |
-| F6 | P2 | OPEN | ServiceDefaultsExtensions.cs:55 | OpenAPI served in Production | Environment already known | Map only outside Production |
-| F11 | P2 | OPEN | dependabot.yml:13; ci.yml | Manual dependency updates, no web audit | NuGet audit in place | Security-only Dependabot; `pnpm audit` job |
-| F5 | P3 | OPEN | Observability.cs:32-34 | Tokens in traces | Metrics already use route templates | Drop url.path for corrections |
-| F7 | P3 | OPEN | SecurityHeadersMiddleware.cs:16-18 | Two headers missing | Web set already defined | Add two headers, assert in test |
-| F8 | P3 | OPEN | HealthChecks.cs:54-58 | Health detail public | Registry already holds detail | Status only on public route |
-| F9 | P3 | OPEN | CorrectionEndpoints.cs:81 | Process-wide gate | Count check already in code | Per-key lock or constraint |
-| F12 | P3 | OPEN | ApiKeyService.cs:56 | Lookup before limiter | Limiter already keyed on digest | Negative cache or order change |
-| F10 | P4 | OPEN | Import/Program.cs:52 | Operator CLI prints detail | Operator-only | Print type for database errors |
+| F1 | P1 | OPEN | web/app/src/app/api/proxy/[...path]/route.ts:92-95; src/SchoolSearch.Api/RateLimiting/ClientIpResolver.cs:13 | Shared anonymous bucket behind the BFF | Edge already sets Fly-Client-IP; resolver already gated by config | BFF forwards `fly-client-ip`; add a BFF test |
+| F2 | P2 | OPEN | src/SchoolSearch.Api/Security/AdminKeyFilter.cs:23-27 | No minimum admin secret strength | Digest comparison already in place | Length check and startup failure in Production |
+| F3 | P2 | OPEN | src/SchoolSearch.Api/Security/AdminEndpoints.cs:134-136, :163 | No admin audit trail | Admin filter already a single point | Append-only AdminAction table |
+| F4 | P2 | OPEN | src/SchoolSearch.Api/Corrections/CorrectionEndpoints.cs:109 | Emails kept indefinitely | Timestamps exist | Erase after closed status plus period |
+| F6 | P2 | OPEN | src/SchoolSearch.ServiceDefaults/ServiceDefaultsExtensions.cs:55 | OpenAPI served in Production | Environment already known | Map only outside Production |
+| F11 | P2 | OPEN | .github/dependabot.yml:13; .github/workflows/ci.yml | Manual dependency updates, no web audit | NuGet audit in place | Security-only Dependabot; `pnpm audit` job |
+| F5 | P3 | OPEN | src/SchoolSearch.ServiceDefaults/Observability.cs:32-34 | Tokens in traces | Metrics already use route templates | Drop url.path for corrections |
+| F7 | P3 | OPEN | src/SchoolSearch.Api/Security/SecurityHeadersMiddleware.cs:16-18 | Two headers missing | Web set already defined | Add two headers, assert in test |
+| F8 | P3 | OPEN | src/SchoolSearch.ServiceDefaults/HealthChecks.cs:54-58 | Health detail public | Registry already holds detail | Status only on public route |
+| F9 | P3 | OPEN | src/SchoolSearch.Api/Corrections/CorrectionEndpoints.cs:81 | Process-wide gate | Count check already in code | Per-key lock or constraint |
+| F12 | P3 | OPEN | src/SchoolSearch.Api/Security/ApiKeyService.cs:56 | Lookup before limiter | Limiter already keyed on digest | Negative cache or order change |
+| F10 | P4 | OPEN | src/SchoolSearch.Import/Program.cs:52 | Operator CLI prints detail | Operator-only | Print type for database errors |
 
 **Blocks deployment:** F1.
 
