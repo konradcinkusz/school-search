@@ -4,20 +4,20 @@ using System.Text.Json;
 
 namespace SchoolSearch.Reviews.Tests;
 
-public sealed class DsaNoticeTests : IClassFixture<DsaTestFactory>
+public sealed class DsaNoticeTests : IClassFixture<ReviewsApiFactory>
 {
     private const string Explanation = "Treść opinii zawiera dane osobowe nauczyciela, co narusza regulamin.";
 
-    private readonly DsaTestFactory _factory;
+    private readonly ReviewsApiFactory _factory;
 
-    public DsaNoticeTests(DsaTestFactory factory) => _factory = factory;
+    public DsaNoticeTests(ReviewsApiFactory factory) => _factory = factory;
 
     [Fact]
     public async Task Notice_without_good_faith_confirmation_is_refused()
     {
         var client = _factory.CreateClient();
 
-        var response = await client.PostAsync("/api/v1/notices", DsaTestFactory.JsonBody(new
+        var response = await client.PostAsync("/api/v1/notices", DsaTestSupport.JsonBody(new
         {
             contentReference = "https://example.test/opinia/1",
             explanation = Explanation,
@@ -35,7 +35,7 @@ public sealed class DsaNoticeTests : IClassFixture<DsaTestFactory>
     {
         var client = _factory.CreateClient();
 
-        var created = await client.PostAsync("/api/v1/notices", DsaTestFactory.JsonBody(new
+        var created = await client.PostAsync("/api/v1/notices", DsaTestSupport.JsonBody(new
         {
             contentReference = "https://example.test/opinia/2",
             explanation = Explanation,
@@ -60,7 +60,7 @@ public sealed class DsaNoticeTests : IClassFixture<DsaTestFactory>
     public async Task Notice_status_is_not_visible_without_the_right_token()
     {
         var client = _factory.CreateClient();
-        var created = await client.PostAsync("/api/v1/notices", DsaTestFactory.JsonBody(new
+        var created = await client.PostAsync("/api/v1/notices", DsaTestSupport.JsonBody(new
         {
             contentReference = "https://example.test/opinia/3",
             explanation = Explanation,
@@ -82,7 +82,7 @@ public sealed class DsaNoticeTests : IClassFixture<DsaTestFactory>
     {
         var client = _factory.CreateClient();
 
-        var response = await client.PostAsync("/api/v1/notices", DsaTestFactory.JsonBody(new
+        var response = await client.PostAsync("/api/v1/notices", DsaTestSupport.JsonBody(new
         {
             reviewId = Guid.NewGuid(),
             explanation = Explanation,
@@ -98,7 +98,7 @@ public sealed class DsaNoticeTests : IClassFixture<DsaTestFactory>
     {
         var client = _factory.CreateClient();
 
-        var response = await client.PostAsync("/api/v1/notices", DsaTestFactory.JsonBody(new
+        var response = await client.PostAsync("/api/v1/notices", DsaTestSupport.JsonBody(new
         {
             explanation = Explanation,
             category = "other",

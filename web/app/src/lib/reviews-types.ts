@@ -54,17 +54,40 @@ export interface StatementOfReasons {
   readonly decidedAt: string;
 }
 
+/** A statement of reasons as the review's author sees it (GET /api/v1/reviews/mine). */
+export interface MyStatement {
+  readonly decisionId: string;
+  readonly action: DecisionAction;
+  readonly legalOrTermsGround: string;
+  readonly facts: string;
+  readonly automated: boolean;
+  readonly redressInfo: string;
+  readonly decidedAt: string;
+}
+
+/** The school's reply as its author sees it, with its own moderation status. */
+export interface MyReviewReply {
+  readonly body: string;
+  readonly representativeLabel: string;
+  readonly verificationState: ReplyVerificationState | string;
+  /** pending | published | rejected */
+  readonly status: string;
+}
+
 export interface MyReview {
   readonly id: string;
   readonly schoolSlug: string;
   readonly rating: number;
   readonly title: string;
   readonly body: string;
-  readonly schoolYearFrom: number;
+  /** "2025/26" */
+  readonly schoolYear: string;
   /** pending | published | rejected | removed */
   readonly status: string;
   readonly createdAt: string;
-  readonly decision: StatementOfReasons | null;
+  readonly publishedAt: string | null;
+  readonly reply: MyReviewReply | null;
+  readonly statements: readonly MyStatement[];
 }
 
 export interface LegalTerms {

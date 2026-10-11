@@ -1,33 +1,38 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using SchoolSearch.Reviews.Auth;
 using SchoolSearch.Reviews.Data;
+using SchoolSearch.Reviews.RateLimiting;
+using SchoolSearch.Reviews.Settings;
 
 namespace SchoolSearch.Reviews.Dsa;
 
 /// <summary>
 /// DSA endpoints: notices (art. 16), statements of reasons (art. 17), complaints (art. 20), legal documents and the
-/// transparency report (art. 11, 12 and 24). Moderation routes live in <see cref="DsaModerationEndpoints"/>.
-/// Anonymous except complaints (account or notice token) and moderation (Moderator policy).
+/// transparency report. Anonymous, except complaints (author account or notice token) and the moderation group
+/// (<see cref="AuthPolicies.Moderator"/>, see <see cref="DsaModerationEndpoints"/>).
 /// </summary>
 public static class DsaEndpoints
 {
-    private const string ModeratorPolicy = "Moderator";
-
     public static IEndpointRouteBuilder MapDsaEndpoints(this IEndpointRouteBuilder app)
     {
         var api = app.MapGroup("/api/v1");
 
-        api.MapPost("/notices", SubmitNotice).WithName("SubmitDsaNotice");
+        api.MapPost("/notices", SubmitNotice)
+            .WithName("SubmitDsaNotice")
+            .RequireRateLimiting(RateLimitPolicies.Notices);
         api.MapGet("/notices/{id:guid}", GetNotice).WithName("GetDsaNoticeStatus");
-        api.MapPost("/decisions/{id:guid}/complaints", SubmitComplaint).WithName("SubmitDsaComplaint");
+        api.MapPost("/decisions/{id:guid}/complaints", SubmitComplaint)
+            .WithName("SubmitDsaComplaint")
+            .RequireRateLimiting(RateLimitPolicies.AuthWrites);
 
         var legal = api.MapGroup("/legal");
         legal.MapGet("/terms", GetTerms).WithName("GetLegalTerms");
         legal.MapGet("/contact", GetContact).WithName("GetLegalContact");
         legal.MapGet("/transparency", GetTransparency).WithName("GetTransparencyReport");
 
-        var moderation = api.MapGroup("/moderation").RequireAuthorization(ModeratorPolicy);
+        var moderation = api.MapGroup("/moderation").RequireAuthorization(AuthPolicies.Moderator);
         moderation.MapGet("/queue", DsaModerationEndpoints.GetQueue).WithName("GetModerationQueue");
         moderation.MapPost("/reviews/{id:guid}/decision", DsaModerationEndpoints.DecideReview).WithName("DecideReview");
         moderation.MapPost("/replies/{reviewId:guid}/decision", DsaModerationEndpoints.DecideReply).WithName("DecideReply");
@@ -70,7 +75,7 @@ public static class DsaEndpoints
             SubmitterName = input.SubmitterName,
             SubmitterEmail = input.SubmitterEmail,
             GoodFaithConfirmed = true,
-            Status = DsaStatus.Received,
+            Status = NoticeStatuses.Received,
             AckToken = DsaTokens.NewToken(),
             ReceivedAt = clock.GetUtcNow(),
         };
@@ -114,7 +119,7 @@ public static class DsaEndpoints
         HttpRequest request,
         ClaimsPrincipal user,
         ReviewsDbContext db,
-        DsaSubjectHasher hasher,
+        SubjectHasher hasher,
         TimeProvider clock,
         CancellationToken ct)
     {
@@ -153,7 +158,7 @@ public static class DsaEndpoints
             DecisionId = id,
             Explanation = input.Explanation,
             AckToken = DsaTokens.NewToken(),
-            Status = DsaStatus.ComplaintReceived,
+            Status = ComplaintStatuses.Received,
             ReceivedAt = clock.GetUtcNow(),
         };
 
@@ -162,7 +167,6 @@ public static class DsaEndpoints
 
         return Results.Json(
             new ComplaintReceipt(complaint.Id, complaint.DecisionId, complaint.Status, complaint.ReceivedAt, complaint.AckToken),
-            DsaJson.Options,
             statusCode: StatusCodes.Status201Created);
     }
 
@@ -175,7 +179,7 @@ public static class DsaEndpoints
         string? token,
         ClaimsPrincipal user,
         ReviewsDbContext db,
-        DsaSubjectHasher hasher,
+        SubjectHasher hasher,
         CancellationToken ct)
     {
         if (token is not null)
@@ -196,8 +200,8 @@ public static class DsaEndpoints
             return DsaHttp.Error(StatusCodes.Status403Forbidden, "forbidden", "The notice token does not match this decision.");
         }
 
-        var subject = user.FindFirstValue("sub");
-        if (string.IsNullOrEmpty(subject))
+        var subject = AuthClaims.Subject(user);
+        if (subject is null)
         {
             return DsaHttp.Error(StatusCodes.Status401Unauthorized, "unauthorized", "Sign in or provide the notice token.");
         }
@@ -223,8 +227,9 @@ public static class DsaEndpoints
         return DsaHttp.Error(StatusCodes.Status403Forbidden, "forbidden", "Only the review author can complain about this decision.");
     }
 
-    internal static IResult GetTerms() =>
-        TypedResults.Ok(new LegalTermsView(LegalDocuments.TermsVersion, LegalDocuments.TermsStatus, LegalDocuments.DraftNotice));
+    /// <summary>The terms version is the one reviews must accept (ReviewsOptions.TermsVersion), so the two cannot drift.</summary>
+    internal static IResult GetTerms(IOptions<ReviewsOptions> reviews) =>
+        TypedResults.Ok(new LegalTermsView(reviews.Value.TermsVersion, LegalDocuments.TermsStatus, LegalDocuments.DraftNotice));
 
     /// <summary>The single point of contact. 503 contact_not_configured when no contact is set (the contact is never invented).</summary>
     internal static IResult GetContact(IOptions<DsaOptions> options)

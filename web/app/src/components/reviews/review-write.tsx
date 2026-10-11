@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { bffRequest, errorCodeOf, errorListOf, errorMessageOf, isUnavailable } from "@/lib/bff-client";
+import { bffRequest, errorCodeOf, errorListOf, isUnavailable } from "@/lib/bff-client";
 import { schoolYearLabel } from "@/lib/format";
 import type { LegalTerms } from "@/lib/reviews-types";
 
@@ -19,11 +19,14 @@ type Gate = "loading" | "unavailable" | "anonymous" | "unverified" | "ready";
 
 const ERROR_TEXT: Record<string, string> = {
   unauthenticated: "Sesja wygasła. Zaloguj się ponownie, aby dodać opinię.",
+  unauthorized: "Sesja wygasła. Zaloguj się ponownie, aby dodać opinię.",
   email_not_verified: "Potwierdź adres e-mail, aby dodać opinię.",
-  forbidden_unverified: "Potwierdź adres e-mail, aby dodać opinię.",
   duplicate_review: "Opinię dla tej szkoły w tym roku szkolnym już dodałeś.",
+  terms_not_accepted: "Zaakceptuj aktualną wersję regulaminu, aby dodać opinię.",
+  validation_failed: "Sprawdź dane formularza: treść, tytuł i ocena muszą spełniać podane wymagania.",
   rate_limited: "Zbyt wiele opinii w krótkim czasie. Spróbuj ponownie później.",
   reviews_unavailable: "Opinie są chwilowo niedostępne. Spróbuj ponownie za chwilę.",
+  upstream_timeout: "Usługa opinii nie odpowiedziała na czas. Spróbuj ponownie.",
 };
 
 /** The last school years a review can refer to (school year 2025 means 2025/2026). */
@@ -157,10 +160,12 @@ function ReviewForm({ slug, onClose }: { readonly slug: string; readonly onClose
       return;
     }
     const code = errorCodeOf(response?.body);
+    // The status decides for session and availability errors; the server message is English and never shown here.
     const text =
-      (code !== null && ERROR_TEXT[code]) ||
+      (response?.status === 401 ? ERROR_TEXT.unauthenticated : null) ||
       (response?.status === 503 ? ERROR_TEXT.reviews_unavailable : null) ||
-      errorMessageOf(response?.body) ||
+      (code !== null && ERROR_TEXT[code]) ||
+      (response === null ? "Nie udało się połączyć z usługą. Opinia nie została wysłana." : null) ||
       "Nie udało się wysłać opinii. Spróbuj ponownie.";
     setFeedback({ kind: "error", text, details: errorListOf(response?.body) });
   }

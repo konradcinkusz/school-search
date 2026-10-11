@@ -1,28 +1,17 @@
-using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using SchoolSearch.Reviews.Errors;
 
 namespace SchoolSearch.Reviews.Dsa;
 
-/// <summary>The uniform error shape of the DSA endpoints: {"error":{"code","message","traceId"}}. Own copy, not the Api's.</summary>
-public sealed record DsaErrorEnvelope(DsaErrorBody Error);
-
-public sealed record DsaErrorBody(string Code, string Message, string TraceId);
-
-/// <summary>Shared JSON options for DSA bodies (camelCase, case-insensitive input).</summary>
-public static class DsaJson
-{
-    public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
-}
-
-/// <summary>Error results, body reading and paging shared by the DSA endpoints.</summary>
+/// <summary>Body reading, error results and paging shared by the DSA endpoints. Errors use the service's uniform envelope.</summary>
 public static class DsaHttp
 {
-    public static IResult Error(int status, string code, string message) =>
-        Results.Json(
-            new DsaErrorEnvelope(new DsaErrorBody(code, message, Activity.Current?.TraceId.ToString() ?? string.Empty)),
-            DsaJson.Options,
-            statusCode: status);
+    /// <summary>Request bodies are read camelCase and case-insensitive (web defaults).</summary>
+    public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    public static IResult Error(int status, string code, string message) => ApiErrorWriter.Result(status, code, message);
 
     public static IResult Failure(DsaFailure failure) => Error(failure.Status, failure.Code, failure.Message);
 
@@ -32,7 +21,7 @@ public static class DsaHttp
     {
         try
         {
-            var body = await request.ReadFromJsonAsync<T>(DsaJson.Options, ct);
+            var body = await request.ReadFromJsonAsync<T>(JsonOptions, ct);
             if (body is null)
             {
                 return (null, Error(StatusCodes.Status400BadRequest, "validation_failed", "Request body is required."));
@@ -46,13 +35,13 @@ public static class DsaHttp
         }
     }
 
-    /// <summary>Page and page size with the same clamping as the Api: page at least 1 and at most 10 000, size 1 to 100.</summary>
+    /// <summary>Page at least 1 and at most 10 000; size 1 to 100, default 20 (the same bounds as the Api).</summary>
     public static (int Page, int Size) ClampPaging(string? page, string? pageSize)
     {
-        var pageNumber = int.TryParse(page, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var p)
+        var pageNumber = int.TryParse(page, NumberStyles.Integer, CultureInfo.InvariantCulture, out var p)
             ? Math.Clamp(p, 1, 10_000)
             : 1;
-        var size = int.TryParse(pageSize, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var s)
+        var size = int.TryParse(pageSize, NumberStyles.Integer, CultureInfo.InvariantCulture, out var s)
             ? Math.Clamp(s, 1, 100)
             : 20;
         return (pageNumber, size);

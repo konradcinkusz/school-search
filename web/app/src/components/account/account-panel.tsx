@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { bffRequest, errorCodeOf, isUnavailable, type BffResponse } from "@/lib/bff-client";
 import { formatDatePl } from "@/lib/format";
-import type { MyReview, StatementOfReasons } from "@/lib/reviews-types";
+import type { MyReview, MyStatement } from "@/lib/reviews-types";
 
 /** The signed-in area: own reviews with status, statements of reasons (DSA art. 17), withdrawal and sign-out. */
 
@@ -14,6 +14,12 @@ const REVIEW_STATUS: Record<string, string> = {
   published: "opublikowana",
   rejected: "odrzucona",
   removed: "usunięta",
+};
+
+const REPLY_STATUS: Record<string, string> = {
+  pending: "oczekuje na sprawdzenie",
+  published: "opublikowana",
+  rejected: "odrzucona",
 };
 
 const DECISION_ACTION: Record<string, string> = {
@@ -31,9 +37,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function parseMine(body: unknown): MyReview[] | null {
-  const list = Array.isArray(body) ? body : isRecord(body) && Array.isArray(body.items) ? body.items : null;
-  if (list === null) return null;
-  return list.filter(isRecord).map((item) => item as unknown as MyReview);
+  if (!isRecord(body) || !Array.isArray(body.items)) return null;
+  return body.items.filter(isRecord).map((item) => ({
+    ...(item as unknown as MyReview),
+    statements: Array.isArray(item.statements) ? (item.statements.filter(isRecord) as unknown as MyStatement[]) : [],
+  }));
 }
 
 export function AccountPanel() {
@@ -155,7 +163,7 @@ export function AccountPanel() {
               <li key={review.id} className="card">
                 <p className="muted">
                   Status: {REVIEW_STATUS[review.status] ?? review.status}
-                  {review.createdAt && formatDatePl(review.createdAt) ? ` · dodano ${formatDatePl(review.createdAt)}` : ""}
+                  {formatDatePl(review.createdAt) ? ` · dodano ${formatDatePl(review.createdAt)}` : ""}
                 </p>
                 <h3>{review.title}</h3>
                 <p className="review__body">{review.body}</p>
@@ -170,7 +178,14 @@ export function AccountPanel() {
                     </>
                   ) : null}
                 </p>
-                {review.decision ? <DecisionView decision={review.decision} /> : null}
+                {review.reply ? (
+                  <p className="muted">
+                    Odpowiedź szkoły ({review.reply.representativeLabel}): {REPLY_STATUS[review.reply.status] ?? review.reply.status}
+                  </p>
+                ) : null}
+                {review.statements.map((statement) => (
+                  <DecisionView key={statement.decisionId} decision={statement} />
+                ))}
               </li>
             ))}
           </ul>
@@ -180,7 +195,7 @@ export function AccountPanel() {
   );
 }
 
-function DecisionView({ decision }: { decision: StatementOfReasons }) {
+function DecisionView({ decision }: { decision: MyStatement }) {
   return (
     <div className="decision">
       <p>

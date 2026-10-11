@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using SchoolSearch.Reviews.Data;
 
 namespace SchoolSearch.Reviews.Dsa;
 
@@ -36,21 +37,38 @@ public static class DsaValidation
     public const int MaxFacts = 3000;
     public const int MaxToken = 64;
 
-    public static readonly IReadOnlySet<string> NoticeCategories = new HashSet<string>(StringComparer.Ordinal)
+    public static readonly IReadOnlySet<string> AllowedNoticeCategories = new HashSet<string>(StringComparer.Ordinal)
     {
-        "illegal_content",
-        "personal_data",
-        "defamation",
-        "other",
+        NoticeCategories.IllegalContent,
+        NoticeCategories.PersonalData,
+        NoticeCategories.Defamation,
+        NoticeCategories.Other,
     };
 
-    public static readonly IReadOnlySet<string> ReviewActions = new HashSet<string>(StringComparer.Ordinal) { "publish", "reject", "remove" };
+    public static readonly IReadOnlySet<string> ReviewActions = new HashSet<string>(StringComparer.Ordinal)
+    {
+        ModerationActions.Publish,
+        ModerationActions.Reject,
+        ModerationActions.Remove,
+    };
 
-    public static readonly IReadOnlySet<string> ReplyActions = new HashSet<string>(StringComparer.Ordinal) { "publish", "reject" };
+    public static readonly IReadOnlySet<string> ReplyActions = new HashSet<string>(StringComparer.Ordinal)
+    {
+        ModerationActions.Publish,
+        ModerationActions.Reject,
+    };
 
-    public static readonly IReadOnlySet<string> NoticeActions = new HashSet<string>(StringComparer.Ordinal) { "keep", "remove" };
+    public static readonly IReadOnlySet<string> NoticeActions = new HashSet<string>(StringComparer.Ordinal)
+    {
+        ModerationActions.Keep,
+        ModerationActions.Remove,
+    };
 
-    public static readonly IReadOnlySet<string> ComplaintOutcomes = new HashSet<string>(StringComparer.Ordinal) { "upheld", "reversed" };
+    public static readonly IReadOnlySet<string> ComplaintOutcomes = new HashSet<string>(StringComparer.Ordinal)
+    {
+        ComplaintStatuses.Upheld,
+        ComplaintStatuses.Reversed,
+    };
 
     /// <summary>Structural check only: one '@', no whitespace, a dot in the domain. Deliverability is not checked.</summary>
     private static readonly Regex EmailShape = new(
@@ -78,7 +96,7 @@ public static class DsaValidation
         }
 
         var category = body.Category?.Trim();
-        if (category is null || !NoticeCategories.Contains(category))
+        if (category is null || !AllowedNoticeCategories.Contains(category))
         {
             return Invalid<NoticeInput>("category is not one of the allowed values.");
         }

@@ -1,14 +1,17 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
+using SchoolSearch.Reviews.Dsa;
+using SchoolSearch.Reviews.Settings;
 
 namespace SchoolSearch.Reviews.Tests;
 
-public sealed class DsaLegalTests : IClassFixture<DsaTestFactory>
+public sealed class DsaLegalTests : IClassFixture<ReviewsApiFactory>
 {
-    private readonly DsaTestFactory _factory;
+    private readonly ReviewsApiFactory _factory;
 
-    public DsaLegalTests(DsaTestFactory factory) => _factory = factory;
+    public DsaLegalTests(ReviewsApiFactory factory) => _factory = factory;
 
     [Fact]
     public async Task Terms_are_published_as_a_draft_with_their_version()
@@ -17,18 +20,19 @@ public sealed class DsaLegalTests : IClassFixture<DsaTestFactory>
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var doc = await response.Content.ReadFromJsonAsync<JsonDocument>();
-        Assert.Equal(LegalDocuments.TermsVersion, doc!.RootElement.GetProperty("version").GetString());
+        Assert.Equal(new ReviewsOptions().TermsVersion, doc!.RootElement.GetProperty("version").GetString());
         Assert.Equal(LegalDocuments.TermsStatus, doc.RootElement.GetProperty("status").GetString());
     }
 
     [Fact]
     public async Task Contact_point_is_returned_when_configured()
     {
-        var response = await _factory.CreateClient().GetAsync("/api/v1/legal/contact");
+        var configured = _factory.WithWebHostBuilder(builder => builder.UseSetting("Dsa:ContactEmail", DsaTestSupport.ContactEmail));
+        var response = await configured.CreateClient().GetAsync("/api/v1/legal/contact");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var doc = await response.Content.ReadFromJsonAsync<JsonDocument>();
-        Assert.Equal(DsaTestFactory.ContactEmail, doc!.RootElement.GetProperty("email").GetString());
+        Assert.Equal(DsaTestSupport.ContactEmail, doc!.RootElement.GetProperty("email").GetString());
     }
 
     [Fact]
@@ -36,9 +40,9 @@ public sealed class DsaLegalTests : IClassFixture<DsaTestFactory>
     {
         var before = await ReadReportAsync();
 
-        var review = DsaTestFactory.NewReview("szkola-prawne-1", "author-l1");
+        var review = DsaTestSupport.NewReview(_factory, "szkola-prawne-1", "author-l1");
         await _factory.UseDbAsync(db => { db.Reviews.Add(review); return db.SaveChangesAsync(); });
-        var notice = await _factory.CreateClient().PostAsync("/api/v1/notices", DsaTestFactory.JsonBody(new
+        var notice = await _factory.CreateClient().PostAsync("/api/v1/notices", DsaTestSupport.JsonBody(new
         {
             reviewId = review.Id,
             explanation = "Opinia zawiera dane osobowe ucznia, których nie należy publikować.",
@@ -47,9 +51,9 @@ public sealed class DsaLegalTests : IClassFixture<DsaTestFactory>
         }));
         using var receipt = await notice.Content.ReadFromJsonAsync<JsonDocument>();
         var noticeId = receipt!.RootElement.GetProperty("id").GetGuid();
-        await _factory.CreateAs("mod-l1", true, "Admin").PostAsync(
+        await _factory.AsUser("mod-l1", true, "Admin").PostAsync(
             $"/api/v1/moderation/notices/{noticeId}/decision",
-            DsaTestFactory.JsonBody(new { action = "keep", legalOrTermsGround = "Art. 16 DSA, pkt 2.", facts = "Brak naruszenia po sprawdzeniu." }));
+            DsaTestSupport.JsonBody(new { action = "keep", legalOrTermsGround = "Art. 16 DSA, pkt 2.", facts = "Brak naruszenia po sprawdzeniu." }));
 
         var after = await ReadReportAsync();
 
@@ -68,11 +72,11 @@ public sealed class DsaLegalTests : IClassFixture<DsaTestFactory>
     }
 }
 
-public sealed class DsaLegalWithoutContactTests : IClassFixture<DsaTestFactoryNoContact>
+public sealed class DsaLegalWithoutContactTests : IClassFixture<ReviewsApiFactory>
 {
-    private readonly DsaTestFactoryNoContact _factory;
+    private readonly ReviewsApiFactory _factory;
 
-    public DsaLegalWithoutContactTests(DsaTestFactoryNoContact factory) => _factory = factory;
+    public DsaLegalWithoutContactTests(ReviewsApiFactory factory) => _factory = factory;
 
     [Fact]
     public async Task Contact_is_unavailable_and_never_invented_when_not_configured()

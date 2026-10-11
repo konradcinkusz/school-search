@@ -1,13 +1,11 @@
 namespace SchoolSearch.Reviews.Dsa;
 
 /// <summary>
-/// Legal texts and their version labels. The texts are DRAFTS: marked for review by a lawyer, never legal advice.
-/// POST /api/v1/schools/{slug}/reviews must echo <see cref="TermsVersion"/> as acceptedTermsVersion.
+/// Legal texts that the DSA endpoints publish. Every text is a DRAFT marked for review by a lawyer; none is legal advice.
+/// The terms version is not here: it is ReviewsOptions.TermsVersion, the same value reviews must accept.
 /// </summary>
 public static class LegalDocuments
 {
-    public const string TermsVersion = "reviews-terms-draft-1";
-
     public const string TermsStatus = "projekt do weryfikacji przez prawnika";
 
     public const string DraftNotice = "Dokument roboczy: projekt do weryfikacji przez prawnika. Nie stanowi porady prawnej.";

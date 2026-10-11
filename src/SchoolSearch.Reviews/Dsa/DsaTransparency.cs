@@ -9,7 +9,7 @@ internal static class DsaTransparency
     public static async Task<TransparencyReport> BuildAsync(ReviewsDbContext db, DateTimeOffset now, CancellationToken ct)
     {
         var noticesReceived = await db.Notices.CountAsync(ct);
-        var noticesDecided = await db.Notices.CountAsync(n => n.Status == DsaStatus.Decided, ct);
+        var noticesDecided = await db.Notices.CountAsync(n => n.Status == NoticeStatuses.Decided, ct);
 
         var byAction = await db.ModerationDecisions.AsNoTracking()
             .GroupBy(d => d.Action)
@@ -19,9 +19,9 @@ internal static class DsaTransparency
         var automated = await db.ModerationDecisions.CountAsync(d => d.Automated, ct);
 
         var complaintsReceived = await db.Complaints.CountAsync(ct);
-        var upheld = await db.Complaints.CountAsync(c => c.Status == DsaStatus.Upheld, ct);
-        var reversed = await db.Complaints.CountAsync(c => c.Status == DsaStatus.Reversed, ct);
-        var pending = await db.Complaints.CountAsync(c => c.Status == DsaStatus.ComplaintReceived, ct);
+        var upheld = await db.Complaints.CountAsync(c => c.Status == ComplaintStatuses.Upheld, ct);
+        var reversed = await db.Complaints.CountAsync(c => c.Status == ComplaintStatuses.Reversed, ct);
+        var pending = await db.Complaints.CountAsync(c => c.Status == ComplaintStatuses.Received, ct);
 
         return new TransparencyReport(
             now,

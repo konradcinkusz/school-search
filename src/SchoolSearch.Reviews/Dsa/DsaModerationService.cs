@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SchoolSearch.Reviews.Auth;
 using SchoolSearch.Reviews.Data;
 
 namespace SchoolSearch.Reviews.Dsa;
@@ -6,9 +7,9 @@ namespace SchoolSearch.Reviews.Dsa;
 /// <summary>
 /// The only code path that publishes, rejects or removes a review, and the only writer of ModerationDecision.
 /// Every decision has Automated=false. AI triage labels only order the moderator queue; they never decide.
-/// Callers must check that Reviews:SubjectPepper is configured before calling (the hashed moderator id is required).
+/// Callers must check SubjectHasher.IsConfigured first: the hashed moderator id is required.
 /// </summary>
-public sealed class DsaModerationService(ReviewsDbContext db, DsaSubjectHasher hasher, TimeProvider clock)
+public sealed class DsaModerationService(ReviewsDbContext db, SubjectHasher hasher, TimeProvider clock)
 {
     /// <summary>Action names recorded for a complaint outcome. They do not change content by themselves.</summary>
     public const string ComplaintUpheldAction = "complaint_upheld";
@@ -19,13 +20,13 @@ public sealed class DsaModerationService(ReviewsDbContext db, DsaSubjectHasher h
     /// <summary>Allowed review actions per current status. A reinstatement is an explicit publish, never a side effect.</summary>
     private static readonly IReadOnlyDictionary<string, string[]> ReviewTransitions = new Dictionary<string, string[]>(StringComparer.Ordinal)
     {
-        [DsaStatus.Pending] = ["publish", "reject", "remove"],
-        [DsaStatus.Published] = ["remove"],
-        [DsaStatus.Rejected] = ["publish"],
-        [DsaStatus.Removed] = ["publish"],
+        [ReviewStatuses.Pending] = [ModerationActions.Publish, ModerationActions.Reject, ModerationActions.Remove],
+        [ReviewStatuses.Published] = [ModerationActions.Remove],
+        [ReviewStatuses.Rejected] = [ModerationActions.Publish],
+        [ReviewStatuses.Removed] = [ModerationActions.Publish],
     };
 
-    private static readonly string[] DeletableReviewStatuses = [DsaStatus.Pending, DsaStatus.Published];
+    private static readonly string[] DeletableReviewStatuses = [ReviewStatuses.Pending, ReviewStatuses.Published];
 
     public async Task<DsaResult<StatementOfReasons>> DecideReviewAsync(
         Guid reviewId,
@@ -50,7 +51,7 @@ public sealed class DsaModerationService(ReviewsDbContext db, DsaSubjectHasher h
         var now = clock.GetUtcNow();
         review.Status = ReviewStatusFor(input.Action);
         review.UpdatedAt = now;
-        if (review.Status == DsaStatus.Published)
+        if (review.Status == ReviewStatuses.Published)
         {
             review.PublishedAt = now;
         }
@@ -75,13 +76,13 @@ public sealed class DsaModerationService(ReviewsDbContext db, DsaSubjectHasher h
             return DsaResult<StatementOfReasons>.Fail(StatusCodes.Status404NotFound, "not_found", "Reply not found.");
         }
 
-        if (reply.Status != DsaStatus.Pending)
+        if (reply.Status != ReplyStatuses.Pending)
         {
             return DsaResult<StatementOfReasons>.Fail(StatusCodes.Status409Conflict, "invalid_transition", "The reply is not pending.");
         }
 
-        var publish = input.Action == "publish";
-        if (publish && review.Status != DsaStatus.Published)
+        var publish = input.Action == ModerationActions.Publish;
+        if (publish && review.Status != ReviewStatuses.Published)
         {
             return DsaResult<StatementOfReasons>.Fail(
                 StatusCodes.Status409Conflict,
@@ -89,7 +90,7 @@ public sealed class DsaModerationService(ReviewsDbContext db, DsaSubjectHasher h
                 "A reply can be published only under a published review.");
         }
 
-        reply.Status = publish ? DsaStatus.Published : DsaStatus.Rejected;
+        reply.Status = publish ? ReplyStatuses.Published : ReplyStatuses.Rejected;
 
         var decision = NewDecision(input, moderatorSubject, clock.GetUtcNow(), reviewId, noticeId: null);
         db.ModerationDecisions.Add(decision);
@@ -114,13 +115,13 @@ public sealed class DsaModerationService(ReviewsDbContext db, DsaSubjectHasher h
             return DsaResult<StatementOfReasons>.Fail(StatusCodes.Status404NotFound, "not_found", "Notice not found.");
         }
 
-        if (notice.Status != DsaStatus.Received)
+        if (notice.Status != NoticeStatuses.Received)
         {
             return DsaResult<StatementOfReasons>.Fail(StatusCodes.Status409Conflict, "already_decided", "The notice already has a decision.");
         }
 
         var now = clock.GetUtcNow();
-        if (input.Action == "remove" && notice.ReviewId is { } reviewId)
+        if (input.Action == ModerationActions.Remove && notice.ReviewId is { } reviewId)
         {
             var review = await db.Reviews.FirstOrDefaultAsync(r => r.Id == reviewId, ct);
             if (review is null)
@@ -133,12 +134,12 @@ public sealed class DsaModerationService(ReviewsDbContext db, DsaSubjectHasher h
 
             if (DeletableReviewStatuses.Contains(review.Status))
             {
-                review.Status = DsaStatus.Removed;
+                review.Status = ReviewStatuses.Removed;
                 review.UpdatedAt = now;
             }
         }
 
-        notice.Status = DsaStatus.Decided;
+        notice.Status = NoticeStatuses.Decided;
 
         var decision = NewDecision(input, moderatorSubject, now, notice.ReviewId, notice.Id);
         db.ModerationDecisions.Add(decision);
@@ -163,7 +164,7 @@ public sealed class DsaModerationService(ReviewsDbContext db, DsaSubjectHasher h
             return DsaResult<ComplaintOutcomeView>.Fail(StatusCodes.Status404NotFound, "not_found", "Complaint not found.");
         }
 
-        if (complaint.Status != DsaStatus.ComplaintReceived)
+        if (complaint.Status != ComplaintStatuses.Received)
         {
             return DsaResult<ComplaintOutcomeView>.Fail(StatusCodes.Status409Conflict, "already_decided", "The complaint already has an outcome.");
         }
@@ -177,9 +178,9 @@ public sealed class DsaModerationService(ReviewsDbContext db, DsaSubjectHasher h
                 "The complained-about decision no longer exists.");
         }
 
-        var upheld = input.Outcome == "upheld";
+        var upheld = input.Outcome == ComplaintStatuses.Upheld;
         var now = clock.GetUtcNow();
-        complaint.Status = upheld ? DsaStatus.Upheld : DsaStatus.Reversed;
+        complaint.Status = upheld ? ComplaintStatuses.Upheld : ComplaintStatuses.Reversed;
 
         var outcomeAction = upheld ? ComplaintUpheldAction : ComplaintReversedAction;
         var decision = NewDecision(
@@ -209,12 +210,12 @@ public sealed class DsaModerationService(ReviewsDbContext db, DsaSubjectHasher h
         if (filter is "open" or "pending")
         {
             candidates.AddRange(await db.Reviews.AsNoTracking()
-                .Where(r => r.Status == DsaStatus.Pending)
+                .Where(r => r.Status == ReviewStatuses.Pending)
                 .Select(r => new QueueCandidate("review", r.Id, r.CreatedAt, r.Id))
                 .ToListAsync(ct));
 
             candidates.AddRange(await db.Reviews.AsNoTracking()
-                .Where(r => r.Reply != null && r.Reply.Status == DsaStatus.Pending)
+                .Where(r => r.Reply != null && r.Reply.Status == ReplyStatuses.Pending)
                 .Select(r => new QueueCandidate("reply", r.Id, r.Reply!.CreatedAt, r.Id))
                 .ToListAsync(ct));
         }
@@ -222,7 +223,7 @@ public sealed class DsaModerationService(ReviewsDbContext db, DsaSubjectHasher h
         if (filter is "open" or "received")
         {
             candidates.AddRange(await db.Notices.AsNoTracking()
-                .Where(n => n.Status == DsaStatus.Received)
+                .Where(n => n.Status == NoticeStatuses.Received)
                 .Select(n => new QueueCandidate("notice", n.Id, n.ReceivedAt, n.ReviewId))
                 .ToListAsync(ct));
         }
@@ -326,9 +327,9 @@ public sealed class DsaModerationService(ReviewsDbContext db, DsaSubjectHasher h
 
     private static string ReviewStatusFor(string action) => action switch
     {
-        "publish" => DsaStatus.Published,
-        "reject" => DsaStatus.Rejected,
-        _ => DsaStatus.Removed,
+        ModerationActions.Publish => ReviewStatuses.Published,
+        ModerationActions.Reject => ReviewStatuses.Rejected,
+        _ => ReviewStatuses.Removed,
     };
 
     private static ModerationTriage? LinkedTriage(Guid? reviewId, IReadOnlyDictionary<Guid, ModerationTriage> triage) =>

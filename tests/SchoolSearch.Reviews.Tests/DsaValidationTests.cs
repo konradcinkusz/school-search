@@ -99,22 +99,6 @@ public sealed class DsaValidationTests
     }
 
     [Fact]
-    public void Subject_hasher_is_unconfigured_without_a_pepper_and_is_stable_when_configured()
-    {
-        Assert.False(new DsaSubjectHasher(null).IsConfigured);
-        Assert.False(new DsaSubjectHasher("   ").IsConfigured);
-
-        var hasher = new DsaSubjectHasher("pepper");
-        var first = hasher.Hash("user-1");
-
-        Assert.True(hasher.IsConfigured);
-        Assert.Equal(64, first.Length);
-        Assert.Equal(first, hasher.Hash("user-1"));
-        Assert.NotEqual(first, hasher.Hash("user-2"));
-        Assert.Equal(first.ToLowerInvariant(), first);
-    }
-
-    [Fact]
     public void Tokens_are_22_characters_and_differ_between_calls()
     {
         var first = DsaTokens.NewToken();

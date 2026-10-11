@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using SchoolSearch.Reviews.Auth;
+using SchoolSearch.Reviews.Data;
 
 namespace SchoolSearch.Reviews.Dsa;
 
@@ -30,7 +32,7 @@ internal static class DsaModerationEndpoints
         Guid id,
         HttpRequest request,
         ClaimsPrincipal user,
-        DsaSubjectHasher hasher,
+        SubjectHasher hasher,
         DsaModerationService moderation,
         CancellationToken ct)
     {
@@ -58,7 +60,7 @@ internal static class DsaModerationEndpoints
         Guid reviewId,
         HttpRequest request,
         ClaimsPrincipal user,
-        DsaSubjectHasher hasher,
+        SubjectHasher hasher,
         DsaModerationService moderation,
         CancellationToken ct)
     {
@@ -86,7 +88,7 @@ internal static class DsaModerationEndpoints
         Guid id,
         HttpRequest request,
         ClaimsPrincipal user,
-        DsaSubjectHasher hasher,
+        SubjectHasher hasher,
         DsaModerationService moderation,
         CancellationToken ct)
     {
@@ -114,7 +116,7 @@ internal static class DsaModerationEndpoints
         Guid id,
         HttpRequest request,
         ClaimsPrincipal user,
-        DsaSubjectHasher hasher,
+        SubjectHasher hasher,
         DsaModerationService moderation,
         CancellationToken ct)
     {
@@ -139,9 +141,9 @@ internal static class DsaModerationEndpoints
     }
 
     /// <summary>Null when the moderator can act. Sets the subject for hashing.</summary>
-    private static IResult? Precondition(ClaimsPrincipal user, DsaSubjectHasher hasher, out string subject)
+    private static IResult? Precondition(ClaimsPrincipal user, SubjectHasher hasher, out string subject)
     {
-        subject = user.FindFirstValue("sub") ?? string.Empty;
+        subject = AuthClaims.Subject(user) ?? string.Empty;
         if (subject.Length == 0)
         {
             return DsaHttp.Error(StatusCodes.Status401Unauthorized, "unauthorized", "Authentication is required.");

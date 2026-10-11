@@ -341,7 +341,7 @@ public static class ReviewEndpoints
     private static IReadOnlyList<StatementOfReasonsItem> StatementsFor(
         IReadOnlyDictionary<Guid, List<StatementOfReasonsItem>> byReview,
         Guid reviewId) =>
-        byReview.TryGetValue(reviewId, out var statements) ? statements : [];
+        byReview.TryGetValue(reviewId, out var statements) ? statements : new List<StatementOfReasonsItem>();
 
     /// <summary>"2025/26" for SchoolYearFrom 2025.</summary>
     private static string FormatSchoolYear(int startYear) =>
