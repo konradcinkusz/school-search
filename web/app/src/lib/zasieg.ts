@@ -1,12 +1,19 @@
-export const ZASIEG_VALUES = ["gmina", "powiat", "wojewodztwo"] as const;
-export type Zasieg = (typeof ZASIEG_VALUES)[number];
+import { isTeryt } from "@/lib/validation";
 
-export function isZasieg(value: string): value is Zasieg {
-  return (ZASIEG_VALUES as readonly string[]).includes(value);
+/** Ranking scope in the URL: "country" or "gmina:<TERYT>" (for example gmina:1465011). */
+export type RankingScope =
+  | { readonly kind: "country"; readonly param: "country" }
+  | { readonly kind: "gmina"; readonly param: string; readonly gminaTeryt: string };
+
+export function parseRankingScope(raw: string): RankingScope | null {
+  if (raw === "country") return { kind: "country", param: "country" };
+  const match = /^gmina:(.+)$/.exec(raw);
+  if (!match || match[1] === undefined) return null;
+  const teryt = match[1];
+  if (!isTeryt(teryt)) return null;
+  return { kind: "gmina", param: `gmina:${teryt}`, gminaTeryt: teryt };
 }
 
-export const ZASIEG_LABEL: Record<Zasieg, string> = {
-  gmina: "gmina",
-  powiat: "powiat",
-  wojewodztwo: "województwo",
-};
+export function rankingHref(scope: RankingScope): string {
+  return `/ranking/${scope.param}`;
+}

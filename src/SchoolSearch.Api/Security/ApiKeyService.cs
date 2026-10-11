@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
@@ -72,7 +73,7 @@ public sealed class ApiKeyService(CatalogDbContext db, TimeProvider clock)
         return Prefix + body;
     }
 
-    private static bool IsWellFormed(string? presented) =>
+    private static bool IsWellFormed([NotNullWhen(true)] string? presented) =>
         presented is not null
         && presented.Length is >= MinKeyLength and <= MaxKeyLength
         && presented.StartsWith(Prefix, StringComparison.Ordinal);

@@ -40,22 +40,27 @@ async function lookUpCatchment(page: Page, gmina: string, street: string, number
 }
 
 test.describe("public journey on the synthetic demo gmina", () => {
-  test.beforeAll(async ({ request }) => {
+  test.beforeAll(async ({ playwright }) => {
     // The API seeds the demo gmina after migrations, so poll the public gminas list before the first test.
-    const base = await catalogApi(request);
-    await expect
-      .poll(
-        async () => {
-          const response = await request.get(`${base}/api/v1/gminas`);
-          if (!response.ok()) {
-            return 0;
-          }
-          const gminas = (await response.json()) as { teryt: string; schoolCount: number }[];
-          return gminas.find((g) => g.teryt === "9999999")?.schoolCount ?? 0;
-        },
-        { timeout: 90_000, intervals: [1_000, 2_000, 3_000] },
-      )
-      .toBeGreaterThan(0);
+    const request = await playwright.request.newContext({ baseURL: test.info().project.use.baseURL });
+    try {
+      const base = await catalogApi(request);
+      await expect
+        .poll(
+          async () => {
+            const response = await request.get(`${base}/api/v1/gminas`);
+            if (!response.ok()) {
+              return 0;
+            }
+            const gminas = (await response.json()) as { teryt: string; schoolCount: number }[];
+            return gminas.find((g) => g.teryt === "9999999")?.schoolCount ?? 0;
+          },
+          { timeout: 90_000, intervals: [1_000, 2_000, 3_000] },
+        )
+        .toBeGreaterThan(0);
+    } finally {
+      await request.dispose();
+    }
   });
 
   test("home: catchment school for a street and number shows score, interval, cohort, coverage and alternatives", async ({

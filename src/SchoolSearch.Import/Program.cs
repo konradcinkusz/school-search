@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using SchoolSearch.Catalog.Data;
+using SchoolSearch.Import.Catchment;
 using SchoolSearch.Import.Cke;
 using SchoolSearch.Import.Geo;
 
@@ -138,6 +139,17 @@ internal static class Program
                     });
                 }
 
+            case "catchment":
+                {
+                    var file = Required(options, "file");
+
+                    return await RunLoaderAsync(db, "catchment", ct, async (context, token) =>
+                    {
+                        await using var stream = File.OpenRead(file);
+                        return await CatchmentLoader.RunAsync(context, stream, TimeProvider.System, token);
+                    });
+                }
+
             default:
                 throw new ArgumentException($"Unknown command '{command}'.");
         }
@@ -256,6 +268,7 @@ internal static class Program
           cke       --file <csv>  --year <yyyy> [--map <json>]
           baseline  --file <csv>  --year <yyyy>
           geo       --file <csv>
+          catchment --file <csv>
         Environment: DATABASE_PROVIDER=postgres|inmemory, ConnectionStrings__catalogdb (postgres).
         Exit codes: 0 ok, 1 error, 2 schema mismatch.
         """;

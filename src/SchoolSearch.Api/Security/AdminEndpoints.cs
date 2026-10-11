@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -99,12 +100,12 @@ public static class AdminEndpoints
         CancellationToken ct)
     {
         var (body, error) = await JsonBodyReader.ReadAsync<UpdateCorrectionRequest>(request, ct);
-        if (error is not null)
+        if (body is null)
         {
-            return error;
+            return error!;
         }
 
-        var target = body!.Status?.Trim();
+        var target = body.Status?.Trim();
         if (target is null || !AllStatuses.Contains(target))
         {
             return ApiErrorWriter.Result(StatusCodes.Status400BadRequest, "validation_failed", "Unknown status.");
