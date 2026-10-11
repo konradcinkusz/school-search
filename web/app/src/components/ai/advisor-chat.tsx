@@ -46,8 +46,8 @@ export function AdvisorChat() {
       return;
     }
 
+    // The visitor's message joins the transcript only when the agent answers, so a retry never sends two user turns.
     const next: Turn[] = [...turns, { role: "user", content: text }];
-    setTurns(next);
     setDraft("");
     setError(null);
     setSending(true);
@@ -79,8 +79,10 @@ export function AdvisorChat() {
     setSending(false);
 
     if (outcome.ok) {
-      setTurns((current) => [...current, { role: "assistant", content: outcome.answer.reply, answer: outcome.answer }]);
+      setTurns([...next, { role: "assistant", content: outcome.answer.reply, answer: outcome.answer }]);
     } else {
+      // Keep the text in the box so the visitor can send it again without retyping.
+      setDraft(text);
       setError(outcome.text);
     }
   }

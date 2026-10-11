@@ -73,11 +73,12 @@ public sealed class CorrectionTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var root = await JsonTestHelpers.ReadJsonAsync(response);
-        ContractAssert.ExactKeys(root, "token", "status", "statusReason", "createdAt", "schoolSlug", "field");
+        ContractAssert.ExactKeys(root, "token", "status", "statusReason", "createdAt", "schoolSlug", "field", "kind");
         Assert.Equal(token, root.GetProperty("token").GetString());
         Assert.Equal("new", root.GetProperty("status").GetString());
         Assert.Equal(PublicSeed.SchoolA, root.GetProperty("schoolSlug").GetString());
         Assert.Equal("name", root.GetProperty("field").GetString());
+        Assert.Equal("school", root.GetProperty("kind").GetString());
 
         var raw = root.GetRawText();
         Assert.DoesNotContain(Message, raw, StringComparison.Ordinal);

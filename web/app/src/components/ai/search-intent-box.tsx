@@ -56,7 +56,7 @@ export function resultsHref(draft: Editable): { href: string; unapplied: string[
 }
 
 export function SearchIntentBox() {
-  const ids = { question: useId(), status: useId(), filters: useId() };
+  const ids = { question: useId(), heading: useId(), status: useId(), filters: useId() };
   const [question, setQuestion] = useState("");
   const [sending, setSending] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -101,8 +101,8 @@ export function SearchIntentBox() {
   const link = draft !== null ? resultsHref(draft) : null;
 
   return (
-    <section className="card ai-search" aria-labelledby={ids.question}>
-      <h2 id={ids.question}>Opisz czego szukasz</h2>
+    <section className="card ai-search" aria-labelledby={ids.heading}>
+      <h2 id={ids.heading}>Opisz czego szukasz</h2>
       <p className="muted">
         Napisz zwykłymi słowami, na przykład „szkoła podstawowa w gminie Przykładowo, z oddziałem sportowym”. AI tylko
         przygotuje filtry, które możesz poprawić. Portal nie ocenia szkół ani nie układa ich według jakości.
