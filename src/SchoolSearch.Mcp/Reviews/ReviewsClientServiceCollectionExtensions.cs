@@ -9,7 +9,8 @@ public static class ReviewsClientServiceCollectionExtensions
     /// <summary>
     /// Registers <see cref="ReviewsClient"/> as a typed client named "reviews". The base address is optional and comes
     /// from Reviews:BaseUrl or REVIEWS_BASE_URL. Unset means the reviews tool answers reviews_unavailable; the service
-    /// still starts. The standard resilience handler from the kernel applies to this client.
+    /// still starts. The standard resilience handler from the kernel applies to this client. The request context is read
+    /// through IHttpContextAccessor so the visitor address can be forwarded.
     /// </summary>
     public static IServiceCollection AddReviewsClient(this IServiceCollection services, IConfiguration configuration)
     {
@@ -32,6 +33,8 @@ public static class ReviewsClientServiceCollectionExtensions
             // A trailing slash keeps any base path; the relative paths used by the tools carry no leading slash.
             root = new Uri(trimmed.TrimEnd('/') + "/", UriKind.Absolute);
         }
+
+        services.AddHttpContextAccessor();
 
         services.AddHttpClient<ReviewsClient>(ReviewsClient.HttpClientName, client =>
         {

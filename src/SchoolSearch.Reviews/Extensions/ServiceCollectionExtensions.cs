@@ -4,6 +4,7 @@ using SchoolSearch.Reviews.Hosting;
 using SchoolSearch.Reviews.RateLimiting;
 using SchoolSearch.Reviews.Security;
 using SchoolSearch.Reviews.Settings;
+using SchoolSearch.ServiceDefaults;
 
 namespace SchoolSearch.Reviews.Extensions;
 
@@ -25,8 +26,8 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Pipeline order: error shape (outermost), security headers, body limit, authentication, rate limiter,
-    /// authorization. Authentication must precede the limiter, which partitions on the caller's subject.
+    /// Pipeline order: error shape (outermost), security headers, body limit, production storage guard,
+    /// authentication, rate limiter, authorization. Authentication must precede the limiter, which partitions on the caller's subject.
     /// Routing is added by the host.
     /// </summary>
     public static WebApplication UseReviewsPipeline(this WebApplication app)
@@ -34,6 +35,7 @@ public static class ServiceCollectionExtensions
         app.UseMiddleware<ApiErrorMiddleware>();
         app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseMiddleware<RequestBodyLimitMiddleware>();
+        app.UseMiddleware<StorageGuardMiddleware>();
         app.UseAuthentication();
         app.UseRateLimiter();
         app.UseAuthorization();

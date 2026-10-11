@@ -119,6 +119,22 @@ if (includeAuthservice)
     }
 }
 
+// The MCP service (ADR-0006) hosts the Phase G agent "Doradca wyboru szkoły" (ADR-0017). It owns no database and reads
+// the catalog through the API and the reviews through the Reviews service, both over HTTP. Added only once its project
+// exists, the same rule as Billing. Its AI kill switch and key are not set here: without ANTHROPIC_API_KEY the agent
+// answers 503 ai_unavailable (P8). The path overload is used because this AppHost does not reference the MCP project.
+var mcpProject = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "SchoolSearch.Mcp", "SchoolSearch.Mcp.csproj"));
+IResourceBuilder<ProjectResource>? mcp = null;
+if (File.Exists(mcpProject))
+{
+    mcp = builder.AddProject("mcp", mcpProject)
+        .WithEnvironment("CATALOG_API_URL", api.GetEndpoint("http"))
+        .WithEnvironment("REVIEWS_BASE_URL", reviews.GetEndpoint("http"))
+        .WaitFor(api)
+        .WaitFor(reviews)
+        .WithHttpHealthCheck("/health");
+}
+
 // The product surface. It reads the API through its server-side proxy; the proxy's candidate
 // ladder picks up services__api__http__0, which WithReference injects.
 var webAppDirectory = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "..", "web", "app"));
@@ -138,6 +154,13 @@ if (billing is not null)
     // The BFF calls the Billing service server-side (BILLING_BASE_URL is read per request, like REVIEWS_BASE_URL).
     web = web.WithEnvironment("BILLING_BASE_URL", billing.GetEndpoint("http"))
         .WaitFor(billing);
+}
+
+if (mcp is not null)
+{
+    // The BFF calls the agent server-side (AGENT_BASE_URL is read per request, like BILLING_BASE_URL). Phase G, ADR-0017.
+    web = web.WithEnvironment("AGENT_BASE_URL", mcp.GetEndpoint("http"))
+        .WaitFor(mcp);
 }
 
 if (includeAuthservice)

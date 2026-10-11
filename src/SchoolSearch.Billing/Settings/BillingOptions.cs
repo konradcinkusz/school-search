@@ -65,6 +65,12 @@ public sealed class BillingRateLimitingOptions
     /// <summary>Authenticated writes (claims, checkout, cancel, resume, profile) per subject per hour.</summary>
     public int AuthWritesPerHour { get; set; } = 20;
 
+    /// <summary>
+    /// Provider webhook calls per client IP per minute. The webhook has its own partition, outside the global per-IP
+    /// window, because a provider's retries come from few addresses. The HMAC signature is the real protection.
+    /// </summary>
+    public int WebhookPerIpPerMinute { get; set; } = 600;
+
     /// <summary>Process-wide concurrency bound beneath the per-client windows.</summary>
     public int ConcurrentRequests { get; set; } = 64;
 }

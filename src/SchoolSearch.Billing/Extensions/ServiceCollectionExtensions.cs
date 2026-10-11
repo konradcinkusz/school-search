@@ -11,6 +11,7 @@ using SchoolSearch.Billing.RateLimiting;
 using SchoolSearch.Billing.Security;
 using SchoolSearch.Billing.Settings;
 using SchoolSearch.Billing.Subscriptions;
+using SchoolSearch.ServiceDefaults;
 
 namespace SchoolSearch.Billing.Extensions;
 
@@ -53,8 +54,8 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Pipeline order: error shape (outermost), security headers, body limit, authentication, rate limiter,
-    /// authorization. Authentication must precede the limiter, which partitions on the caller's subject.
+    /// Pipeline order: error shape (outermost), security headers, body limit, production storage guard,
+    /// authentication, rate limiter, authorization. Authentication must precede the limiter, which partitions on the caller's subject.
     /// Routing is added by the host.
     /// </summary>
     public static WebApplication UseBillingPipeline(this WebApplication app)
@@ -62,6 +63,7 @@ public static class ServiceCollectionExtensions
         app.UseMiddleware<ApiErrorMiddleware>();
         app.UseMiddleware<SecurityHeadersMiddleware>();
         app.UseMiddleware<RequestBodyLimitMiddleware>();
+        app.UseMiddleware<StorageGuardMiddleware>();
         app.UseAuthentication();
         app.UseRateLimiter();
         app.UseAuthorization();

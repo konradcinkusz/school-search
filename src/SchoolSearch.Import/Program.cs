@@ -66,6 +66,13 @@ internal static class Program
         var command = args[0];
         var options = ParseOptions(args.AsSpan(1));
 
+        // ---- BEGIN G2 AI extractor commands (offline; return BEFORE any database context is created) ----
+        if (command == "catchment-extract")
+        {
+            return await SchoolSearch.Import.Catchment.Extract.CatchmentExtractCommand.RunAsync(options, ct);
+        }
+        // ---- END G2 AI extractor commands ----
+
         await using var db = CreateContext();
 
         if (!db.Database.IsRelational())

@@ -37,6 +37,11 @@ export function billingBaseUrl(env: NodeJS.ProcessEnv = process.env): string | n
   return normaliseBaseUrl(env.BILLING_BASE_URL);
 }
 
+/** Base URL of the MCP service that hosts the advisor agent (AGENT_BASE_URL, server-side only). Null: advisor off (P8). */
+export function agentBaseUrl(env: NodeJS.ProcessEnv = process.env): string | null {
+  return normaliseBaseUrl(env.AGENT_BASE_URL);
+}
+
 /** Shared secret that proves the BFF may vouch for X-Client-Ip (same contract as the catalog proxy). */
 export function bffSharedSecret(env: NodeJS.ProcessEnv = process.env): string | null {
   const raw = env.BFF_SHARED_SECRET;

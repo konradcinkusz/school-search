@@ -3,6 +3,7 @@ import { catalogCandidates } from "@/lib/catalog-url";
 import { isSameOrigin } from "@/lib/bff-auth";
 import { billingRouteFor, forwardToBilling, type BillingRoute } from "@/lib/billing-proxy";
 import { forwardToReviews, reviewsRouteFor } from "@/lib/reviews-proxy";
+import { catalogAdminRouteFor, forwardToCatalogAdmin } from "@/lib/catalog-admin-proxy";
 import { isSlug, isToken } from "@/lib/validation";
 
 // BFF catch-all (FRONTEND-BFF §5): the browser talks only to this origin; the backend address stays server-side.
@@ -41,7 +42,13 @@ const GET_ROUTES: ReadonlyArray<RouteMatcher> = [
 const isExplainPath = (s: readonly string[]): boolean =>
   s.length === 5 && s[0] === "api" && s[1] === "v1" && s[2] === "schools" && isSlug(s[3] ?? "") && s[4] === "explain";
 
-const POST_ROUTES: ReadonlyArray<RouteMatcher> = [["api", "v1", "corrections"], isExplainPath];
+/** AI search intent (feature 2) and methodology answers (feature 7): anonymous JSON POSTs, answered by the catalog. */
+const POST_ROUTES: ReadonlyArray<RouteMatcher> = [
+  ["api", "v1", "corrections"],
+  isExplainPath,
+  ["api", "v1", "ai", "search-intent"],
+  ["api", "v1", "ai", "methodology-answer"],
+];
 
 const SAFE_SEGMENT = /^[A-Za-z0-9._~-]{1,200}$/;
 const QUERY_PATTERN = /^[\x20-\x7E]*$/;
@@ -170,6 +177,8 @@ export async function GET(
   if (reviews) return forwardToReviews(request, path, reviews, null);
   const billing = billingFor(path, "GET");
   if (billing) return forwardToBilling(request, path, billing, null);
+  const admin = segmentsAreSafe(path) ? catalogAdminRouteFor(path, "GET") : null;
+  if (admin) return forwardToCatalogAdmin(request, path, admin);
   if (!matchesRoute(path, GET_ROUTES)) {
     return errorResponse(404, "not_found", "Nie znaleziono zasobu.");
   }
@@ -183,6 +192,14 @@ export async function POST(
   const { path } = await context.params;
   const reviews = segmentsAreSafe(path) ? reviewsRouteFor(path, "POST") : null;
   const billing = billingFor(path, "POST");
+  const admin = segmentsAreSafe(path) ? catalogAdminRouteFor(path, "POST") : null;
+  if (admin) {
+    // Operator triage: same-origin only, no body. The catalog answer is a suggestion; nothing is sent to anyone.
+    if (!originAllowed(request) || !isSameOrigin(request)) {
+      return errorResponse(403, "forbidden_origin", "Żądanie z tej domeny nie jest dozwolone.");
+    }
+    return forwardToCatalogAdmin(request, path, admin);
+  }
   if (!reviews && !billing && (!segmentsAreSafe(path) || !matchesRoute(path, POST_ROUTES))) {
     return errorResponse(404, "not_found", "Nie znaleziono zasobu.");
   }

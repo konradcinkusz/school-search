@@ -9,7 +9,8 @@ namespace SchoolSearch.Reviews.RateLimiting;
 
 /// <summary>
 /// The one place the client address is resolved. The limiters and any future per-client allowance call this,
-/// so they meter the same visitor. The BFF forwards the visitor address in X-Client-Ip together with a shared secret.
+/// so they meter the same visitor. The BFF (and the MCP service) forwards the visitor address in X-Client-Ip together
+/// with a shared secret. A call that carries the secret but no visitor address is a trusted service call.
 /// </summary>
 public sealed class ClientIpResolver(IOptions<ReviewsOptions> options, IConfiguration configuration)
 {
@@ -41,27 +42,34 @@ public sealed class ClientIpResolver(IOptions<ReviewsOptions> options, IConfigur
         return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
     }
 
+    /// <summary>
+    /// True when the caller presents the valid shared secret and no visitor address. Such a call is another service
+    /// acting for itself (for example, the MCP service with no visitor in its request context). It gets its own bucket
+    /// so one busy service cannot starve the visitor buckets, and it cannot pick a visitor bucket either.
+    /// </summary>
+    public bool IsTrustedServiceCall(HttpContext context) =>
+        SecretMatches(context) && !context.Request.Headers.ContainsKey(BffClientIpHeader);
+
     private string? ResolveFromBff(HttpContext context)
     {
-        var secret = configuration["BFF_SHARED_SECRET"];
-        if (string.IsNullOrEmpty(secret))
-        {
-            return null;
-        }
-
-        if (!context.Request.Headers.TryGetValue(BffSecretHeader, out var presented)
-            || !context.Request.Headers.TryGetValue(BffClientIpHeader, out var ip))
-        {
-            return null;
-        }
-
-        var expected = SHA256.HashData(Encoding.UTF8.GetBytes(secret));
-        var actual = SHA256.HashData(Encoding.UTF8.GetBytes(presented.ToString()));
-        if (!CryptographicOperations.FixedTimeEquals(expected, actual))
+        if (!SecretMatches(context) || !context.Request.Headers.TryGetValue(BffClientIpHeader, out var ip))
         {
             return null;
         }
 
         return IPAddress.TryParse(ip.ToString().Trim(), out var parsed) ? parsed.ToString() : null;
+    }
+
+    private bool SecretMatches(HttpContext context)
+    {
+        var secret = configuration["BFF_SHARED_SECRET"];
+        if (string.IsNullOrEmpty(secret) || !context.Request.Headers.TryGetValue(BffSecretHeader, out var presented))
+        {
+            return false;
+        }
+
+        var expected = SHA256.HashData(Encoding.UTF8.GetBytes(secret));
+        var actual = SHA256.HashData(Encoding.UTF8.GetBytes(presented.ToString()));
+        return CryptographicOperations.FixedTimeEquals(expected, actual);
     }
 }

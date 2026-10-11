@@ -133,6 +133,14 @@ jobs:
           dotnet build src/SchoolSearch.Billing/SchoolSearch.Billing.csproj -c Release
           ASPNETCORE_ENVIRONMENT=Staging Billing__MockMode=true ASPNETCORE_URLS=http://localhost:8083 nohup dotnet src/SchoolSearch.Billing/bin/Release/net10.0/SchoolSearch.Billing.dll > billing.log 2>&1 &
           curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8083/alive
+      - name: Build and start the MCP service (no key, catalog on :8080, reviews on :8082)
+        # Phase G (ADR-0017). The web BFF reaches the agent at AGENT_BASE_URL (see the web step). No ANTHROPIC_API_KEY is
+        # set in CI, so POST /agent/chat answers 503 ai_unavailable and the /doradca page shows its degraded state (P8).
+        # Port 8084: the API, Reviews and Billing above hold 8080, 8082 and 8083.
+        run: |
+          dotnet build src/SchoolSearch.Mcp/SchoolSearch.Mcp.csproj -c Release
+          CATALOG_API_URL=http://localhost:8080 REVIEWS_BASE_URL=http://localhost:8082 ASPNETCORE_ENVIRONMENT=Staging ASPNETCORE_URLS=http://localhost:8084 nohup dotnet src/SchoolSearch.Mcp/bin/Release/net10.0/SchoolSearch.Mcp.dll > mcp.log 2>&1 &
+          curl --fail --silent --show-error --retry 30 --retry-delay 2 --retry-all-errors http://localhost:8084/health
       - name: Install web dependencies
         working-directory: web
         run: pnpm install --frozen-lockfile
@@ -142,6 +150,7 @@ jobs:
           CATALOG_API_URL: http://localhost:8080
           REVIEWS_BASE_URL: http://localhost:8082
           BILLING_BASE_URL: http://localhost:8083
+          AGENT_BASE_URL: http://localhost:8084
         run: |
           pnpm --filter ./app run build
           PORT=3000 nohup pnpm --filter ./app exec next start -p 3000 > ../web.log 2>&1 &
@@ -168,6 +177,7 @@ jobs:
           tail -n 40 api.log || true
           tail -n 40 reviews.log || true
           tail -n 40 billing.log || true
+          tail -n 40 mcp.log || true
           tail -n 30 web.log || true
 
   docker-build:

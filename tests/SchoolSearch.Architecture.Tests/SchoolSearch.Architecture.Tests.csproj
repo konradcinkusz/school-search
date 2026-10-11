@@ -31,6 +31,11 @@
     <ProjectReference Include="..\..\src\SchoolSearch.Billing\SchoolSearch.Billing.csproj" />
   </ItemGroup>
 
+  <!-- ADR-0017 (Phase G): the MCP service hosts the AI agent (src/SchoolSearch.Mcp/Agent). Referenced only once its project exists. -->
+  <ItemGroup Condition="Exists('..\..\src\SchoolSearch.Mcp\SchoolSearch.Mcp.csproj')">
+    <ProjectReference Include="..\..\src\SchoolSearch.Mcp\SchoolSearch.Mcp.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>

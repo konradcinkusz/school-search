@@ -28,6 +28,8 @@ public sealed class IdentityBoundaryTests
         ReviewsNamespace,
         // Phase F (ADR-0016): Billing validates authservice tokens too. It is loaded only when its project exists.
         "SchoolSearch.Billing",
+        // Phase G (ADR-0017): the MCP service hosts the agent. It validates nothing and mints nothing (no tokens, no users).
+        "SchoolSearch.Mcp",
     };
 
     private static readonly string[] ScoreContractTypeNames = { "ScoreBlock", "ScoreDto" };

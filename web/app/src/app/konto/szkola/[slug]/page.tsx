@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { OwnerSchoolPanel } from "@/components/billing/owner-school";
+import { OwnerRepliesPanel } from "@/components/reviews/owner-replies";
 import { isSlug } from "@/lib/validation";
 
 // Client-driven owner area. Access is re-checked by the Billing service on every call.
@@ -18,6 +19,7 @@ export default async function SchoolOwnerPage({ params }: { params: Promise<{ sl
     <article>
       <h1>Profil szkoły: {slug}</h1>
       <OwnerSchoolPanel slug={slug} />
+      <OwnerRepliesPanel slug={slug} />
     </article>
   );
 }

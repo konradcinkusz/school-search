@@ -32,5 +32,7 @@ secrets.env*
 # Trees no service image compiles or serves
 tests
 docs
+# Exception: the Api embeds docs/methodology/RANKING-METHODOLOGY.md (SchoolSearch.Api.csproj). Keep this line after "docs".
+!docs/methodology
 flyio
 scripts
