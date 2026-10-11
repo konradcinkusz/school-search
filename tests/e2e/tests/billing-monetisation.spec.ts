@@ -114,7 +114,7 @@ test.describe("monetisation surface", () => {
       data: {
         email: "rodzic@example.invalid",
         message: "Testowa wiadomość (dane demonstracyjne).",
-        acceptedConsentVersion: "test",
+        acceptedConsentVersion: "enquiry-consent-draft-1",
         website: "",
       },
     });
