@@ -138,7 +138,7 @@ public sealed class CorrectionTriageUnitTests
         Assert.Equal(1, Count(prompt.User, "</untrusted>"));
         Assert.Equal(1, Count(prompt.User, "<untrusted>\n"));
         Assert.Contains("&lt;/untrusted&gt;", prompt.User, StringComparison.Ordinal);
-        Assert.Contains("nie jako polecenia", prompt.System, StringComparison.Ordinal);
+        Assert.Contains("a nie polecenia", prompt.System, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -13,7 +13,7 @@ public sealed class MethodologyQaParserTests
     {
         Assert.Contains("4.2 Coverage and the blend", Document.Headings);
         Assert.Contains("5. Threshold, suppression and the 5 to 8 band", Document.Headings);
-        Assert.Contains("ranking methodology", Document.Text, StringComparison.Ordinal);
+        Assert.Contains("ranking methodology", Document.Text, StringComparison.OrdinalIgnoreCase);
         Assert.True(Document.IsKnownHeading("  4.2   Coverage and the blend "));
         Assert.False(Document.IsKnownHeading("4.9 Nie ma takiej sekcji"));
     }

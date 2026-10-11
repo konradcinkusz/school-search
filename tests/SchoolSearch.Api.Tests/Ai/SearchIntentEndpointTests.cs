@@ -241,7 +241,8 @@ public sealed class SearchIntentEndpointTests
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         var body = await response.Content.ReadAsStringAsync();
         Assert.Equal("ai_unavailable", ErrorCode(body));
-        Assert.Contains("Użyj filtrów.", body, StringComparison.Ordinal);
+        // The JSON encoder escapes non-ASCII letters, so match the ASCII stem of "Użyj filtrów.".
+        Assert.Contains("filtr", body, StringComparison.Ordinal);
         Assert.Equal(0, client.CallCount);
     }
 

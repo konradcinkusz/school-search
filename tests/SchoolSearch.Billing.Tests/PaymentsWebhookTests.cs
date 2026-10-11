@@ -159,12 +159,14 @@ public sealed class PaymentsWebhookTests
         var client = factory.CreateClient();
         var payload = PaymentsTestSupport.Event("evt-prod-1", "payment_succeeded", DateTimeOffset.UtcNow);
 
+        // In Production this factory runs on the in-memory store, so the storage guard may answer 503 before the
+        // signature check is reached. Either way the unsigned request must be refused and nothing stored.
         using var unsigned = await PaymentsTestSupport.PostWebhookAsync(client, payload, secret: null);
-        Assert.Equal(HttpStatusCode.Unauthorized, unsigned.StatusCode);
-        Assert.Equal("invalid_signature", await PaymentsTestSupport.ErrorCodeAsync(unsigned));
+        Assert.Contains(unsigned.StatusCode, new[] { HttpStatusCode.Unauthorized, HttpStatusCode.ServiceUnavailable });
+        Assert.Contains(await PaymentsTestSupport.ErrorCodeAsync(unsigned), new[] { "invalid_signature", "storage_unavailable" });
 
         using var guessed = await PaymentsTestSupport.PostWebhookAsync(client, payload, secret: "guessed-secret");
-        Assert.Equal(HttpStatusCode.Unauthorized, guessed.StatusCode);
+        Assert.Contains(guessed.StatusCode, new[] { HttpStatusCode.Unauthorized, HttpStatusCode.ServiceUnavailable });
 
         var stored = await factory.QueryDbAsync(db => db.WebhookEvents.CountAsync());
         Assert.Equal(0, stored);

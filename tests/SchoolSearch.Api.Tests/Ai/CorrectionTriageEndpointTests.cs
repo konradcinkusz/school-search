@@ -83,7 +83,7 @@ public sealed class CorrectionTriageEndpointTests
         Assert.Contains("\"field\":\"name\"", user, StringComparison.Ordinal);
         Assert.DoesNotContain(SyntheticEmail, user, StringComparison.Ordinal);
         Assert.DoesNotContain(SyntheticEmail, system, StringComparison.Ordinal);
-        Assert.Contains("obiekt JSON", system, StringComparison.Ordinal);
+        Assert.Contains("obiektem JSON", system, StringComparison.Ordinal);
     }
 
     [Fact]

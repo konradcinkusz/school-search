@@ -106,7 +106,9 @@ public sealed class ServiceBucketAndStorageGuardTests
         using var write = new HttpRequestMessage(HttpMethod.Post, PublicList) { Content = new StringContent("{}") };
         using var response = await client.SendAsync(write);
 
-        Assert.NotEqual(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        // Auth is not configured in this factory, so a 503 auth_unavailable is possible; only the storage guard must stay out of the way.
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("storage_unavailable", body, StringComparison.Ordinal);
     }
 
     private static async Task<HttpStatusCode> SendAsync(HttpClient client, string path, string? secret, string? clientIp)
