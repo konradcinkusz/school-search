@@ -72,7 +72,7 @@ public static class SioLoader
         var sheet = workbook.Worksheet(1);
         var columns = ResolveColumns(sheet, map, out var headerRow, out var lastRow);
 
-        var existingSchools = await db.Schools.AsNoTracking().ToDictionaryAsync(s => s.IdPodmiot, ct);
+        var existingSchools = await db.Schools.ToDictionaryAsync(s => s.IdPodmiot, ct);
         var knownGoverningBodyCodes = (await db.GoverningBodyTypes.AsNoTracking().Select(g => g.Code).ToListAsync(ct)).ToHashSet();
 
         // Tracked on purpose: class-level rows are replaced by key within the year, including removal of stale levels.
@@ -236,10 +236,7 @@ public static class SioLoader
             {
                 db.Schools.Add(school);
             }
-            else
-            {
-                db.Schools.Update(school);
-            }
+            // Existing schools are loaded tracked above, so field changes are picked up without Update().
 
             foreach (var (level, pupils, oddzialy) in levels)
             {

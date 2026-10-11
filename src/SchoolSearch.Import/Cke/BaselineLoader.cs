@@ -42,6 +42,11 @@ public static class BaselineLoader
 
         using var textReader = new StringReader(text);
         using var reader = new CsvReader(textReader, CkeCsvSupport.CreateConfiguration(CkeCsvSupport.DetectDelimiter(text)));
+        if (!reader.Read())
+        {
+            throw new InvalidOperationException("Import aborted: the file has no header row. Nothing was written.");
+        }
+
         reader.ReadHeader();
         var headers = reader.HeaderRecord ?? Array.Empty<string>();
 
