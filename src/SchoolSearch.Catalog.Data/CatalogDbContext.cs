@@ -23,6 +23,14 @@ public sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> options)
 
     public DbSet<ImportRun> ImportRuns => Set<ImportRun>();
 
+    public DbSet<ApiKey> ApiKeys => Set<ApiKey>();
+
+    public DbSet<CorrectionRequest> CorrectionRequests => Set<CorrectionRequest>();
+
+    public DbSet<CatchmentCoverage> CatchmentCoverages => Set<CatchmentCoverage>();
+
+    public DbSet<CatchmentStreet> CatchmentStreets => Set<CatchmentStreet>();
+
     /// <summary>
     /// The Npgsql migrations are hand-written and no model snapshot exists yet (see
     /// Migrations/Npgsql/README.md). EF 9+ would otherwise make MigrateAsync fail with
@@ -50,6 +58,7 @@ public sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> options)
 
             entity.Property(s => s.GminaTeryt).HasMaxLength(7);
             entity.HasIndex(s => s.GminaTeryt);
+            entity.Property(s => s.GminaName).HasMaxLength(120);
 
             // Same column as Phase A (TypeOfGoverningBody): existing data and the InitialCreate schema stay valid.
             entity.Property(s => s.GoverningBodyTypeCode).HasColumnName("TypeOfGoverningBody");
@@ -167,6 +176,81 @@ public sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> options)
             entity.HasIndex(r => new { r.Kind, r.StartedAt });
 
             entity.OwnsOne(r => r.Provenance, provenance =>
+            {
+                provenance.Property(p => p.Source).HasMaxLength(200).IsRequired();
+                provenance.Property(p => p.SourceUrl).HasMaxLength(500).IsRequired();
+                provenance.Property(p => p.AsOf).IsRequired();
+                provenance.Property(p => p.Method).HasMaxLength(500).IsRequired();
+            });
+        });
+
+        modelBuilder.Entity<ApiKey>(entity =>
+        {
+            entity.ToTable("ApiKeys");
+
+            entity.HasKey(k => k.Id);
+            entity.Property(k => k.Id).ValueGeneratedNever();
+            entity.Property(k => k.KeyHash).HasMaxLength(64).IsRequired();
+            entity.HasIndex(k => k.KeyHash).IsUnique();
+            entity.Property(k => k.Label).HasMaxLength(80).IsRequired();
+            entity.Property(k => k.Tier).HasMaxLength(16).IsRequired();
+            entity.Property(k => k.CreatedAt).IsRequired();
+            entity.Property(k => k.RevokedAt);
+        });
+
+        modelBuilder.Entity<CorrectionRequest>(entity =>
+        {
+            entity.ToTable("CorrectionRequests");
+
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Id).ValueGeneratedNever();
+            entity.Property(c => c.PublicToken).HasMaxLength(64).IsRequired();
+            entity.HasIndex(c => c.PublicToken).IsUnique();
+            entity.Property(c => c.SchoolId);
+            entity.Property(c => c.Field).HasMaxLength(40).IsRequired();
+            entity.Property(c => c.Message).HasMaxLength(2000).IsRequired();
+            entity.Property(c => c.ContactEmail).HasMaxLength(200);
+            entity.Property(c => c.Status).HasMaxLength(16).IsRequired();
+            entity.Property(c => c.StatusReason).HasMaxLength(500);
+            entity.Property(c => c.CreatedAt).IsRequired();
+            entity.Property(c => c.UpdatedAt);
+            entity.HasIndex(c => new { c.Status, c.CreatedAt });
+        });
+
+        modelBuilder.Entity<CatchmentCoverage>(entity =>
+        {
+            entity.ToTable("CatchmentCoverages");
+
+            entity.HasKey(c => c.GminaTeryt);
+            entity.Property(c => c.GminaTeryt).HasMaxLength(7).ValueGeneratedNever();
+            entity.Property(c => c.State).HasMaxLength(16).IsRequired();
+            entity.Property(c => c.ResolutionUrl).HasMaxLength(500);
+            entity.Property(c => c.ResolutionDate);
+
+            entity.OwnsOne(c => c.Provenance, provenance =>
+            {
+                provenance.Property(p => p.Source).HasMaxLength(200).IsRequired();
+                provenance.Property(p => p.SourceUrl).HasMaxLength(500).IsRequired();
+                provenance.Property(p => p.AsOf).IsRequired();
+                provenance.Property(p => p.Method).HasMaxLength(500).IsRequired();
+            });
+        });
+
+        modelBuilder.Entity<CatchmentStreet>(entity =>
+        {
+            entity.ToTable("CatchmentStreets");
+
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Id).ValueGeneratedOnAdd();
+            entity.Property(c => c.GminaTeryt).HasMaxLength(7).IsRequired();
+            entity.Property(c => c.SchoolId);
+            entity.Property(c => c.StreetNormalized).HasMaxLength(200).IsRequired();
+            entity.Property(c => c.NumberFrom);
+            entity.Property(c => c.NumberTo);
+            entity.Property(c => c.Parity).HasMaxLength(8);
+            entity.HasIndex(c => new { c.GminaTeryt, c.StreetNormalized });
+
+            entity.OwnsOne(c => c.Provenance, provenance =>
             {
                 provenance.Property(p => p.Source).HasMaxLength(200).IsRequired();
                 provenance.Property(p => p.SourceUrl).HasMaxLength(500).IsRequired();

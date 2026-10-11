@@ -21,6 +21,9 @@ public sealed class School
     /// <summary>TERYT code of the gmina (7 characters), when known.</summary>
     public string? GminaTeryt { get; set; }
 
+    /// <summary>Public name of the gmina, when known (max 120). Derived from the TERYT register; never a person's name.</summary>
+    public string? GminaName { get; set; }
+
     /// <summary>idTypOrgProw code of the governing body. Code only, never a name.</summary>
     public int? GoverningBodyTypeCode { get; set; }
 

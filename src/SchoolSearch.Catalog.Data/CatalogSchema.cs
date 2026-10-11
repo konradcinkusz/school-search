@@ -7,5 +7,5 @@ public static class CatalogSchema
     /// Id of the newest migration. The importer refuses to run (exit 2) when
     /// __EFMigrationsHistory does not contain it. Update together with the newest migration.
     /// </summary>
-    public const string LatestMigrationId = "20261011010000_Phase_B_Ingest";
+    public const string LatestMigrationId = "20261012000000_Phase_C_PublicSurface";
 }
