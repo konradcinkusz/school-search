@@ -11,6 +11,7 @@ description = "Placeholders and documentation that legitimately contain key-shap
 paths = [
   '''(^|/)secrets\.env\.example$''',   # committed template, values are empty
   '''(^|/)\.gitleaks\.toml$''',        # this file
+  '''(^|/)evals/datasets/.*\.jsonl$''',    # synthetic adversarial eval cases (fake injection markers, no secrets)
 ]
 regexes = [
   '''replace-me''',                    # placeholder text used in docs and examples
