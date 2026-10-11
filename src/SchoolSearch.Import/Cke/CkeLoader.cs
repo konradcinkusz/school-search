@@ -98,7 +98,7 @@ public static class CkeLoader
 
             if (!schoolIds.Contains(schoolId))
             {
-                log.Add($"row {row}: key matches no School.IdPodmiot; exact match only");
+                log.Add($"row {row}: key {schoolId} matches no School.IdPodmiot; exact match only");
                 continue;
             }
 
