@@ -42,7 +42,7 @@ internal static class ReviewTriageHarness
             TriagesPerMinute = 1000,
         };
         var options = Options.Create(settings);
-        var clock = new FixedClock(Start);
+        var clock = new ReviewFixedClock(Start);
         var recorder = new RecordingReviewTriageClient(model);
 
         var available = condition != "no_key";
@@ -145,7 +145,7 @@ internal sealed class CannedReviewTriageClient(EvalCase c) : IReviewTriageClient
 }
 
 /// <summary>A clock that does not move. The triage windows are not under test here.</summary>
-internal sealed class FixedClock(DateTimeOffset now) : TimeProvider
+internal sealed class ReviewFixedClock(DateTimeOffset now) : TimeProvider
 {
     public override DateTimeOffset GetUtcNow() => now;
 }
