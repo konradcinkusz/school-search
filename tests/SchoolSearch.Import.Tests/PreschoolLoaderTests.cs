@@ -170,7 +170,7 @@ public sealed class PreschoolLoaderTests
             "9001;450;520;;;;;;reported\n" +
             "9002;600;500;;;;;;\n" +
             "9999;300;300;;;;;;\n" +
-            "9003;;;;;3;;reported\n";
+            "9003;;;;;;3;;reported\n";
 
         var report = await RunFactsAsync(db, csv);
 
