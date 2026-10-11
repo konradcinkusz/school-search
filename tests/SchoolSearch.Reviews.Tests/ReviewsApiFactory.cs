@@ -14,8 +14,13 @@ namespace SchoolSearch.Reviews.Tests;
 /// test auth scheme. The test scheme is registered here only; production code never sees it.
 /// authConfigured = false leaves Auth:* unset, which is the P8 degraded mode (503 auth_unavailable).
 /// </summary>
-public sealed class ReviewsApiFactory(bool authConfigured = true) : WebApplicationFactory<Program>
+public sealed class ReviewsApiFactory(bool authConfigured) : WebApplicationFactory<Program>
 {
+    /// <summary>Parameterless constructor so xUnit can build the class fixture.</summary>
+    public ReviewsApiFactory() : this(true)
+    {
+    }
+
     public const string TestPepper = "test-pepper-not-a-secret";
     public const string TermsVersion = "draft-1";
     public const string Issuer = "schoolsearch-reviews-test";
