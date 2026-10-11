@@ -20,24 +20,28 @@ public sealed class SearchReadService(CatalogDbContext db, SchoolScoreService sc
 {
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(10);
 
-    public Task<RankingSnapshot> GetRankingAsync(string scope, string? gminaTeryt, int? examYear, CancellationToken ct)
+    public async Task<RankingSnapshot> GetRankingAsync(string scope, string? gminaTeryt, int? examYear, CancellationToken ct)
     {
         var year = examYear?.ToString(CultureInfo.InvariantCulture) ?? "none";
         var key = $"ranking:{scope}:{gminaTeryt ?? "-"}:{year}";
 
-        return cache.GetOrCreateAsync(key, entry =>
+        var snapshot = await cache.GetOrCreateAsync(key, entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = CacheLifetime;
             return BuildRankingAsync(scope, gminaTeryt, examYear, ct);
         });
+        return snapshot!;
     }
 
-    public Task<IReadOnlyList<GminaInfo>> ListGminasAsync(CancellationToken ct) =>
-        cache.GetOrCreateAsync("gminas", entry =>
+    public async Task<IReadOnlyList<GminaInfo>> ListGminasAsync(CancellationToken ct)
+    {
+        var gminas = await cache.GetOrCreateAsync("gminas", entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = CacheLifetime;
             return BuildGminasAsync(ct);
         });
+        return gminas!;
+    }
 
     private async Task<RankingSnapshot> BuildRankingAsync(string scope, string? gminaTeryt, int? examYear, CancellationToken ct)
     {
