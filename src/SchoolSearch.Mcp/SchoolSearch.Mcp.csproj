@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Anthropic" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" />
   </ItemGroup>
 
