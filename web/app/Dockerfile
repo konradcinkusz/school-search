@@ -16,7 +16,10 @@ RUN npm install -g pnpm@10.28.0
 WORKDIR /repo/web
 COPY --from=deps /repo/web/node_modules ./node_modules
 COPY --from=deps /repo/web/app/node_modules ./app/node_modules
-COPY web ./
+# Explicit file list: never copy a host checkout's node_modules or .next into the image.
+COPY web/package.json web/pnpm-workspace.yaml ./
+COPY web/app/package.json web/app/tsconfig.json web/app/next.config.ts web/app/next-env.d.ts ./app/
+COPY web/app/src ./app/src
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm -C app build
 
@@ -29,6 +32,7 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nextjs
+# Standalone output is traced from web/ (outputFileTracingRoot), so server.js lives at app/server.js.
 COPY --from=builder --chown=nextjs:nodejs /repo/web/app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /repo/web/app/.next/static ./app/.next/static
 USER nextjs
