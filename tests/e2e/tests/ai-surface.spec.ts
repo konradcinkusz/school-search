@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 // AI surface (SPEC-G, G7). CI runs without ANTHROPIC_API_KEY and without AGENT_BASE_URL, so every AI box must show its
 // degrade state (P8) while the rest of the page keeps working. Assertions are unconditional: the degraded copy is
@@ -7,6 +7,15 @@ import { expect, test } from "@playwright/test";
 const AI_DEGRADED = /Asystent AI jest teraz niedostępny/;
 const NOT_RANKING = /najlepsz|najgorsz/i;
 
+/**
+ * Opens a page and waits until its client bundle has loaded. The AI boxes are client components: a click made before
+ * hydration would hit the server-rendered form, so the wait is part of the page open, not a fixed sleep.
+ */
+async function openPage(page: Page, path: string): Promise<void> {
+  await page.goto(path);
+  await page.waitForLoadState("networkidle");
+}
+
 test.describe("AI surface: degrade states and guard rails", () => {
   test("search box: empty input is refused locally and sends no request", async ({ page }) => {
     const sent: string[] = [];
@@ -14,7 +23,7 @@ test.describe("AI surface: degrade states and guard rails", () => {
       if (request.url().includes("/ai/search-intent")) sent.push(request.url());
     });
 
-    await page.goto("/");
+    await openPage(page, "/");
     await expect(page.getByRole("heading", { level: 2, name: "Opisz czego szukasz" })).toBeVisible();
     await page.getByRole("button", { name: "Przygotuj filtry" }).click();
 
@@ -23,7 +32,7 @@ test.describe("AI surface: degrade states and guard rails", () => {
   });
 
   test("search box: with no key the AI degrade state shows and the page never navigates", async ({ page }) => {
-    await page.goto("/");
+    await openPage(page, "/");
     const before = new URL(page.url());
 
     await page.getByRole("textbox", { name: "Opisz czego szukasz" }).fill("Szkoła podstawowa w gminie Przykładowo, z oddziałem sportowym");
@@ -38,7 +47,7 @@ test.describe("AI surface: degrade states and guard rails", () => {
   });
 
   test("search box: the AI result never reaches the school list by itself", async ({ page }) => {
-    await page.goto("/");
+    await openPage(page, "/");
     await page.getByRole("textbox", { name: "Opisz czego szukasz" }).fill("najlepsza szkoła w okolicy");
     await page.getByRole("button", { name: "Przygotuj filtry" }).click();
 
@@ -50,7 +59,7 @@ test.describe("AI surface: degrade states and guard rails", () => {
   });
 
   test("methodology: the question box shows the degrade state and the methodology text stays intact", async ({ page }) => {
-    await page.goto("/metodologia");
+    await openPage(page, "/metodologia");
 
     await expect(page.getByRole("heading", { level: 1, name: "Metodologia" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: "Zapytaj o metodologię" })).toBeVisible();
@@ -63,13 +72,13 @@ test.describe("AI surface: degrade states and guard rails", () => {
   });
 
   test("methodology: an empty question is refused locally", async ({ page }) => {
-    await page.goto("/metodologia");
+    await openPage(page, "/metodologia");
     await page.getByRole("button", { name: "Zapytaj" }).click();
     await expect(page.getByRole("alert").filter({ hasText: "Wpisz pytanie o metodologię." })).toBeVisible();
   });
 
   test("advisor: the page renders with the AI label, the disclaimer and the nav link", async ({ page }) => {
-    await page.goto("/doradca");
+    await openPage(page, "/doradca");
 
     await expect(page.getByRole("heading", { level: 1, name: "Doradca wyboru szkoły" })).toBeVisible();
     await expect(page.getByText("Wygenerowano przez AI.", { exact: false })).toBeVisible();
@@ -84,7 +93,7 @@ test.describe("AI surface: degrade states and guard rails", () => {
       if (request.url().includes("/api/agent")) sent.push(request.url());
     });
 
-    await page.goto("/doradca");
+    await openPage(page, "/doradca");
     await page.getByRole("button", { name: "Wyślij" }).click();
 
     await expect(page.getByRole("alert").filter({ hasText: "Napisz, czego szukasz, zanim wyślesz wiadomość." })).toBeVisible();
@@ -92,7 +101,7 @@ test.describe("AI surface: degrade states and guard rails", () => {
   });
 
   test("advisor: with no agent configured the degrade state shows and the message stays in the box", async ({ page }) => {
-    await page.goto("/doradca");
+    await openPage(page, "/doradca");
 
     await page.getByLabel("Twoja wiadomość").fill("Szukam szkoły blisko domu.");
     await page.getByRole("button", { name: "Wyślij" }).click();
@@ -163,7 +172,7 @@ test.describe("AI surface: degrade states and guard rails", () => {
   });
 
   test("moderation has corrections and complaints tabs next to the existing queues", async ({ page }) => {
-    await page.goto("/moderacja");
+    await openPage(page, "/moderacja");
 
     await page.getByRole("tab", { name: "Korekty" }).click();
     await expect(page.getByRole("tab", { name: "Korekty" })).toHaveAttribute("aria-selected", "true");
@@ -175,7 +184,7 @@ test.describe("AI surface: degrade states and guard rails", () => {
   });
 
   test("correction form offers preschool fields only when the target is a preschool", async ({ page }) => {
-    await page.goto("/dla-szkol");
+    await openPage(page, "/dla-szkol");
 
     const fieldOptions = page.locator('select[name="field"] option');
     await expect(fieldOptions.filter({ hasText: "Czesne: minimum" })).toHaveCount(0);
