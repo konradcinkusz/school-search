@@ -5,7 +5,7 @@ namespace SchoolSearch.Mcp.Prompts;
 
 /// <summary>Guided prompts. The text is instructions to the model; it contains no user data.</summary>
 [McpServerPromptType]
-public static class SchoolPrompts
+public sealed class SchoolPrompts
 {
     private const string ChooseSchoolText =
         "Help the user look for a primary school for their child with the school-search tools.\n" +
