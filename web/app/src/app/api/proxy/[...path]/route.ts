@@ -88,11 +88,18 @@ async function forward(
     return errorResponse(400, "bad_query", "Nieprawidłowe parametry zapytania.");
   }
 
-  // Forward the client address for rate limiting only. The catalog must trust this header from the BFF alone.
-  const clientIp = request.headers.get("x-forwarded-for");
+  // Forward the visitor address for rate limiting only. The catalog honours X-Client-Ip solely when the
+  // shared secret matches, so no other caller can choose its own bucket.
+  const clientIp = (request.headers.get("fly-client-ip") ?? request.headers.get("x-forwarded-for") ?? "")
+    .split(",")[0]
+    ?.trim();
   const headers: Record<string, string> = { accept: "application/json" };
   if (method === "POST") headers["content-type"] = "application/json";
-  if (clientIp) headers["x-forwarded-for"] = clientIp.split(",")[0]?.trim() ?? "";
+  const bffSecret = process.env.BFF_SHARED_SECRET;
+  if (bffSecret && clientIp && /^[0-9a-fA-F:.]{3,45}$/.test(clientIp)) {
+    headers["x-client-ip"] = clientIp;
+    headers["x-bff-secret"] = bffSecret;
+  }
 
   let lastFailure = "no candidate reachable";
   for (const candidate of catalogCandidates()) {

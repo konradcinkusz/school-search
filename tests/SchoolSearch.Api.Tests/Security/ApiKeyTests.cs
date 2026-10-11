@@ -68,7 +68,7 @@ public sealed class ApiKeyTests
         Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(valid)).StatusCode);
 
         using var unknown = new HttpRequestMessage(HttpMethod.Get, "/api/v1/meta");
-        unknown.Headers.TryAddWithoutValidation("X-Api-Key", "ss_thisKeyWasNeverIssued0000000000000000000");
+        unknown.Headers.TryAddWithoutValidation("X-Api-Key", "ss_replace-me-never-issued");
         Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(unknown)).StatusCode);
 
         using var malformed = new HttpRequestMessage(HttpMethod.Get, "/api/v1/meta");

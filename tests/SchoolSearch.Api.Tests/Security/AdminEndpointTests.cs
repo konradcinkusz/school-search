@@ -10,7 +10,7 @@ public sealed class AdminEndpointTests
 {
     private const string ConfigurationKey = "ADMIN_API_KEY";
     private const string HeaderName = "X-Admin-Key";
-    private const string AdminKey = "test-admin-key-not-a-real-secret-0123456789";
+    private const string AdminKey = "replace-me-test-admin-credential";
 
     private static readonly string ListPath = "/api/v1/admin/corrections";
 
