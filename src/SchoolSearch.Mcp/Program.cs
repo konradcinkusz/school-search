@@ -1,3 +1,4 @@
+using SchoolSearch.Mcp.Agent;
 using SchoolSearch.Mcp.Catalog;
 using SchoolSearch.Mcp.Options;
 using SchoolSearch.Mcp.Prompts;
@@ -16,6 +17,7 @@ builder.Services.Configure<McpOptions>(builder.Configuration.GetSection(McpOptio
 builder.Services.AddCatalogClient(builder.Configuration);
 builder.Services.AddReviewsClient(builder.Configuration);
 builder.Services.AddMcpRateLimiting();
+builder.Services.AddAgent(builder.Configuration);
 
 // Streamable HTTP transport. Anonymous in v1; the MCP server authenticates to the catalog with its own key.
 builder.Services.AddMcpServer()
@@ -32,6 +34,7 @@ app.UseMcpSecurityHeaders();
 app.UseRateLimiter();
 app.MapDefaultEndpoints();
 app.MapMcp("/mcp");
+app.MapAgentEndpoints();
 
 app.Run();
 

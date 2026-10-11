@@ -12,6 +12,8 @@ name: flyio
 #   - every gate accepts success || skipped from its upstream
 #   - app and volume creation is idempotent and lives here, not in a shell
 #   - secrets reach flyctl on stdin (`flyctl secrets import --stage`), never on the command line (flyio/SECRETS.md §2)
+#   - ANTHROPIC_API_KEY (Phase G, optional) reaches api, reviews, billing and mcp the same way, and only when the GitHub
+#     secret is set. It enables nothing by itself: each service's AI_ENABLED kill switch in flyio/*.fly.toml stays false (ADR-0011)
 #   - post-deploy /health check; authservice assertions (non-empty JWKS, issuer) via scripts/assert-authservice.sh
 
 on:
@@ -340,6 +342,8 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           SUBJECT_PEPPER: ${{ secrets.REVIEWS_SUBJECT_PEPPER }}
           BFF_SHARED_SECRET: ${{ secrets.BFF_SHARED_SECRET }}
+          # Optional (ADR-0011): pushed only when set. Triage stays off while AI_ENABLED is false in flyio/reviews.fly.toml.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
           apps="$(flyctl apps list --json)"
@@ -357,6 +361,9 @@ jobs:
               printf 'BFF_SHARED_SECRET=%s\n' "$BFF_SHARED_SECRET"
             else
               echo "BFF_SHARED_SECRET is not set in the dev environment: reviews rate limits fall back to the proxy address" >&2
+            fi
+            if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+              printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY"
             fi
           } | flyctl secrets import --stage --app "$APP"
       - name: Deploy the built image (no rebuild)
@@ -404,6 +411,8 @@ jobs:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           SUBJECT_PEPPER: ${{ secrets.BILLING_SUBJECT_PEPPER }}
           WEBHOOK_SECRET: ${{ secrets.BILLING_WEBHOOK_SECRET }}
+          # Optional (ADR-0011, F6): pushed only when set. The assistant stays off while AI_ENABLED is false in flyio/billing.fly.toml.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
           apps="$(flyctl apps list --json)"
@@ -420,6 +429,9 @@ jobs:
               printf 'Billing__WebhookSecret=%s\n' "$WEBHOOK_SECRET"
             else
               echo "BILLING_WEBHOOK_SECRET is not set in the dev environment: every webhook is rejected until it is set" >&2
+            fi
+            if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+              printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY"
             fi
           } | flyctl secrets import --stage --app "$APP"
       - name: Deploy the built image (no rebuild)
@@ -457,9 +469,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Ensure app and database connection secret (idempotent, staged)
+        # ANTHROPIC_API_KEY is optional (ADR-0011): pushed only when the GitHub secret exists, never echoed.
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           BFF_SHARED_SECRET: ${{ secrets.BFF_SHARED_SECRET }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
           apps="$(flyctl apps list --json)"
@@ -472,6 +486,9 @@ jobs:
               "$POSTGRES_USER" "$POSTGRES_PASSWORD"
             if [ -n "${BFF_SHARED_SECRET:-}" ]; then
               printf 'BFF_SHARED_SECRET=%s\n' "$BFF_SHARED_SECRET"
+            fi
+            if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+              printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY"
             fi
           } | flyctl secrets import --stage --app "$APP"
       - name: Deploy the built image (no rebuild)
@@ -565,9 +582,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Ensure app and MCP key (idempotent)
+      - name: Ensure app, MCP key and agent key (idempotent)
+        # Both values are optional (flyio/SECRETS.md). The agent (ADR-0017) answers 503 ai_unavailable without the key.
         env:
           MCP_API_KEY: ${{ secrets.MCP_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
           apps="$(flyctl apps list --json)"
@@ -575,11 +594,19 @@ jobs:
             flyctl apps create "$APP" --org "$FLY_ORG" --yes
           fi
           # Optional (flyio/SECRETS.md): without it the MCP server calls the catalog anonymously.
-          # Value on stdin, never on the command line (SECRETS.md section 2).
-          if [ -n "${MCP_API_KEY:-}" ]; then
-            printf 'MCP_API_KEY=%s\n' "$MCP_API_KEY" | flyctl secrets import --stage --app "$APP"
-          else
+          if [ -z "${MCP_API_KEY:-}" ]; then
             echo "MCP_API_KEY is not set in the dev environment: MCP runs with the anonymous rate bucket"
+          fi
+          # Values on stdin, never on the command line (SECRETS.md section 2). An empty pair imports nothing.
+          if [ -n "${MCP_API_KEY:-}" ] || [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+            {
+              if [ -n "${MCP_API_KEY:-}" ]; then
+                printf 'MCP_API_KEY=%s\n' "$MCP_API_KEY"
+              fi
+              if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+                printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY"
+              fi
+            } | flyctl secrets import --stage --app "$APP"
           fi
       - name: Deploy the built image (no rebuild)
         run: flyctl deploy --config flyio/mcp.fly.toml --app school-search-mcp-dev --image "$IMAGE" --yes

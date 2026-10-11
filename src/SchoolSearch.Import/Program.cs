@@ -66,6 +66,20 @@ internal static class Program
         var command = args[0];
         var options = ParseOptions(args.AsSpan(1));
 
+        // ---- BEGIN G2 AI extractor commands (offline; return BEFORE any database context is created) ----
+        if (command == "catchment-extract")
+        {
+            return await SchoolSearch.Import.Catchment.Extract.CatchmentExtractCommand.RunAsync(options, ct);
+        }
+        // ---- END G2 AI extractor commands ----
+
+        // ---- BEGIN G4 preschool tuition extractor (offline; return BEFORE any database context is created) ----
+        if (command == "preschool-extract")
+        {
+            return await SchoolSearch.Import.Preschools.Extract.PreschoolExtractCommand.RunAsync(options, ct);
+        }
+        // ---- END G4 preschool tuition extractor ----
+
         await using var db = CreateContext();
 
         if (!db.Database.IsRelational())
@@ -302,6 +316,8 @@ internal static class Program
           catchment --file <csv>
           sio-preschools   --file <csv> [--as-of yyyy-MM-dd] [--map <json>]
           preschool-facts  --file <csv> --source-name <text> --source-url <url> --as-of yyyy-MM-dd
+          catchment-extract --input <saved text|html> --gmina <TERYT> --resolution-url <url> --resolution-date yyyy-MM-dd --out <candidate.csv> [--map-schools <csv idPodmiot;name>]
+          preschool-extract --input <saved text|html|csv> --gmina <TERYT> --source-name <text> --source-url <https url> --as-of yyyy-MM-dd --preschools <csv idPodmiot;name> --out <candidate.csv>
         Environment: DATABASE_PROVIDER=postgres|inmemory, ConnectionStrings__catalogdb (postgres).
         Exit codes: 0 ok, 1 error, 2 schema mismatch.
         """;

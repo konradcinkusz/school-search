@@ -3,11 +3,21 @@ using System.Text.RegularExpressions;
 
 namespace SchoolSearch.Api.Corrections;
 
-/// <summary>Raw POST body. Everything is optional at the type level; <see cref="CorrectionRequestValidator"/> decides what is required.</summary>
-public sealed record CorrectionSubmission(string? Slug, string? Field, string? Message, string? ContactEmail);
+/// <summary>
+/// Raw POST body. Everything is optional at the type level; <see cref="CorrectionRequestValidator"/> decides what is
+/// required. Kind is optional: absent or empty means a school, so existing clients are unchanged.
+/// </summary>
+public sealed record CorrectionSubmission(string? Slug, string? Field, string? Message, string? ContactEmail, string? Kind = null);
 
 /// <summary>A submission after normalization. The message is stored verbatim apart from removed control characters and trimmed edges.</summary>
-public sealed record NormalizedCorrection(string Slug, string Field, string Message, string? ContactEmail);
+public sealed record NormalizedCorrection(string Slug, string Field, string Message, string? ContactEmail, string Kind = CorrectionTargetKinds.School);
+
+/// <summary>The kinds of published record a correction may target. Public values, as the API takes and returns them.</summary>
+public static class CorrectionTargetKinds
+{
+    public const string School = "school";
+    public const string Preschool = "preschool";
+}
 
 public sealed record CorrectionValidation(NormalizedCorrection? Value, string? Error);
 
@@ -37,6 +47,17 @@ public static class CorrectionRequestValidator
         "other",
     };
 
+    /// <summary>Fixed allowlist of correctable preschool facts (kind "preschool"). Anything else is refused.</summary>
+    public static readonly IReadOnlySet<string> AllowedPreschoolFields = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "tuition_min",
+        "tuition_max",
+        "hours",
+        "free_places",
+        "address",
+        "other",
+    };
+
     /// <summary>Structural check only: one '@', no whitespace, a dot in the domain. Deliverability is not checked.</summary>
     private static readonly Regex EmailShape = new(
         @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
@@ -51,8 +72,15 @@ public static class CorrectionRequestValidator
             return Invalid("slug is required.");
         }
 
+        var kind = string.IsNullOrWhiteSpace(input.Kind) ? CorrectionTargetKinds.School : input.Kind.Trim().ToLowerInvariant();
+        if (kind is not (CorrectionTargetKinds.School or CorrectionTargetKinds.Preschool))
+        {
+            return Invalid("kind is not one of the allowed values.");
+        }
+
         var field = input.Field?.Trim().ToLowerInvariant();
-        if (field is null || !AllowedFields.Contains(field))
+        var allowedFields = kind == CorrectionTargetKinds.Preschool ? AllowedPreschoolFields : AllowedFields;
+        if (field is null || !allowedFields.Contains(field))
         {
             return Invalid("field is not one of the allowed values.");
         }
@@ -84,7 +112,7 @@ public static class CorrectionRequestValidator
             }
         }
 
-        return new CorrectionValidation(new NormalizedCorrection(slug, field, message, email), null);
+        return new CorrectionValidation(new NormalizedCorrection(slug, field, message, email, kind), null);
     }
 
     /// <summary>

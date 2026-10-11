@@ -1,6 +1,7 @@
 web/
 tests/
 docs/
+!docs/methodology
 flyio/
 .github/
 **/node_modules

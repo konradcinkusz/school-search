@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { catalog, type Methodology } from "@/lib/api";
 import { formatPercent } from "@/lib/format";
+import { MethodologyQa } from "@/components/ai/methodology-qa";
 
 // Live values come from /api/v1/methodology per request; the fallback is the documented 1.0.0 set.
 export const dynamic = "force-dynamic";
@@ -46,6 +47,8 @@ export default async function MethodologyPage() {
           </>
         )}
       </div>
+
+      <MethodologyQa />
 
       <h2>Czym jest ta strona</h2>
       <p>

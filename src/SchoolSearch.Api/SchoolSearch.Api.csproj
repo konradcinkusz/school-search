@@ -16,6 +16,11 @@
     through Npgsql.EntityFrameworkCore.PostgreSQL, referenced by the kernel. Versions stay in
     Directory.Packages.props; this project carries no Version attributes.
   -->
+  <!-- Methodology Q&A (Ai/MethodologyQa*.cs) answers only from this document. Path is relative to this project. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\docs\methodology\RANKING-METHODOLOGY.md" LogicalName="RANKING-METHODOLOGY.md" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <!-- Validation only (ADR-0015): access tokens from authservice. Version lives in Directory.Packages.props. -->

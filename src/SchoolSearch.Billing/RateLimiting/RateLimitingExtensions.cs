@@ -29,6 +29,10 @@ public static class BillingRateLimitingExtensions
     private const string ProbeKey = "probe";
     private const string ProcessKey = "process";
     private const string AuthenticatedKey = "authenticated";
+    private const string WebhookKey = "webhook";
+
+    /// <summary>The provider webhook path. It is limited in its own partition, not by the global per-IP window.</summary>
+    internal const string WebhookPath = "/api/v1/billing/webhook";
 
     public static IServiceCollection AddBillingRateLimiting(this IServiceCollection services)
     {
@@ -92,14 +96,28 @@ public static class BillingRateLimitingExtensions
                 return RateLimitPartition.GetNoLimiter(ProbeKey);
             }
 
+            var services = context.RequestServices;
+            var clientIp = services.GetRequiredService<ClientIpResolver>().Resolve(context);
+
+            // The webhook is anonymous and signed. It gets a generous per-address window of its own, so a provider's
+            // retries do not exhaust the general allowance (and the general allowance does not starve the webhook).
+            if (IsWebhook(context))
+            {
+                var webhookLimit = services.GetRequiredService<IOptions<BillingOptions>>().Value.RateLimiting.WebhookPerIpPerMinute;
+                return RateLimitPartition.GetFixedWindowLimiter(WebhookKey + ":" + clientIp, _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = webhookLimit,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                });
+            }
+
             if (context.User.Identity?.IsAuthenticated == true)
             {
                 return RateLimitPartition.GetNoLimiter(AuthenticatedKey);
             }
 
-            var services = context.RequestServices;
             var perMinute = services.GetRequiredService<IOptions<BillingOptions>>().Value.RateLimiting.PerIpPerMinute;
-            var clientIp = services.GetRequiredService<ClientIpResolver>().Resolve(context);
 
             return RateLimitPartition.GetFixedWindowLimiter("ip:" + clientIp, _ => new FixedWindowRateLimiterOptions
             {
@@ -130,4 +148,7 @@ public static class BillingRateLimitingExtensions
 
     private static bool IsProbe(HttpContext context) =>
         context.Request.Path.Value is "/health" or "/alive";
+
+    private static bool IsWebhook(HttpContext context) =>
+        string.Equals(context.Request.Path.Value, WebhookPath, StringComparison.OrdinalIgnoreCase);
 }

@@ -16,6 +16,12 @@ primary_region = "waw"
   CATALOG_API_URL = "https://school-search-api-dev.fly.dev"   # public URL, so the proxy can wake a stopped api
   REVIEWS_BASE_URL = "https://school-search-reviews-dev.fly.dev"   # get_school_reviews (Phase E); public URL, same reason
   SchoolSearch__TrustProxyClientIpHeader = "true"   # behind the Fly edge: the per-IP limit reads Fly-Client-IP (same key as api.fly.toml)
+  # Phase G agent (POST /agent/chat, ADR-0017). The agent lives in this service because it owns the read-only tool surface.
+  # ANTHROPIC_API_KEY is a Fly secret pushed by flyio.yml when the GitHub secret exists (flyio/SECRETS.md). Without it the
+  # endpoint answers 503 ai_unavailable (P8). Setting AI_ENABLED="false" is the kill switch for the agent
+  # (docs/runbooks/AI-OPERATIONS.md); run the Phase G eval gate (docs/ai/AI-EVALS.md) before launch.
+  # Total tokens per UTC day for the agent, process-wide (the cost guard; in memory, resets on restart, ADR-0017).
+  AI_DAILY_TOKEN_BUDGET = "100000"
 
 [http_service]
   internal_port = 8080

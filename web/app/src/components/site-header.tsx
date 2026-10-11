@@ -19,6 +19,9 @@ export function SiteHeader() {
               <Link href="/porownaj">Porównaj</Link>
             </li>
             <li>
+              <Link href="/doradca">Doradca</Link>
+            </li>
+            <li>
               <Link href="/metodologia">Metodologia</Link>
             </li>
             <li>

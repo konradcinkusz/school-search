@@ -15,6 +15,7 @@
 | 6 | Preschool czesne extraction | Proposed (Phase D) | none | Needs preschool source list and spot-check process. |
 | 7 | Methodology Q&A | Proposed | none | Needs eval set; model choice open. |
 | 8 | Profile-copy assistant (Phase F, "Zaproponuj tekst") | **Implemented (F6), not deployed, not compiled in the authoring environment** | `src/SchoolSearch.Billing/Ai/`; see "Profile-copy assistant — implemented" at the end of this file | Owner-only draft, never saved or published. Behind `ANTHROPIC_API_KEY` and `AI_ENABLED`; without them 503 `ai_unavailable`. Needs the Phase F gates (legal review of the sales terms, provider decision) before go-live. |
+| 9 | "Doradca wyboru szkoły" (agent with a tool loop, Phase G, G6) | **Implemented (Phase G), not deployed, switch off** | `POST /agent/chat` in `src/SchoolSearch.Mcp/Agent/**` (MCP service, ADR-0017); page `/doradca` (web G7) | Read-only tools in process, 6 turns, 8 tool calls, 20 s. Digit-grounded replies only. See "Doradca wyboru szkoły — agent". |
 
 **Deviations from the proposal as implemented in PR 4 (feature 1):**
 
@@ -688,3 +689,163 @@ facts are refused before the call; one retry for a banned claim; two bad answers
 refused; refusal and cut-off answers are refused; the exception text is not returned; the budget stops the retry; the
 allowance is per owner; the parser and input rules; the prompt carries only the facts and escapes markup.
 Not run: no .NET SDK in the authoring environment, and no live model call. A live eval set for drafts is still to be written.
+
+## Phase G: search intent (feature 2) — implemented
+
+Scope: `POST /api/v1/ai/search-intent`, `{question}` up to 300 characters, in `src/SchoolSearch.Api/Ai/SearchIntent*`.
+Phase G task G1. The answer is a set of filters for the existing search, never results.
+
+- **What the model may return.** Only the declared filter fields, through a tool call: `gmina` (seven digits, and only when the
+  question names one), `q`, `publicOnly`, `maxDistanceKm` (at most 50) and `type` (`school` or `preschool`). Anything about
+  quality, ranking, "najlepsza", ascending or descending order goes into `unsupported`, never into `filters`. The response
+  says in Polish that the portal does not rank schools by quality.
+- **Validation.** The server clamps and checks every field (TERYT shape, ranges, enums) and drops what it cannot read. The
+  parser is defensive: a parse failure, a refusal or a cut-off answer is a fallback, never a partial trust.
+- **What is sent.** The fixed rules and a user turn with the question alone, inside an `<untrusted>` block with `<` and `>`
+  escaped. No result rows, scores, IP, session or account. The pre-send guard refuses an e-mail address, a telephone-like
+  number or a PESEL-like number before any call.
+- **Who applies the filters.** The caller, through the normal search API. The endpoint never returns schools.
+- **Degrade (P8).** Without the key or with `AI_ENABLED=false`: 503 `ai_unavailable`, and the home page keeps the filter form.
+- **Cost guards.** The shared daily budget of the Api (`AI_DAILY_TOKEN_BUDGET`), a per-IP allowance and a cache by normalised question.
+
+**Deviations from the proposal in section 4 (feature 2):**
+
+- Its own `SearchIntentOptions`, `SearchIntentRateLimiter` and `SearchIntentGuard`, not the explain types by reference. The explain
+  limiter counts explanations per school, and the search allowance is a different limit. The shared budget counter is reused.
+- Model `claude-haiku-5-5` only. The proposal's escalation to Sonnet is not wired; it needs a recorded change after the eval.
+
+**Evals.** Layer 1 tests (fake client): quality words never reach filters, TERYT and range clamps, `unsupported` wording, the
+pre-send guard. Not run. Layer 2 set and threshold: `docs/ai/AI-EVALS.md`, feature 2.
+
+## Phase G: correction triage (feature 5) — implemented
+
+Scope: `POST /api/v1/admin/corrections/{id}/triage` (moderator only), in `src/SchoolSearch.Api/Ai/CorrectionTriage*`. Phase G
+task G3. The route group is wired by the orchestrator through `MapCorrectionTriageEndpoints`.
+
+- **Who may call it.** The same admin gate as the other admin routes (`src/SchoolSearch.Api/Security/AdminEndpoints.cs`):
+  unconfigured answers 404, no token 401, a token without the role 403.
+- **What is sent.** The correction's field code, the proposed value, the free-text note after the pre-send guard, and the school
+  slug. The reporter's e-mail address is never sent (it is not a parameter of the prompt builder).
+- **What comes back.** `{category, fieldLooksValid, severity, suggestedAction, draftReplyPl, aiLabel, model}`. Category,
+  severity and action come from enums. The draft is Polish text for the moderator to copy. It is checked for markup and for
+  banned claims (superlatives, guarantees, verification claims).
+- **What it never does.** It is not persisted (no migration), it sends nothing (the system has no outbound e-mail), and it
+  changes no correction status. The moderator decides.
+- **Degrade (P8).** Without the key: 503 `ai_unavailable`. The corrections queue shows the rows without triage.
+
+**Deviations from the proposal in section 4 (feature 5):**
+
+- The proposal names Sonnet for this feature. The implementation uses `claude-haiku-5-5` by default, for the same reason as
+  feature 2: the output is a small enum set and a short draft, and the escalation is a recorded change after the eval.
+- The output cap is the Api's `MaxOutputTokens` of 1500, not the 800 of section 4, because adaptive thinking counts against the cap.
+
+**Evals.** Layer 1 tests (fake client): admin gate cases, the reporter's e-mail is absent from the payload, the response is not
+stored, banned claims are refused, injection in the note changes nothing in the shape. Not run. `docs/ai/AI-EVALS.md`, feature 5.
+
+## Phase G: batch extractors (features 3 and 6) — implemented
+
+Scope: two console commands in `src/SchoolSearch.Import`, run by an operator on a trusted machine with the operator's own
+key. Phase G tasks G2 and G4. Decision: ADR-0017, decision 3. The shared interface is `IImportLlm` in `SchoolSearch.Import.Ai`,
+with `AnthropicImportLlm` as the only file that references the SDK.
+
+- **`catchment-extract`.** Reads a saved document (text or HTML), splits it into chunks, asks the model for candidate rows
+  (school name as written, street, house-number rule, condition), validates each row strictly, and writes a candidate CSV in
+  the format the `catchment` loader accepts, with a `confidence` column and the header line `UNVERIFIED - human sign-off
+  required`. A sibling `.review.md` lists every row with its source quote.
+- **`preschool-extract`.** Reads a saved gmina tuition table and extracts per-preschool candidate facts (name as written,
+  tuition minimum and maximum in PLN, meals, opening hours, free places and their date). Matching to `idPodmiot` is an exact
+  normalised name match against a supplied preschool file. Unmatched rows go to a rejects file and are never guessed.
+  Output is in the `preschool-facts` format with `confidence=unverified`, and a `.review.md` with source quotes. Money parsing
+  accepts comma decimals.
+- **What neither command does.** It does not fetch a URL (the URL is provenance text). It does not open a database context
+  (architecture rule `Import_AI_and_extractor_namespaces_never_reach_the_catalog_database`). It refuses a document with
+  pupil-level patterns before any call. It has no flag that approves output. A person flips the confidence by hand, and loads
+  the file through the existing import path.
+- **Injection.** The document is data inside an `<untrusted>` block. An instruction in the document cannot add a column or a row
+  outside the schema.
+- **Deployment.** Not deployed. The Import image is built by CI as before; no Fly app runs it and no key is pushed for it.
+
+**Deviations from the proposal (sections 4, 6, 3.3):**
+
+- **No Batch API.** The proposal recommends batch pricing for features 3 and 6. The commands call the messages API per chunk,
+  because an operator runs them interactively on one document at a time. The price is higher per token; the volume is small.
+- **Model `claude-haiku-5-5` by default**, not Sonnet (feature 3) or Haiku with Sonnet escalation (feature 6). Opus escalation
+  is not wired. Escalation is a recorded change after the eval.
+- **Cost guard** is a per-run token budget in the Import code (`ImportTokenBudget`), not the Postgres `ai_usage` table of section 3.3.
+- **Output is CSV and Markdown, not the `candidate` JSON of section 4.** The CSV formats are the ones the existing loaders accept,
+  so no new import path is needed.
+
+**Evals.** `tests/SchoolSearch.Import.Tests/CatchmentExtract*.cs` and `PreschoolExtract*.cs` (fake `IImportLlm`): parsing,
+strict validation, injection, exact matching, comma decimals, the `unverified` default, the absence of an approve flag, the
+no-database rule. Not run. `docs/ai/AI-EVALS.md`, features 3 and 6.
+
+## Phase G: methodology answers (feature 7) — implemented
+
+Scope: `POST /api/v1/ai/methodology-answer`, `{question}` up to 300 characters, in `src/SchoolSearch.Api/Ai/MethodologyQa*`.
+Phase G task G5. The methodology is `docs/methodology/RANKING-METHODOLOGY.md`, embedded in the Api assembly as the resource
+`RANKING-METHODOLOGY.md`, loaded once and split by headings.
+
+- **What the model may use.** Only the methodology text supplied in the prompt. It must say "Tego nie opisuje metodologia" when
+  the document does not cover the question. It does not give an opinion on a school or say which school is better.
+- **Citations.** The answer lists the headings it used. Each heading must exist in the document. An invalid citation drops the
+  answer and returns the safe fallback message. Nothing is returned that a citation does not support.
+- **Response.** `{answer, citedSections, aiLabel, model, groundedInDocument: true}`.
+- **Cache.** Per normalised question in `IMemoryCache`, with `Size = 1` on each entry, because the cache is shared with other
+  features under a size limit.
+- **Degrade (P8).** Without the key: 503 `ai_unavailable`. The methodology page keeps its static text.
+
+**Deviations from the proposal (section 4, feature 7):** the proposal's "static FAQ" fallback remains the page content; the
+question box is shown only when the endpoint is available. The model is `claude-haiku-5-5` by default; the Sonnet escalation is not
+wired. Output budget is 1500 tokens (the Api's cap), not the 800 of section 4.
+
+**Evals.** `tests/SchoolSearch.Api.Tests/Ai/MethodologyQa*.cs` (fake client): a non-covered question gets the phrase, a hallucinated
+citation is dropped, the cache uses `Size = 1`, the document is loaded once. Not run. `docs/ai/AI-EVALS.md`, feature 7.
+
+## Doradca wyboru szkoły — agent — implemented
+
+Scope: a multi-step agent in the MCP service: `POST /agent/chat` (plain HTTP, not MCP), code in `src/SchoolSearch.Mcp/Agent/**`,
+page `/doradca` in the web app, reached through the BFF route `/api/agent`. Phase G task G6. Decision: ADR-0017.
+
+- **Request.** `{messages: [{role, content}]}`: at most 12 turns, each at most 1000 characters, and an optional gmina context.
+- **Response.** `{reply, steps: [{tool, args, summary}], citedSlugs, aiLabel, model, stopReason}`. The steps are shown to the
+  visitor as "Sprawdziłem: ...".
+- **The loop.** A manual tool-use loop. The model sees the read-only tools: `find_schools`, `get_school`, `get_catchment_school`,
+  `compare_schools`, `get_ranking`, `get_methodology`, `find_preschools`, `get_preschool` and `get_school_reviews`. The tools
+  run in process, by calling the same tool classes and clients as the MCP tools. There is no HTTP call from the service to itself.
+- **Limits.** 6 model turns, 8 tool calls, a 20-second deadline, a token budget, and a per-IP rate limit copied from the MCP limiter.
+  A limit reached returns `stopReason` and a safe reply.
+- **Untrusted data.** Every tool result is data inside an `<untrusted>` block. Review text is marked `userGenerated`. The system
+  rules forbid ranking, quality judgements and invented facts, and require the citation of school slugs and the disclaimer
+  "obwód ustala gmina" for catchment results. `no_data` and `insufficient_cohort` are explained, never turned into a number.
+- **Grounding.** Every number in the final reply must occur in a tool result. A reply that fails is replaced by a safe message that
+  lists the tool facts only.
+- **The SDK seam.** `IAgentLlm` has one turn method, `NextAsync`. `AnthropicAgentLlm` is the only file in the agent that touches the
+  SDK. A change in the SDK is therefore a one-file fix.
+- **Degrade (P8).** Without the key or with `AI_ENABLED=false`: 503 `ai_unavailable`. The web page shows the unavailable state.
+
+**Deviations from the proposal and the rest of the design:**
+
+- The agent is in the MCP service, not in the catalog Api, and not in a new service (ADR-0017, decision 1). The reason is that the
+  service already owns the tool surface and the catalog and reviews clients.
+- The MCP service holds `ANTHROPIC_API_KEY` and is anonymous in v1. The limits above are its only cost controls, and the exit
+  condition is in ADR-0017.
+- `AI_DAILY_TOKEN_BUDGET` for the agent defaults to 100000 (`flyio/mcp.fly.toml`), in memory per process (ADR-0011 item 11).
+
+**Evals.** `tests/SchoolSearch.Mcp.Tests/Agent*.cs` (scripted fake `IAgentLlm`): tool call, result and final answer; the loop
+limits; an injection inside a review is not obeyed; an ungrounded number blocks the reply; an unknown tool is refused; no key gives
+503. Not run. `docs/ai/AI-EVALS.md`, the agent section.
+
+## Phase G: what changed in the boundaries and the infrastructure
+
+- **One SDK file per deployable is replaced by a naming rule.** Only `Anthropic*Client.cs` and `*Llm.cs` may reference the SDK.
+  The Api has four AI features and therefore four such files. Architecture test: `AiBoundaryTests.cs`.
+- **Namespace rules.** Scoring and `Catalog.Data` depend on no `*.Ai` namespace. The Import extractors depend on neither
+  `Catalog.Data` nor Entity Framework. The MCP agent depends on no Entity Framework. No AI-namespace method named like a state change
+  takes a `DbContext`.
+- **Kill switches.** `AI_ENABLED` is `false` in `flyio/api.fly.toml`, `flyio/reviews.fly.toml`, `flyio/billing.fly.toml` and
+  `flyio/mcp.fly.toml`. A key pushed by `flyio.yml` enables nothing.
+- **Environment variables added in Phase G:** `AGENT_BASE_URL` (web, the public MCP URL), `AI_DAILY_TOKEN_BUDGET` (MCP, and the
+  documented default for the other services). The key stays `ANTHROPIC_API_KEY` everywhere.
+- **Operations and security.** `docs/runbooks/AI-OPERATIONS.md` (keys, switches, budgets, extractor procedure),
+  `docs/security/SECURITY-REVIEW-PHASE-G.md` (threats and controls, with their state), `docs/ai/AI-EVALS.md` (what to measure before
+  each switch goes on).

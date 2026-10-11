@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { AddressForm } from "@/components/address-form";
+import { SearchIntentBox } from "@/components/ai/search-intent-box";
 import { CatchmentPanel } from "@/components/catchment-panel";
 import { Pagination } from "@/components/pagination";
 import { SchoolList } from "@/components/school-list";
@@ -66,6 +67,8 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
           <CatchmentPanel gmina={selectedGmina} street={street} number={number} />
         ) : null}
       </section>
+
+      <SearchIntentBox />
 
       <section aria-labelledby="name-search-heading" className="name-search">
         <h2 id="name-search-heading">Szukaj szkoły po nazwie</h2>

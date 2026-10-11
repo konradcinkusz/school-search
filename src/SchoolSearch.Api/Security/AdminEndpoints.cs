@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using SchoolSearch.Api.Ai;
 using SchoolSearch.Api.Errors;
 using SchoolSearch.Catalog.Data;
 using SchoolSearch.Catalog.Data.Entities;
@@ -43,6 +44,7 @@ public static class AdminEndpoints
         RegisterAuthServiceStatus(app);
 
         var admin = app.MapGroup("/api/v1/admin").AddEndpointFilter<AdminAccessFilter>();
+        admin.MapCorrectionTriageEndpoints();
 
         admin.MapGet("/corrections", ListCorrections).WithName("AdminListCorrections");
         admin.MapPatch("/corrections/{id:guid}", UpdateCorrection).WithName("AdminUpdateCorrection");

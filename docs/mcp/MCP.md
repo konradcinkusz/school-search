@@ -282,3 +282,18 @@ On 429, wait for `Retry-After` seconds and retry. Do not retry in a tight loop.
 | Dependency versions | `ModelContextProtocol.AspNetCore` 2.2.0 and `Anthropic` 12.55.0 are the versions the design names. Confirm they resolve on NuGet in CI. |
 
 Until the protocol test is green in CI on the merged commit, MCP is not exposed (ADR-0006).
+
+## 9. The agent endpoint (Phase G, not MCP)
+
+`POST /agent/chat` is a plain HTTP route on the same service, not an MCP tool. It runs a bounded tool loop over the read-only
+tools in section 2, in process, and answers with a reply, the steps it took, the school slugs it cites and an AI label. It is
+off until its key and its kill switch are set (`AI_ENABLED`, `ANTHROPIC_API_KEY`; without them 503 `ai_unavailable`). The MCP
+protocol surface of sections 2 and 3 does not change.
+
+- Request: `messages` (at most 12 turns, each at most 1000 characters) and an optional `context.gmina`.
+- Limits: 6 model turns, 8 tool calls, 20 seconds, a token budget and a per-IP rate limit.
+- Tool results are data. Review text is marked `userGenerated` and is never an instruction.
+- Replies carry no ranking and no quality judgement. Every number in a reply must occur in a tool result, or the reply is replaced
+  by a message that lists the tool facts only.
+
+Decision: [ADR-0017](../adr/0017-ai-agent-in-mcp-service-and-batch-extractors.md). Operations: [`docs/runbooks/AI-OPERATIONS.md`](../runbooks/AI-OPERATIONS.md).

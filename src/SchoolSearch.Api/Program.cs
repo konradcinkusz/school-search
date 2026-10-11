@@ -23,6 +23,9 @@ builder.Services.AddSecurityServices(builder.Configuration);
 builder.Services.AddAuthServiceAuthentication(builder.Configuration, builder.Environment);
 builder.Services.AddDemoSeed(builder.Configuration);
 builder.Services.AddAiServices(builder.Configuration);
+builder.Services.AddSearchIntent(builder.Configuration);
+builder.Services.AddMethodologyQa(builder.Configuration);
+builder.Services.AddCorrectionTriage(builder.Configuration);
 
 var app = builder.Build();
 
@@ -36,6 +39,8 @@ app.MapCorrectionEndpoints();
 app.MapKeyEndpoints();
 app.MapAdminEndpoints();
 app.MapAiEndpoints();
+app.MapSearchIntentEndpoints();
+app.MapMethodologyQaEndpoints();
 
 app.Run();
 

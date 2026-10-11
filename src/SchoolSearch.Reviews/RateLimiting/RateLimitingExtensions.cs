@@ -29,6 +29,7 @@ public static class ReviewsRateLimitingExtensions
     private const string ProbeKey = "probe";
     private const string ProcessKey = "process";
     private const string AuthenticatedKey = "authenticated";
+    private const string TrustedServiceKey = "trusted-service";
 
     public static IServiceCollection AddReviewsRateLimiting(this IServiceCollection services)
     {
@@ -92,14 +93,28 @@ public static class ReviewsRateLimitingExtensions
                 return RateLimitPartition.GetNoLimiter(ProbeKey);
             }
 
+            var services = context.RequestServices;
+            var resolver = services.GetRequiredService<ClientIpResolver>();
+
+            // A trusted service (valid shared secret, no visitor address) gets its own bucket, never a visitor's.
+            if (resolver.IsTrustedServiceCall(context))
+            {
+                var serviceLimit = services.GetRequiredService<IOptions<ReviewsOptions>>().Value.RateLimiting.TrustedServicePerMinute;
+                return RateLimitPartition.GetFixedWindowLimiter(TrustedServiceKey, _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = serviceLimit,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                });
+            }
+
             if (context.User.Identity?.IsAuthenticated == true)
             {
                 return RateLimitPartition.GetNoLimiter(AuthenticatedKey);
             }
 
-            var services = context.RequestServices;
             var perMinute = services.GetRequiredService<IOptions<ReviewsOptions>>().Value.RateLimiting.PerIpPerMinute;
-            var clientIp = services.GetRequiredService<ClientIpResolver>().Resolve(context);
+            var clientIp = resolver.Resolve(context);
 
             return RateLimitPartition.GetFixedWindowLimiter("ip:" + clientIp, _ => new FixedWindowRateLimiterOptions
             {

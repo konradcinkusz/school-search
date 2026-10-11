@@ -2,12 +2,16 @@
 
 import { useState } from "react";
 import { ClaimsQueueView } from "@/components/moderation/claims-queue";
+import { ComplaintDecisionForm } from "@/components/moderation/complaints-decision";
+import { CorrectionsQueueView } from "@/components/moderation/corrections-queue";
 import { ModerationQueueView } from "@/components/moderation/moderation-queue";
 
-/** Moderator console with two tabs: reviews and notices (existing), and school claims (Phase F). */
+/** Moderator console: reviews and notices, school claims (Phase F), corrections with AI triage and complaints (Phase G). */
 const TABS = [
   { id: "reviews", label: "Opinie i zgłoszenia" },
   { id: "claims", label: "Zgłoszenia właścicieli" },
+  { id: "corrections", label: "Korekty" },
+  { id: "complaints", label: "Skargi" },
 ] as const;
 
 export function ModerationConsole() {
@@ -31,7 +35,10 @@ export function ModerationConsole() {
         ))}
       </div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {tab === "reviews" ? <ModerationQueueView /> : <ClaimsQueueView />}
+        {tab === "reviews" ? <ModerationQueueView /> : null}
+        {tab === "claims" ? <ClaimsQueueView /> : null}
+        {tab === "corrections" ? <CorrectionsQueueView /> : null}
+        {tab === "complaints" ? <ComplaintDecisionForm /> : null}
       </div>
     </div>
   );

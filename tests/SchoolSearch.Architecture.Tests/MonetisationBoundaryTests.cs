@@ -28,12 +28,14 @@ public sealed class MonetisationBoundaryTests
     private const string CatalogDataNamespace = "SchoolSearch.Catalog.Data";
 
     // Assemblies that carry scores, rankings or reviews. None of them may reference billing (ADR-0016).
+    // The MCP service (and its Phase G agent, ADR-0017) serves scores and reviews to agents, so it is one of them.
     private static readonly string[] ScoreConsumerAssemblyNames =
     {
         "SchoolSearch.Api",
         "SchoolSearch.Reviews",
         "SchoolSearch.Catalog.Data",
         "SchoolSearch.Contracts",
+        "SchoolSearch.Mcp",
     };
 
     // The public score and ranking contract. The five names are checked for presence, so the member rule cannot pass

@@ -14,6 +14,10 @@ primary_region = "waw"
   ASPNETCORE_URLS = "http://+:8080"
   DATABASE_PROVIDER = "postgres"
   SchoolSearch__TrustProxyClientIpHeader = "true"   # behind the Fly edge; see RateLimiting/ClientIpResolver.cs
+  # AI explain (feature 1) and the Phase G search-intent and methodology answers (ADR-0011, ADR-0017). ANTHROPIC_API_KEY is
+  # a Fly secret pushed by flyio.yml when the GitHub secret exists. Setting AI_ENABLED="false" is the kill switch
+  # (docs/runbooks/AI-OPERATIONS.md). Close the open items in docs/ai/AI-FEATURES.md (O1, O2) and the eval gate before launch.
+  AI_DAILY_TOKEN_BUDGET = "200000"
   # Admin routes validate authservice access tokens (role Admin or SuperAdmin), ADR-0015. Same issuer and audience
   # as authservice (flyio/authservice.fly.toml). Auth__Authority unset would answer the admin group with 404 (P8).
   Auth__Authority = "https://school-search-authservice-dev.fly.dev"

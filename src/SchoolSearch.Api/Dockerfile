@@ -18,6 +18,9 @@ COPY src/SchoolSearch.ServiceDefaults/ src/SchoolSearch.ServiceDefaults/
 COPY src/SchoolSearch.Catalog.Data/ src/SchoolSearch.Catalog.Data/
 COPY src/SchoolSearch.Contracts/ src/SchoolSearch.Contracts/
 COPY src/SchoolSearch.Api/ src/SchoolSearch.Api/
+# The methodology document is embedded into the Api assembly (SchoolSearch.Api.csproj, EmbeddedResource).
+# Only this folder of docs/ is copied; the rest of docs/ stays out of the image (.dockerignore re-includes it).
+COPY docs/methodology/ docs/methodology/
 RUN dotnet publish src/SchoolSearch.Api/SchoolSearch.Api.csproj -c Release -o /app/publish --no-restore
 
 # Runtime major version equals the TFM major (net10.0). Roll-forward does not cross a major.

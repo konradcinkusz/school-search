@@ -64,18 +64,16 @@ public static class CorrectionEndpoints
             return ApiErrorWriter.Result(StatusCodes.Status400BadRequest, "validation_failed", validation.Error ?? "Request is invalid.");
         }
 
-        // A slug longer than any stored slug cannot match a school. It gets the same answer as any unknown slug.
-        var schoolId = input.Slug.Length > CorrectionRequestValidator.MaxSlugLength
-            ? null
-            : await FindSchoolIdAsync(db, input.Slug, ct);
-
-        if (schoolId is not { } school)
+        // A slug longer than any stored slug cannot match a record. It gets the same answer as any unknown slug.
+        var targetId = await ResolveTargetIdAsync(db, input, ct);
+        if (targetId is not { } target)
         {
-            return SchoolNotFound();
+            return TargetNotFound(input.Kind);
         }
 
+        var storedField = CorrectionStorage.StoredField(input.Kind, input.Field);
         var now = DateTimeOffset.UtcNow;
-        var clientKey = guard.KeyFor(clientIp.Resolve(httpContext), school, input.Field);
+        var clientKey = guard.KeyFor(clientIp.Resolve(httpContext), target, storedField);
 
         // One process-wide gate: the count check and the insert must not interleave between two submissions.
         await guard.Gate.WaitAsync(ct);
@@ -103,8 +101,8 @@ public static class CorrectionEndpoints
             {
                 Id = Guid.NewGuid(),
                 PublicToken = NewToken(),
-                SchoolId = school,
-                Field = input.Field,
+                SchoolId = target,
+                Field = storedField,
                 Message = input.Message,
                 ContactEmail = input.ContactEmail,
                 Status = CorrectionStatuses.New,
@@ -145,12 +143,9 @@ public static class CorrectionEndpoints
             return CorrectionNotFound();
         }
 
-        var schoolSlug = await db.Schools.AsNoTracking()
-            .Where(s => s.IdPodmiot == request.SchoolId)
-            .Select(s => s.Slug)
-            .FirstOrDefaultAsync(ct);
-
-        if (schoolSlug is null)
+        var kind = CorrectionStorage.KindOf(request.Field);
+        var targetSlug = await FindTargetSlugAsync(db, request.SchoolId, kind, ct);
+        if (targetSlug is null)
         {
             return CorrectionNotFound();
         }
@@ -160,8 +155,48 @@ public static class CorrectionEndpoints
             request.Status,
             request.StatusReason,
             request.CreatedAt,
-            schoolSlug,
-            request.Field));
+            targetSlug,
+            CorrectionStorage.BareField(request.Field),
+            kind));
+    }
+
+    /// <summary>The stored SchoolId for the target named by slug and kind, or null when no such record exists.</summary>
+    private static async Task<long?> ResolveTargetIdAsync(CatalogDbContext db, NormalizedCorrection input, CancellationToken ct)
+    {
+        if (input.Slug.Length > CorrectionRequestValidator.MaxSlugLength)
+        {
+            return null;
+        }
+
+        if (input.Kind == CorrectionTargetKinds.Preschool)
+        {
+            var preschoolId = await db.Preschools.AsNoTracking()
+                .Where(p => p.Slug == input.Slug)
+                .Select(p => (long?)p.IdPodmiot)
+                .FirstOrDefaultAsync(ct);
+
+            return preschoolId is { } id ? CorrectionStorage.StoredTargetId(CorrectionTargetKinds.Preschool, id) : null;
+        }
+
+        return await FindSchoolIdAsync(db, input.Slug, ct);
+    }
+
+    /// <summary>The public slug of a stored target. A preschool row is looked up in Preschools, never in Schools.</summary>
+    private static async Task<string?> FindTargetSlugAsync(CatalogDbContext db, long storedTargetId, string kind, CancellationToken ct)
+    {
+        if (kind == CorrectionTargetKinds.Preschool)
+        {
+            var preschoolId = CorrectionStorage.PreschoolIdOf(storedTargetId);
+            return await db.Preschools.AsNoTracking()
+                .Where(p => p.IdPodmiot == preschoolId)
+                .Select(p => p.Slug)
+                .FirstOrDefaultAsync(ct);
+        }
+
+        return await db.Schools.AsNoTracking()
+            .Where(s => s.IdPodmiot == storedTargetId)
+            .Select(s => s.Slug)
+            .FirstOrDefaultAsync(ct);
     }
 
     private static Task<long?> FindSchoolIdAsync(CatalogDbContext db, string slug, CancellationToken ct) =>
@@ -170,8 +205,10 @@ public static class CorrectionEndpoints
             .Select(s => (long?)s.IdPodmiot)
             .FirstOrDefaultAsync(ct);
 
-    private static IResult SchoolNotFound() =>
-        ApiErrorWriter.Result(StatusCodes.Status404NotFound, "not_found", "School not found.");
+    private static IResult TargetNotFound(string kind) =>
+        kind == CorrectionTargetKinds.Preschool
+            ? ApiErrorWriter.Result(StatusCodes.Status404NotFound, "not_found", "Preschool not found.")
+            : ApiErrorWriter.Result(StatusCodes.Status404NotFound, "not_found", "School not found.");
 
     private static IResult CorrectionNotFound() =>
         ApiErrorWriter.Result(StatusCodes.Status404NotFound, "not_found", "Correction request not found.");
@@ -229,14 +266,18 @@ public static class CorrectionStatuses
 /// <summary>201 body of POST /api/v1/corrections. The token is the only handle the submitter gets.</summary>
 public sealed record CorrectionCreatedResponse(string Token, string Status);
 
-/// <summary>Body of GET /api/v1/corrections/{token}. No message, no contact email, no internal id.</summary>
+/// <summary>
+/// Body of GET /api/v1/corrections/{token}. No message, no contact email, no internal id. SchoolSlug is the slug of the
+/// corrected record, school or preschool (see Kind); Field is the bare field code.
+/// </summary>
 public sealed record CorrectionStatusResponse(
     string Token,
     string Status,
     string? StatusReason,
     DateTimeOffset CreatedAt,
     string SchoolSlug,
-    string Field);
+    string Field,
+    string Kind);
 
 /// <summary>
 /// Limits open correction requests per client, school and field over 24 hours. The client is identified by a

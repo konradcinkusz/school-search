@@ -24,6 +24,10 @@ export function billingUnavailable(): NextResponse {
   return bffError(503, "billing_unavailable", "Płatne profile są chwilowo niedostępne.");
 }
 
+export function agentUnavailable(): NextResponse {
+  return bffError(503, "agent_unavailable", "Doradca AI jest chwilowo niedostępny.");
+}
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -538,3 +538,91 @@ td {
 .pricing__plan h3 {
   margin-top: 0;
 }
+
+/* ---- AI surface (Phase G, SPEC-G G7). AI output is always inside a dashed .ai-box, labelled and never styled as a score. ---- */
+
+.ai-search__result {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.chips {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.chips legend {
+  padding: 0;
+  margin-bottom: 0.25rem;
+}
+
+.chip {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-muted);
+  border-radius: 12px;
+}
+
+.chip label {
+  font-size: 0.875rem;
+}
+
+.chip input,
+.chip select {
+  font: inherit;
+  max-width: 100%;
+}
+
+.chip--check {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.ai-chat {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.ai-chat__log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.ai-msg--user p {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-muted);
+}
+
+.ai-msg--assistant .ai-box {
+  margin: 0;
+}
+
+.ai-chat__steps {
+  padding-left: 1.25rem;
+  margin: 0 0 0.5rem;
+}
+
+.ai-chat__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.ai-draft {
+  width: 100%;
+  font: inherit;
+  margin-top: 0.25rem;
+}

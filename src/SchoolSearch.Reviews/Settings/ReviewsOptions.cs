@@ -34,6 +34,12 @@ public sealed class ReviewsRateLimitingOptions
     /// <summary>Authenticated writes (reviews, replies, deletes) per subject per hour.</summary>
     public int AuthWritesPerHour { get; set; } = 10;
 
+    /// <summary>
+    /// Calls from a trusted service (valid shared secret, no visitor address, for example the MCP service) per minute,
+    /// in their own bucket. Visitor buckets are not affected.
+    /// </summary>
+    public int TrustedServicePerMinute { get; set; } = 600;
+
     /// <summary>Process-wide concurrency bound beneath the per-client windows.</summary>
     public int ConcurrentRequests { get; set; } = 64;
 }

@@ -23,6 +23,9 @@ primary_region = "waw"
   # Monetisation (Phase F): premium profiles, enquiries and the seller account pages. The BFF calls the Billing service
   # server-side. Unset means the billing features show "niedostępne" (P8). Public URL, same reason as REVIEWS_BASE_URL.
   BILLING_BASE_URL = "https://school-search-billing-dev.fly.dev"
+  # Phase G (ADR-0017): the "Doradca wyboru szkoły" page (/doradca) calls the agent in the MCP service server-side, through
+  # the BFF route /api/agent. Public URL, same reason as REVIEWS_BASE_URL. Unset means the page shows its degraded state (P8).
+  AGENT_BASE_URL = "https://school-search-mcp-dev.fly.dev"
 
 [http_service]
   internal_port = 3000              # must equal PORT

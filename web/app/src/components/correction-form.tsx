@@ -16,6 +16,18 @@ const FIELD_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   { value: "other", label: "Inne" },
 ];
 
+/** Preschool corrections (SPEC-G, G8): the catalog accepts kind=preschool with these field codes only. */
+const PRESCHOOL_FIELD_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: "tuition_min", label: "Czesne: minimum (zł miesięcznie)" },
+  { value: "tuition_max", label: "Czesne: maksimum (zł miesięcznie)" },
+  { value: "hours", label: "Godziny otwarcia" },
+  { value: "free_places", label: "Wolne miejsca" },
+  { value: "address", label: "Adres" },
+  { value: "other", label: "Inne" },
+];
+
+type Target = "school" | "preschool";
+
 const MESSAGE_MAX = 2000;
 const EMAIL_MAX = 200;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -42,12 +54,15 @@ function errorText(status: number, body: unknown): string {
 export function CorrectionForm({ initialSlug }: { initialSlug: string | undefined }) {
   const ids = {
     slug: useId(),
+    target: useId(),
     field: useId(),
     message: useId(),
     email: useId(),
   };
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>({ kind: "idle" });
+  const [target, setTarget] = useState<Target>("school");
+  const fieldOptions = target === "preschool" ? PRESCHOOL_FIELD_OPTIONS : FIELD_OPTIONS;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -72,6 +87,7 @@ export function CorrectionForm({ initialSlug }: { initialSlug: string | undefine
     }
 
     const body: Record<string, string> = { slug, field, message };
+    if (target === "preschool") body.kind = "preschool";
     if (email !== "") body.contactEmail = email;
 
     setSending(true);
@@ -89,6 +105,7 @@ export function CorrectionForm({ initialSlug }: { initialSlug: string | undefine
         if (typeof token === "string" && typeof status === "string") {
           setFeedback({ kind: "done", submitted: { token, status } });
           form.reset();
+          setTarget("school");
           return;
         }
       }
@@ -103,7 +120,19 @@ export function CorrectionForm({ initialSlug }: { initialSlug: string | undefine
   return (
     <form onSubmit={onSubmit} noValidate>
       <div className="field">
-        <label htmlFor={ids.slug}>Identyfikator szkoły (slug)</label>
+        <label htmlFor={ids.target}>Czego dotyczy zgłoszenie?</label>
+        <select
+          id={ids.target}
+          name="target"
+          value={target}
+          onChange={(event) => setTarget(event.target.value === "preschool" ? "preschool" : "school")}
+        >
+          <option value="school">Szkoły podstawowej</option>
+          <option value="preschool">Przedszkola</option>
+        </select>
+      </div>
+      <div className="field">
+        <label htmlFor={ids.slug}>{target === "preschool" ? "Identyfikator przedszkola (slug)" : "Identyfikator szkoły (slug)"}</label>
         <input
           id={ids.slug}
           name="slug"
@@ -116,8 +145,8 @@ export function CorrectionForm({ initialSlug }: { initialSlug: string | undefine
       </div>
       <div className="field">
         <label htmlFor={ids.field}>Czego dotyczy korekta?</label>
-        <select id={ids.field} name="field" defaultValue="other">
-          {FIELD_OPTIONS.map((option) => (
+        <select key={target} id={ids.field} name="field" defaultValue="other">
+          {fieldOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
