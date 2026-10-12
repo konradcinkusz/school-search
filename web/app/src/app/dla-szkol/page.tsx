@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CorrectionForm } from "@/components/correction-form";
+import { NotSoldList } from "@/components/billing/not-sold-list";
 import "../styles/static.css";
 
 // Reads ?slug= to prefill the form; no data is fetched here.
@@ -55,12 +56,14 @@ export default async function ForSchoolsPage({ searchParams }: { searchParams: S
       </p>
 
       <h3>Czego nie sprzedajemy</h3>
-      <ul className="checklist checklist--no">
-        <li>Wyniku szkoły, pozycji w rankingu ani kolejności wyników.</li>
-        <li>Usuwania, ograniczania ani ukrywania opinii i danych o szkole.</li>
-        <li>Odznak „najlepsza”, „zweryfikowana” czy podobnych. Potwierdzenie przedstawiciela przez redakcję nie jest do kupienia.</li>
-        <li>Wpływu płatności na listy, porównania, sortowanie wyników i opinie użytkowników.</li>
-      </ul>
+      <NotSoldList
+        items={[
+          "Wyniku szkoły, pozycji w rankingu ani kolejności wyników.",
+          "Usuwania, ograniczania ani ukrywania opinii i danych o szkole.",
+          "Odznak „najlepsza”, „zweryfikowana” czy podobnych. Potwierdzenie przedstawiciela przez redakcję nie jest do kupienia.",
+          "Wpływu płatności na listy, porównania, sortowanie wyników i opinie użytkowników.",
+        ]}
+      />
 
       <h2 id="korekta">Zgłoszenie korekty</h2>
       <div className="card form-card">

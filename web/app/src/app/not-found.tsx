@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import "./styles/static.css";
 
 export const metadata: Metadata = {
   title: "Nie znaleziono strony",

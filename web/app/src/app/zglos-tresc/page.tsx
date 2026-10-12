@@ -32,12 +32,14 @@ export default async function ReportPage({ searchParams }: { searchParams: Searc
 
   return (
     <article className="prose">
-      <h1>Zgłoś treść</h1>
-      <p>
-        Zgłoszenie dotyczy treści na tym serwisie, na przykład opinii, które naruszają prawo lub{" "}
-        <Link href="/regulamin">regulamin</Link>. Zgłoszenie możesz złożyć bez konta. Każde zgłoszenie rozpatruje
-        człowiek, nie automat. Dostaniesz uzasadnienie decyzji (art. 17 DSA).
-      </p>
+      <header className="page-header">
+        <h1>Zgłoś treść</h1>
+        <p className="lead">
+          Zgłoszenie dotyczy treści na tym serwisie, na przykład opinii, które naruszają prawo lub{" "}
+          <Link href="/regulamin">regulamin</Link>. Zgłoszenie możesz złożyć bez konta. Każde zgłoszenie rozpatruje
+          człowiek, nie automat. Dostaniesz uzasadnienie decyzji (art. 17 DSA).
+        </p>
+      </header>
       {reviewId !== undefined ? (
         <p className="muted">Zgłaszasz konkretną opinię. Jej numer zostanie dołączony do zgłoszenia.</p>
       ) : null}

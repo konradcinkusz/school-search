@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { catalog, type Methodology } from "@/lib/api";
 import { formatPercent } from "@/lib/format";
 import { MethodologyQa } from "@/components/ai/methodology-qa";
+import { NotSoldList } from "@/components/billing/not-sold-list";
 import "../styles/static.css";
 
 // Live values come from /api/v1/methodology per request; the fallback is the documented 1.0.0 set.
@@ -77,10 +78,11 @@ export default async function MethodologyPage() {
             <li>
               <a href="#korekty">Korekty i kontakt</a>
             </li>
+            <li>
+              <a href="#pytania">Zapytaj o metodologię</a>
+            </li>
           </ul>
         </nav>
-
-        <MethodologyQa />
       </div>
 
       <h2 id="czym-jest">Czym jest ta strona</h2>
@@ -151,18 +153,24 @@ export default async function MethodologyPage() {
       </ul>
 
       <h2 id="czego-nie-robimy">Czego nie robimy</h2>
-      <ul>
-        <li>Nie publikujemy nazwisk uczniów ani danych umożliwiających ich identyfikację.</li>
-        <li>Nie oceniamy na podstawie pochodzenia ani narodowości uczniów.</li>
-        <li>Nie przyjmujemy opłat za pozycję w wynikach. Wynik nie jest do kupienia.</li>
-        <li>Nie pobieramy danych z serwisów konkurencyjnych.</li>
-      </ul>
+      <NotSoldList
+        items={[
+          "Nie publikujemy nazwisk uczniów ani danych umożliwiających ich identyfikację.",
+          "Nie oceniamy na podstawie pochodzenia ani narodowości uczniów.",
+          "Nie przyjmujemy opłat za pozycję w wynikach. Wynik nie jest do kupienia.",
+          "Nie pobieramy danych z serwisów konkurencyjnych.",
+        ]}
+      />
 
       <h2 id="korekty">Korekty i kontakt</h2>
       <p>
         Jeżeli dane dotyczące szkoły są błędne, szkoła lub każdy inny zainteresowany może zgłosić korektę na{" "}
         <a href="/dla-szkol">stronie dla szkół</a>. Zgłoszenia są sprawdzane, a zmiany opisywane w historii wersji.
       </p>
+
+      <div id="pytania" className="measure-block">
+        <MethodologyQa />
+      </div>
     </article>
   );
 }

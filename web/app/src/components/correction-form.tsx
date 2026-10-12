@@ -191,7 +191,7 @@ export function CorrectionForm({ initialSlug }: { initialSlug: string | undefine
       <div className="field">
         <label htmlFor={ids.slug}>
           {slugLabel}
-          <span aria-hidden="true"> *</span>
+          <span aria-hidden="true">&nbsp;*</span>
         </label>
         <input
           id={ids.slug}
@@ -234,7 +234,7 @@ export function CorrectionForm({ initialSlug }: { initialSlug: string | undefine
       </div>
       <div className="field">
         <label htmlFor={ids.message}>
-          Co jest błędne i jakie są właściwe dane?<span aria-hidden="true"> *</span>
+          Co jest błędne i jakie są właściwe dane?<span aria-hidden="true">&nbsp;*</span>
         </label>
         <textarea
           id={ids.message}

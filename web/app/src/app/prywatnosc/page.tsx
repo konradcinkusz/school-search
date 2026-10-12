@@ -13,7 +13,10 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <article className="prose">
-      <h1>Polityka prywatności</h1>
+      <header className="page-header">
+        <h1>Polityka prywatności</h1>
+        <p className="lead">Jakie dane zbiera serwis i po co je wykorzystuje.</p>
+      </header>
       <div className="notice" role="note">
         <strong>Projekt do weryfikacji przez prawnika.</strong> Ten tekst jest roboczą wersją i nie jest poradą prawną.
       </div>

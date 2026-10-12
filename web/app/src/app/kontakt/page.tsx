@@ -17,8 +17,10 @@ export default async function ContactPage() {
   const contact = await legalContact();
   return (
     <article className="prose">
-      <h1>Kontakt</h1>
-      <p>Punkt kontaktowy dla organów państwowych i użytkowników serwisu (art. 11 i 12 DSA).</p>
+      <header className="page-header">
+        <h1>Kontakt</h1>
+        <p className="lead">Punkt kontaktowy dla organów państwowych i użytkowników serwisu (art. 11 i 12 DSA).</p>
+      </header>
       {contact.ok ? (
         contact.data.email !== null || contact.data.url !== null ? (
           <dl className="facts">
@@ -59,9 +61,20 @@ export default async function ContactPage() {
           </p>
         </>
       )}
-      <p>
-        Zgłoszenia treści składasz przez formularz <a href="/zglos-tresc">Zgłoś treść</a>.
-      </p>
+      <nav aria-label="Powiązane strony">
+        <p>Zobacz też:</p>
+        <ul className="plain-list">
+          <li>
+            <a href="/zglos-tresc">Zgłoś treść</a>
+          </li>
+          <li>
+            <a href="/regulamin">Regulamin</a>
+          </li>
+          <li>
+            <a href="/prywatnosc">Polityka prywatności</a>
+          </li>
+        </ul>
+      </nav>
     </article>
   );
 }

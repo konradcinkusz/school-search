@@ -331,6 +331,12 @@ hr {
   outline: none;
 }
 
+/* Results headings and regions are focused by script (tabindex -1) so screen readers land on them. They are not
+   controls, so they show no focus box. Interactive elements keep their ring. */
+:is(h1, h2, h3, h4, p, div, section)[tabindex="-1"]:focus {
+  outline: none;
+}
+
 .muted {
   color: var(--color-muted);
 }
@@ -532,12 +538,46 @@ hr {
   outline-offset: -3px;
 }
 
-/* Phone: a fade on the right edge says that more links sit off-screen; the extra right padding lets the last link scroll clear of the fade. */
+/* Phone: more links sit off-screen to the right. A header-coloured fade and a chevron cue sit over the right edge
+   (pointer-events: none, so the links underneath stay tappable). The extra right padding lets the last link scroll
+   clear of the cue. The cue hides once the row is scrolled to its end (nav-links.tsx sets data-end on the list). */
 @media (max-width: 61.99rem) {
+  .site-nav {
+    position: relative;
+  }
+
   .site-nav ul {
-    padding-right: 40px;
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
-    mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+    padding-right: 48px;
+  }
+
+  .site-nav::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 48px;
+    pointer-events: none;
+    background: linear-gradient(to right, transparent, var(--color-surface) 75%);
+  }
+
+  .site-nav::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    right: 20px;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--color-fg);
+    border-bottom: 2px solid var(--color-fg);
+    transform: translateY(-70%) rotate(-45deg);
+    pointer-events: none;
+  }
+
+  .site-nav:has(ul[data-end="true"])::before,
+  .site-nav:has(ul[data-end="true"])::after {
+    display: none;
   }
 }
 
@@ -556,8 +596,6 @@ hr {
   .site-nav ul {
     padding: 0;
     overflow: visible;
-    -webkit-mask-image: none;
-    mask-image: none;
   }
 }
 
@@ -605,11 +643,26 @@ hr {
   margin: 0;
 }
 
+/* Footer links: a 44px tap row at every width (no later rule may shorten it). */
 .site-footer__links a {
   display: inline-flex;
   align-items: center;
+  box-sizing: border-box;
   min-height: var(--tap);
+  padding-block: var(--space-1);
   color: var(--color-fg);
+}
+
+/* Tablet: the brand text takes a full row and the two link columns share the next row. */
+@media (min-width: 48rem) and (max-width: 61.99rem) {
+  .site-footer__inner {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-5) var(--space-6);
+  }
+
+  .site-footer__inner > :first-child {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (min-width: 48rem) {
@@ -621,10 +674,11 @@ hr {
   .site-footer__links {
     flex-direction: column;
   }
+}
 
-  /* Keeps the 44px target from the base rule (no shorter override). */
-  .site-footer__links a {
-    min-height: var(--tap);
+@media (min-width: 62rem) {
+  .site-footer__inner {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
   }
 }
 
@@ -634,15 +688,26 @@ hr {
   margin-bottom: var(--space-5);
 }
 
-.page-header h1 {
-  margin-bottom: var(--space-2);
-}
-
 .page-header .lead,
 .lead {
   font-size: var(--text-lg);
   color: var(--color-muted);
   line-height: var(--leading-snug);
+  margin: 0 0 var(--space-4);
+}
+
+/* One rhythm for every page header: the H1 sits close to its lead, the lead close to the notice under it. */
+h1 + .lead,
+.page-header h1 + .lead {
+  margin-top: 0;
+}
+
+.page-header h1 {
+  margin-bottom: var(--space-3);
+}
+
+.lead + .notice {
+  margin-top: 0;
 }
 
 .eyebrow {
@@ -764,7 +829,6 @@ hr {
   --notice-bg: var(--color-ai-bg);
   --notice-fg: var(--color-ai-fg);
   --notice-border: var(--color-ai-border);
-  max-width: calc(var(--measure) + 2 * var(--space-4));
 }
 
 .notice--demo {
@@ -1258,8 +1322,8 @@ legend {
     grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
     grid-template-areas:
       "intro panel"
-      "principles panel";
-    grid-template-rows: auto 1fr;
+      "principles principles";
+    grid-template-rows: auto auto;
     gap: var(--space-5) var(--space-7);
   }
 
@@ -1273,6 +1337,8 @@ legend {
 
   .hero .principles {
     grid-area: principles;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-5);
     margin-top: 0;
   }
 }
@@ -1337,7 +1403,7 @@ legend {
   }
 
   .name-search {
-    align-self: stretch;
+    align-self: start;
   }
 }
 
@@ -1545,12 +1611,13 @@ legend {
   vertical-align: 0.05em;
 }
 
-/* Limited profile (ADR-0009, 5 to 8 pupils): dashed on every side in the info tokens. Distinct from the grey
-   suppressed box above, which has a solid left rule and a surface background. */
+/* Limited profile (ADR-0009, 5 to 8 pupils): a calm, static info block. Solid rules in the info tokens and a
+   filled dot as the marker (not a dashed ring, which reads as a loading spinner). Distinct from the grey
+   suppressed box above, which has an open circle, a solid left rule and a surface background. */
 .score--limited {
   background: var(--color-info-bg);
-  border: 1px dashed var(--color-info-border);
-  border-left: 4px dashed var(--color-info-fg);
+  border: 1px solid var(--color-info-border);
+  border-left: 4px solid var(--color-info-fg);
 }
 
 .score--limited .score__value {
@@ -1561,12 +1628,12 @@ legend {
 .score--limited .score__value::before {
   content: "";
   display: inline-block;
-  width: 0.6em;
-  height: 0.6em;
-  margin-right: 0.45em;
-  border: 2px dashed var(--color-info-fg);
+  width: 0.5em;
+  height: 0.5em;
+  margin-right: 0.5em;
+  background: var(--color-info-fg);
   border-radius: 50%;
-  vertical-align: 0.05em;
+  vertical-align: 0.12em;
 }
 
 .score--compact {
@@ -2174,10 +2241,18 @@ tr[data-demo="true"] > td:first-child {
 
 .ai-panel__head {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--space-2) var(--space-3);
   margin-bottom: var(--space-2);
+}
+
+.ai-panel__head h1 {
+  min-width: 0;
+}
+
+.ai-panel__head .badge {
+  flex: none;
 }
 
 .ai-panel__head h2 {
@@ -2700,6 +2775,14 @@ details > summary + * {
 .empty-state {
   text-align: left;
   padding: var(--space-6) 0;
+}
+
+.empty-state .actions {
+  margin: var(--space-4) 0 var(--space-5);
+}
+
+.empty-state nav > p {
+  margin: 0 0 var(--space-2);
 }
 
 /* ---------------------------------------------------------------- Motion and print */

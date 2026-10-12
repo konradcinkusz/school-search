@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 /**
  * Main navigation links. The current section is marked with aria-current="page" so it is announced and styled.
@@ -27,29 +27,43 @@ export function NavLinks() {
   const pathname = usePathname() ?? "/";
   const listRef = useRef<HTMLUListElement>(null);
 
+  /** Sets data-end on the list when no link lies beyond the right edge; the CSS cue (globals.css) hides then. */
+  const updateEnd = useCallback(() => {
+    const list = listRef.current;
+    if (list === null) return;
+    const atEnd = list.scrollWidth - list.clientWidth - list.scrollLeft <= 2;
+    list.dataset.end = String(atEnd);
+  }, []);
+
   useEffect(() => {
     const list = listRef.current;
-    if (list === null || list.scrollWidth <= list.clientWidth) return;
+    if (list === null) return;
+    if (list.scrollWidth <= list.clientWidth) {
+      updateEnd();
+      return;
+    }
     const current = list.querySelector<HTMLElement>('[aria-current="page"]');
     if (current === null) {
       list.scrollLeft = 0;
+      updateEnd();
       return;
     }
     // Viewport rectangles, not offsetLeft: offsetLeft is measured from a different offsetParent and clipped the active item.
-    // The 16px inset matches the row's left padding; the 40px inset on the right matches the fade in globals.css.
+    // The 16px inset matches the row's left padding; the 48px inset on the right matches the cue area in globals.css.
     const box = list.getBoundingClientRect();
     const item = current.getBoundingClientRect();
     const LEFT_INSET = 16;
-    const RIGHT_INSET = 40;
+    const RIGHT_INSET = 48;
     if (item.left < box.left + LEFT_INSET) {
       list.scrollLeft -= box.left + LEFT_INSET - item.left;
     } else if (item.right > box.right - RIGHT_INSET) {
       list.scrollLeft += item.right - (box.right - RIGHT_INSET);
     }
-  }, [pathname]);
+    updateEnd();
+  }, [pathname, updateEnd]);
 
   return (
-    <ul ref={listRef}>
+    <ul ref={listRef} onScroll={updateEnd}>
       {LINKS.map((link) => (
         <li key={link.href}>
           <Link href={link.href} aria-current={isCurrent(pathname, link.section) ? "page" : undefined}>

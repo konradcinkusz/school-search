@@ -18,7 +18,10 @@ export default async function TermsPage() {
   const version = terms.ok ? terms.data.version : null;
   return (
     <article className="prose">
-      <h1>Regulamin</h1>
+      <header className="page-header">
+        <h1>Regulamin</h1>
+        <p className="lead">Zasady kont i opinii w wyszukiwarce szkół.</p>
+      </header>
       <div className="notice" role="note">
         <strong>Projekt do weryfikacji przez prawnika.</strong> Ten tekst jest roboczą wersją i nie jest poradą prawną.
       </div>
