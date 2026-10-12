@@ -11,11 +11,21 @@ import { firstParam, parseSlugList } from "@/lib/validation";
 // Data-driven: rendered per request.
 export const dynamic = "force-dynamic";
 
+const description =
+  "Porównanie 2 do 4 szkół obok siebie: wynik z przedziałem, liczba uczniów w grupie porównawczej i wersja metodologii. Nie jest oficjalnym rankingiem.";
+
 export const metadata: Metadata = {
   title: "Porównaj szkoły",
-  description:
-    "Porównanie 2 do 4 szkół obok siebie: wynik z przedziałem, liczba uczniów w grupie porównawczej i wersja metodologii. Nie jest oficjalnym rankingiem.",
+  description,
   alternates: { canonical: "/porownaj" },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Porównaj szkoły | Wyszukiwarka szkół",
+    description,
+    url: "/porownaj",
+  },
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;

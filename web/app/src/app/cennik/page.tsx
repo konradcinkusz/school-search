@@ -9,11 +9,21 @@ import "../styles/static.css";
 // Plans come from the Billing service configuration at request time; nothing about prices is written here.
 export const dynamic = "force-dynamic";
 
+const description =
+  "Cennik profilu rozszerzonego dla szkół. Płatność nie wpływa na wynik, ranking, kolejność ani opinie. Treść sponsorowana jest oznaczona. Nie jest oficjalnym rankingiem.";
+
 export const metadata: Metadata = {
   title: "Cennik",
-  description:
-    "Cennik profilu rozszerzonego dla szkół. Płatność nie wpływa na wynik, ranking, kolejność ani opinie. Treść sponsorowana jest oznaczona. Nie jest oficjalnym rankingiem.",
+  description,
   alternates: { canonical: "/cennik" },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Cennik | Wyszukiwarka szkół",
+    description,
+    url: "/cennik",
+  },
 };
 
 export default async function PricingPage() {

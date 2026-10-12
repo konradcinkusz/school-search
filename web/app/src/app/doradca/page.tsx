@@ -8,11 +8,21 @@ import "../styles/home.css";
 // Client-driven advisor. Nothing is fetched on the server: the conversation goes through the BFF /api/agent route.
 export const dynamic = "force-dynamic";
 
+const description =
+  "Doradca AI, który sprawdza dane w portalu i opisuje, co z nich wynika. Nie ocenia szkół i nie tworzy rankingu. Obwód ustala gmina.";
+
 export const metadata: Metadata = {
   title: "Doradca wyboru szkoły",
-  description:
-    "Doradca AI, który sprawdza dane w portalu i opisuje, co z nich wynika. Nie ocenia szkół i nie tworzy rankingu. Obwód ustala gmina.",
+  description,
   alternates: { canonical: "/doradca" },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Doradca wyboru szkoły | Wyszukiwarka szkół",
+    description,
+    url: "/doradca",
+  },
 };
 
 export default function AdvisorPage() {

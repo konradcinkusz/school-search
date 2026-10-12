@@ -7,10 +7,21 @@ import "../styles/static.css";
 // Single point of contact for authorities and users (DSA art. 11 and 12), read from the Reviews service.
 export const dynamic = "force-dynamic";
 
+const description =
+  "Punkt kontaktowy serwisu dla organów i użytkowników.";
+
 export const metadata: Metadata = {
   title: "Kontakt",
-  description: "Punkt kontaktowy serwisu dla organów i użytkowników.",
+  description,
   alternates: { canonical: "/kontakt" },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Kontakt | Wyszukiwarka szkół",
+    description,
+    url: "/kontakt",
+  },
 };
 
 export default async function ContactPage() {

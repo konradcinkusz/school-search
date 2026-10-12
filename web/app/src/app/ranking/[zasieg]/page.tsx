@@ -41,13 +41,23 @@ async function gminaNameOf(gminaTeryt: string): Promise<string | null> {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { zasieg } = await params;
   const scope = parseRankingScope(zasieg);
-  if (!scope) return { title: "Ranking" };
+  if (!scope) return { title: "Nie znaleziono strony", robots: { index: false } };
   const gminaName = scope.kind === "gmina" ? await gminaNameOf(scope.gminaTeryt) : null;
   const where = scope.kind === "country" ? "w kraju" : `w gminie ${gminaName ?? "Nieznana gmina"}`;
+  const title = `Ranking szkół ${where}`;
+  const description = `Ranking szkół podstawowych ${where}, od najwyższego wyniku. Nie jest oficjalnym rankingiem.`;
   return {
-    title: `Ranking szkół ${where}`,
-    description: `Ranking szkół podstawowych ${where}, od najwyższego wyniku. Nie jest oficjalnym rankingiem.`,
+    title,
+    description,
     alternates: { canonical: `/ranking/${scope.param}` },
+    openGraph: {
+      type: "website",
+      locale: "pl_PL",
+      siteName: "Wyszukiwarka szkół",
+      title: `${title} | Wyszukiwarka szkół`,
+      description,
+      url: `/ranking/${scope.param}`,
+    },
   };
 }
 

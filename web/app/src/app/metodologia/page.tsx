@@ -8,11 +8,21 @@ import "../styles/static.css";
 // Live values come from /api/v1/methodology per request; the fallback is the documented 1.0.0 set.
 export const dynamic = "force-dynamic";
 
+const description =
+  "Jak liczymy wyniki szkół: wynik z przedziałem, wskaźnik udziału w egzaminie, próg liczebności i znane ograniczenia. Nie jest oficjalnym rankingiem.";
+
 export const metadata: Metadata = {
   title: "Metodologia",
-  description:
-    "Jak liczymy wyniki szkół: wynik z przedziałem, wskaźnik udziału w egzaminie, próg liczebności i znane ograniczenia. Nie jest oficjalnym rankingiem.",
+  description,
   alternates: { canonical: "/metodologia" },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Metodologia | Wyszukiwarka szkół",
+    description,
+    url: "/metodologia",
+  },
 };
 
 /** Fallback when the API cannot be reached. Matches docs/methodology/RANKING-METHODOLOGY.md (1.0.0). */

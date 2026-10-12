@@ -31,14 +31,26 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  if (!isSlug(slug)) return { title: "Przedszkole" };
+  if (!isSlug(slug)) return { title: "Nie znaleziono strony", robots: { index: false } };
   const result = await catalog.preschool(slug);
-  if (!result.ok) return { title: "Przedszkole" };
+  if (!result.ok) {
+    if (result.reason === "not_found") return { title: "Nie znaleziono strony", robots: { index: false } };
+    return { title: "Przedszkole" };
+  }
   const preschool = result.data;
+  const description = `${preschool.name}: lokalizacja, czesne, godziny otwarcia i wolne miejsca, każde ze źródłem i datą.`;
   return {
     title: preschool.name,
-    description: `${preschool.name}: lokalizacja, czesne, godziny otwarcia i wolne miejsca, każde ze źródłem i datą.`,
+    description,
     alternates: { canonical: `/przedszkola/${slug}` },
+    openGraph: {
+      type: "website",
+      locale: "pl_PL",
+      siteName: "Wyszukiwarka szkół",
+      title: `${preschool.name} | Wyszukiwarka szkół`,
+      description,
+      url: `/przedszkola/${slug}`,
+    },
   };
 }
 

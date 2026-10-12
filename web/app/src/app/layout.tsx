@@ -3,8 +3,11 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import Link from "next/link";
 import { BrandMark, SiteHeader } from "@/components/site-header";
+import { siteOrigin } from "@/lib/site";
 
 export const metadata: Metadata = {
+  // Resolves relative canonical and Open Graph URLs. Read when this module loads (build time for static pages).
+  metadataBase: new URL(siteOrigin()),
   title: {
     default: "Wyszukiwarka szkół podstawowych",
     template: "%s | Wyszukiwarka szkół",
@@ -12,6 +15,15 @@ export const metadata: Metadata = {
   description:
     "Wyszukiwarka szkół podstawowych z wynikami, poziomem pewności i metodologią. Nie jest oficjalnym rankingiem.",
   applicationName: "Wyszukiwarka szkół",
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Wyszukiwarka szkół podstawowych | Wyszukiwarka szkół",
+    description:
+      "Wyszukiwarka szkół podstawowych z wynikami, poziomem pewności i metodologią. Nie jest oficjalnym rankingiem.",
+    url: "/",
+  },
 };
 
 export const viewport: Viewport = {

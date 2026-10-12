@@ -103,3 +103,26 @@ test.describe("page metadata", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Nie znaleziono strony" })).toBeVisible();
   });
 });
+
+test.describe("Open Graph and canonical", () => {
+  const OG_ROUTES = ["/metodologia", "/szkoly/demo-sp-1", "/ranking/country"] as const;
+
+  for (const route of OG_ROUTES) {
+    test(`${route} carries og:title, og:description and og:type website`, async ({ page }) => {
+      await page.goto(route);
+      const read = (property: string) =>
+        page.locator(`meta[property="${property}"]`).first().getAttribute("content");
+
+      expect((await read("og:title"))?.trim(), `og:title on ${route}`).toBeTruthy();
+      expect((await read("og:description"))?.trim(), `og:description on ${route}`).toBeTruthy();
+      expect(await read("og:type"), `og:type on ${route}`).toBe("website");
+    });
+  }
+
+  test("the home page has a canonical link to the root path", async ({ page }) => {
+    await page.goto("/");
+    const href = await page.locator('link[rel="canonical"]').first().getAttribute("href");
+    expect(href, "home canonical link").not.toBeNull();
+    expect(new URL(href!).pathname).toBe("/");
+  });
+});

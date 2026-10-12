@@ -7,11 +7,21 @@ import "../styles/static.css";
 // Reads ?slug= to prefill the form; no data is fetched here.
 export const dynamic = "force-dynamic";
 
+const description =
+  "Profil rozszerzony dla szkół: co można kupić, a czego nie. Płatność nie wpływa na wynik, ranking ani opinie. Zgłoś korektę danych szkoły.";
+
 export const metadata: Metadata = {
   title: "Dla szkół",
-  description:
-    "Profil rozszerzony dla szkół: co można kupić, a czego nie. Płatność nie wpływa na wynik, ranking ani opinie. Zgłoś korektę danych szkoły.",
+  description,
   alternates: { canonical: "/dla-szkol" },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Dla szkół | Wyszukiwarka szkół",
+    description,
+    url: "/dla-szkol",
+  },
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;

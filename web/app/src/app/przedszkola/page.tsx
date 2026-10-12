@@ -14,11 +14,21 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 20;
 
+const description =
+  "Przedszkola: lokalizacja, czesne, godziny otwarcia i wolne miejsca, każde ze źródłem i datą. Przedszkola nie mają wyniku jakości.";
+
 export const metadata: Metadata = {
   title: "Przedszkola",
-  description:
-    "Przedszkola: lokalizacja, czesne, godziny otwarcia i wolne miejsca, każde ze źródłem i datą. Przedszkola nie mają wyniku jakości.",
+  description,
   alternates: { canonical: "/przedszkola" },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Przedszkola | Wyszukiwarka szkół",
+    description,
+    url: "/przedszkola",
+  },
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;

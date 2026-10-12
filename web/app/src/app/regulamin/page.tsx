@@ -5,12 +5,23 @@ import "../styles/static.css";
 // DRAFT terms. The text is a working draft for legal review and is not legal advice (SPEC-E).
 export const dynamic = "force-dynamic";
 
+const description =
+  "Regulamin kont i opinii w wyszukiwarce szkół. Projekt do weryfikacji przez prawnika.";
+
 export const metadata: Metadata = {
   title: "Regulamin",
-  description: "Regulamin kont i opinii w wyszukiwarce szkół. Projekt do weryfikacji przez prawnika.",
+  description,
   alternates: { canonical: "/regulamin" },
   // Draft text: kept out of search results until the owner and a lawyer approve it.
   robots: { index: false, follow: true },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Regulamin | Wyszukiwarka szkół",
+    description,
+    url: "/regulamin",
+  },
 };
 
 export default async function TermsPage() {

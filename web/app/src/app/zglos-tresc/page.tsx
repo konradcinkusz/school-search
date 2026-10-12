@@ -8,10 +8,21 @@ import "../styles/static.css";
 // Notice-and-action intake (DSA art. 16). Reads the optional ?slug= and ?review= prefill only.
 export const dynamic = "force-dynamic";
 
+const description =
+  "Zgłoś treść niezgodną z prawem lub regulaminem. Każde zgłoszenie dostaje uzasadnioną decyzję.";
+
 export const metadata: Metadata = {
   title: "Zgłoś treść",
-  description: "Zgłoś treść niezgodną z prawem lub regulaminem. Każde zgłoszenie dostaje uzasadnioną decyzję.",
+  description,
   alternates: { canonical: "/zglos-tresc" },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Zgłoś treść | Wyszukiwarka szkół",
+    description,
+    url: "/zglos-tresc",
+  },
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;

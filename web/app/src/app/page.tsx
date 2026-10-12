@@ -50,6 +50,23 @@ function readSearch(sp: Record<string, string | string[] | undefined>): HomeSear
 }
 
 /** Result-specific titles, so a screen reader hears that the navigation produced a result. */
+/** Every search result on the home page points its canonical at "/", so result URLs do not compete with it. */
+function homeMetadata(title: string): Metadata {
+  return {
+    title,
+    description: HOME_DESCRIPTION,
+    alternates: { canonical: "/" },
+    openGraph: {
+      type: "website",
+      locale: "pl_PL",
+      siteName: "Wyszukiwarka szkół",
+      title: `${title} | Wyszukiwarka szkół`,
+      description: HOME_DESCRIPTION,
+      url: "/",
+    },
+  };
+}
+
 export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
   const search = readSearch(await searchParams);
   if (search.gminaParam && isTeryt(search.gminaParam) && search.street && search.numberValid) {
@@ -57,16 +74,13 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
     const gmina = gminas.ok ? gminas.data.find((item) => item.teryt === search.gminaParam) : undefined;
     if (gmina) {
       const address = search.number ? `${search.street} ${search.number}` : search.street;
-      return {
-        title: `Obwód: ${address}, ${gmina.name ?? "Nieznana gmina"}`,
-        description: HOME_DESCRIPTION,
-      };
+      return homeMetadata(`Obwód: ${address}, ${gmina.name ?? "Nieznana gmina"}`);
     }
   }
   if (search.nameQuery !== undefined && search.nameQuery.length >= NAME_QUERY_MIN) {
-    return { title: `Wyniki wyszukiwania: ${search.nameQuery}`, description: HOME_DESCRIPTION };
+    return homeMetadata(`Wyniki wyszukiwania: ${search.nameQuery}`);
   }
-  return { title: HOME_TITLE, description: HOME_DESCRIPTION };
+  return homeMetadata(HOME_TITLE);
 }
 
 export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {

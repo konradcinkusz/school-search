@@ -71,14 +71,26 @@ const STATUS_LABEL: Record<ScoreStatus, string> = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  if (!isSlug(slug)) return { title: "Szkoła" };
+  if (!isSlug(slug)) return { title: "Nie znaleziono strony", robots: { index: false } };
   const result = await catalog.school(slug);
-  if (!result.ok) return { title: "Szkoła" };
+  if (!result.ok) {
+    if (result.reason === "not_found") return { title: "Nie znaleziono strony", robots: { index: false } };
+    return { title: "Szkoła" };
+  }
   const school = result.data;
+  const description = `Profil szkoły ${school.name}: wynik z przedziałem, liczba uczniów w grupie porównawczej, źródła i metodologia. Nie jest oficjalnym rankingiem.`;
   return {
     title: school.name,
-    description: `Profil szkoły ${school.name}: wynik z przedziałem, liczba uczniów w grupie porównawczej, źródła i metodologia. Nie jest oficjalnym rankingiem.`,
+    description,
     alternates: { canonical: `/szkoly/${slug}` },
+    openGraph: {
+      type: "website",
+      locale: "pl_PL",
+      siteName: "Wyszukiwarka szkół",
+      title: `${school.name} | Wyszukiwarka szkół`,
+      description,
+      url: `/szkoly/${slug}`,
+    },
   };
 }
 
