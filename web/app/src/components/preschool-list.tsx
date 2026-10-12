@@ -1,12 +1,6 @@
 import Link from "next/link";
-import type { PreschoolFactsBlock, PreschoolListItem } from "@/lib/api";
+import type { PreschoolListItem } from "@/lib/api";
 import { freePlacesValue, hoursLabel, sourceLine, tuitionLabel } from "@/lib/preschool";
-
-/**
- * Facts per preschool slug, from the profile. The list endpoint carries fee and vacancies only, so source, date and
- * opening hours come from the profile. A slug with no entry (or a null entry) shows that its source is unknown.
- */
-export type PreschoolFactsBySlug = Readonly<Record<string, PreschoolFactsBlock | null | undefined>>;
 
 function Fact({ label, value, meta }: { readonly label: string; readonly value: string | null; readonly meta: string | null }) {
   return (
@@ -20,15 +14,16 @@ function Fact({ label, value, meta }: { readonly label: string; readonly value: 
   );
 }
 
-/** A list of preschools: practical facts only, no score, rank or grade. Names render as text inside a link. */
+/**
+ * A list of preschools: practical facts only, no score, rank or grade. Names render as text inside a link. Each item
+ * carries its facts with their source and date, so the list makes no request per preschool.
+ */
 export function PreschoolList({
   items,
   emptyText,
-  factsBySlug,
 }: {
   readonly items: readonly PreschoolListItem[];
   readonly emptyText: string;
-  readonly factsBySlug?: PreschoolFactsBySlug;
 }) {
   if (items.length === 0) {
     return <p className="muted">{emptyText}</p>;
@@ -36,7 +31,7 @@ export function PreschoolList({
   return (
     <ul className="school-list">
       {items.map((preschool) => {
-        const facts = factsBySlug?.[preschool.slug] ?? null;
+        const facts = preschool.facts;
         const tuition = tuitionLabel(preschool.monthlyTuition);
         const places = freePlacesValue(preschool.freePlacesCount);
         const hours = facts ? hoursLabel(facts.hours) : null;

@@ -226,6 +226,8 @@ export interface PreschoolListItem {
   readonly distanceKm: number | null;
   readonly monthlyTuition: MoneyRange;
   readonly freePlacesCount: number | null;
+  /** Same block as the profile's facts, with source, date and confidence. Null when no facts row exists. */
+  readonly facts: PreschoolFactsBlock | null;
 }
 
 export interface PreschoolProfile {

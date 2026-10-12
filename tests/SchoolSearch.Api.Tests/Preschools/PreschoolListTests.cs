@@ -41,7 +41,7 @@ public sealed class PreschoolListTests : IDisposable
         ContractAssert.ExactKeys(
             alfa,
             "slug", "name", "gminaTeryt", "gminaName", "isPublic", "latitude", "longitude",
-            "distanceKm", "monthlyTuition", "freePlacesCount");
+            "distanceKm", "monthlyTuition", "freePlacesCount", "facts");
         Assert.Equal(300m, alfa.GetProperty("monthlyTuition").GetProperty("minPln").GetDecimal());
         Assert.Equal(450m, alfa.GetProperty("monthlyTuition").GetProperty("maxPln").GetDecimal());
         Assert.Equal(2, alfa.GetProperty("freePlacesCount").GetInt32());
@@ -49,6 +49,50 @@ public sealed class PreschoolListTests : IDisposable
         var gamma = ContractNav.BySlug(items, Gamma);
         Assert.Equal(JsonValueKind.Null, gamma.GetProperty("monthlyTuition").GetProperty("minPln").ValueKind);
         Assert.Equal(JsonValueKind.Null, gamma.GetProperty("freePlacesCount").ValueKind);
+        Assert.Equal(JsonValueKind.Null, gamma.GetProperty("facts").ValueKind);
+    }
+
+    [Fact]
+    public async Task List_item_facts_carry_provenance_confidence_and_hours_or_null_like_the_profile()
+    {
+        await _factory.SeedAsync(ApplyAsync);
+
+        var items = (await ListAsync(string.Empty)).GetProperty("items");
+
+        // Alfa: every fact has its source, date and confidence; hours are the stored times.
+        var alfaFacts = ContractNav.BySlug(items, Alfa).GetProperty("facts");
+        ContractAssert.ExactKeys(alfaFacts, "monthlyTuition", "monthlyMealPln", "hours", "freePlaces", "source");
+        var alfaSource = alfaFacts.GetProperty("source");
+        ContractAssert.ExactKeys(alfaSource, "source", "sourceUrl", "asOf", "method", "confidence");
+        Assert.Equal("Synthetic tuition table", alfaSource.GetProperty("source").GetString());
+        Assert.Equal("2025-08-15", alfaSource.GetProperty("asOf").GetString());
+        Assert.Equal("reported", alfaSource.GetProperty("confidence").GetString());
+        Assert.Equal("06:30", alfaFacts.GetProperty("hours").GetProperty("opens").GetString());
+        Assert.Equal("17:00", alfaFacts.GetProperty("hours").GetProperty("closes").GetString());
+        Assert.Equal("2025-09-01", alfaFacts.GetProperty("freePlaces").GetProperty("asOf").GetString());
+
+        // The list item carries the same block as the profile, byte for byte.
+        var profile = await ProfileAsync(Alfa);
+        Assert.Equal(
+            profile.GetProperty("facts").GetRawText(),
+            alfaFacts.GetRawText());
+
+        // Delta: a facts row with unknown hours and tuition keeps them null, with its own confidence.
+        var deltaFacts = ContractNav.BySlug(items, Delta).GetProperty("facts");
+        Assert.Equal(JsonValueKind.Null, deltaFacts.GetProperty("hours").GetProperty("opens").ValueKind);
+        Assert.Equal(JsonValueKind.Null, deltaFacts.GetProperty("hours").GetProperty("closes").ValueKind);
+        Assert.Equal(JsonValueKind.Null, deltaFacts.GetProperty("monthlyTuition").GetProperty("minPln").ValueKind);
+        Assert.Equal("unverified", deltaFacts.GetProperty("source").GetProperty("confidence").GetString());
+
+        // Gamma has no facts row, so the block is null (the client shows "brak danych").
+        Assert.Equal(JsonValueKind.Null, ContractNav.BySlug(items, Gamma).GetProperty("facts").ValueKind);
+    }
+
+    private async Task<JsonElement> ProfileAsync(string slug)
+    {
+        var response = await _factory.CreateClient().GetAsync("/api/v1/preschools/" + slug);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return await JsonTestHelpers.ReadJsonAsync(response);
     }
 
     [Fact]

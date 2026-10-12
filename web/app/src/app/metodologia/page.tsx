@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Metodologia",
   description:
-    "Jak liczymy wyniki szkół: wynik z przedziałem, wskaźnik pokrycia kohorty, próg liczebności i znane ograniczenia. Nie jest oficjalnym rankingiem.",
+    "Jak liczymy wyniki szkół: wynik z przedziałem, wskaźnik udziału w egzaminie, próg liczebności i znane ograniczenia. Nie jest oficjalnym rankingiem.",
   alternates: { canonical: "/metodologia" },
 };
 
@@ -67,7 +67,7 @@ export default async function MethodologyPage() {
               <a href="#skladowe">Składowe wyniku</a>
             </li>
             <li>
-              <a href="#pokrycie">Wskaźnik kontrolny: pokrycie kohorty</a>
+              <a href="#pokrycie">Wskaźnik kontrolny: udział w egzaminie</a>
             </li>
             <li>
               <a href="#ograniczenia">Znane ograniczenia i obciążenia</a>
@@ -96,14 +96,14 @@ export default async function MethodologyPage() {
       <p>Każdy wynik szkoły występuje zawsze razem z poziomem pewności. Każdy wynik zawiera:</p>
       <ul>
         <li>wartość wyniku, czyli wskaźnik wartości dodanej opisany poniżej,</li>
-        <li>liczebność kohorty, czyli liczbę uczniów, na której wynik został obliczony,</li>
+        <li>grupa porównawcza (kohorta), czyli liczba uczniów, na której wynik został obliczony,</li>
         <li>przedział niepewności 95%,</li>
         <li>wersję metodologii, według której wynik został policzony,</li>
         <li>datę danych (stan na dzień) oraz źródło.</li>
       </ul>
       <p>
-        Wynik publikujemy od <strong>{m.publicationThreshold}</strong> uczniów w kohorcie. Poniżej tego progu wyniku nie
-        pokazujemy: zamiast liczby pojawia się informacja o zbyt małej kohorcie. Brak wyniku nie oznacza zera ani gorszej
+        Wynik publikujemy od <strong>{m.publicationThreshold}</strong> uczniów w grupie porównawczej. Poniżej tego progu
+        wyniku nie pokazujemy: zamiast liczby pojawia się informacja o zbyt małej grupie porównawczej. Brak wyniku nie oznacza zera ani gorszej
         oceny. Próg liczebności jest zapisany w jednym miejscu, a jego uzasadnienie jest opublikowane razem z wersją
         metodologii.
       </p>
@@ -115,11 +115,11 @@ export default async function MethodologyPage() {
         niepewności 95% liczymy ze współczynnikiem z = <strong>{intervalZLabel(m.intervalZ)}</strong>.
       </p>
 
-      <h2 id="pokrycie">Wskaźnik kontrolny: pokrycie kohorty</h2>
+      <h2 id="pokrycie">Wskaźnik kontrolny: udział w egzaminie</h2>
       <p>
         Wynik egzaminu może być zawyżony, jeśli szkoła przystępuje do egzaminu tylko część uczniów albo zmienia się
         skład przystępujących. Dlatego wynik uwzględnia udział uczniów rocznika, którzy przystąpili do egzaminu. Wskaźnik
-        jest wplatany w składową egzaminacyjną, a nie pokazywany obok jako osobna odznaka. Poniżej pokrycia{" "}
+        jest wplatany w składową egzaminacyjną, a nie pokazywany obok jako osobna odznaka. Poniżej udziału{" "}
         <strong>{formatPercent(m.coverageFloor * 100)}</strong> wynik jest proporcjonalnie obniżany, nawet jeśli średnia
         rośnie.
       </p>
@@ -136,11 +136,11 @@ export default async function MethodologyPage() {
         </li>
         <li>
           <strong>Selekcja do egzaminu.</strong> Nawet z wskaźnikiem pokrycia część zniekształceń pozostaje, zwłaszcza w
-          małych kohortach.
+          małych grupach porównawczych.
         </li>
         <li>
           <strong>Jeden rok danych.</strong> Pojedynczy rok bywa przypadkowy. Wyniki czytamy razem z poziomem pewności i
-          kohortą.
+          liczbą uczniów w grupie porównawczej.
         </li>
         <li>
           <strong>Obwód a wybór szkoły.</strong> Obwód szkolny nie zawsze odpowiada temu, co rodzic faktycznie wybiera.

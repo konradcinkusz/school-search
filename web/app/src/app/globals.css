@@ -1625,17 +1625,6 @@ legend {
   font-size: var(--text-base);
 }
 
-.score--limited .score__value::before {
-  content: "";
-  display: inline-block;
-  width: 0.5em;
-  height: 0.5em;
-  margin-right: 0.5em;
-  background: var(--color-info-fg);
-  border-radius: 50%;
-  vertical-align: 0.12em;
-}
-
 .score--compact {
   padding: var(--space-2) var(--space-3);
 }

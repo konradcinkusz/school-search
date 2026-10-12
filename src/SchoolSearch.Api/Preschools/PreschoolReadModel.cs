@@ -26,7 +26,8 @@ internal static class PreschoolReadModel
         preschool.Longitude,
         distanceKm,
         new MoneyRange(preschool.Facts?.MonthlyTuitionMinPln, preschool.Facts?.MonthlyTuitionMaxPln),
-        preschool.Facts?.FreePlaces);
+        preschool.Facts?.FreePlaces,
+        ToFactsBlock(preschool.Facts));
 
     /// <summary>
     /// Full profile of one preschool. The governing body is a type only, exactly as for schools: the operator name is

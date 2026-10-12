@@ -334,6 +334,7 @@ function preschoolListItem(p, distanceKm) {
       maxPln: p.facts ? p.facts.tuitionMax : null,
     },
     freePlacesCount: p.facts ? p.facts.free : null,
+    facts: preschoolFacts(p),
   };
 }
 

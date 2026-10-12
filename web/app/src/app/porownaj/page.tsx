@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Porównaj szkoły",
   description:
-    "Porównanie 2 do 4 szkół obok siebie: wynik z przedziałem, liczebność kohorty i wersja metodologii. Nie jest oficjalnym rankingiem.",
+    "Porównanie 2 do 4 szkół obok siebie: wynik z przedziałem, liczba uczniów w grupie porównawczej i wersja metodologii. Nie jest oficjalnym rankingiem.",
   alternates: { canonical: "/porownaj" },
 };
 
@@ -30,8 +30,8 @@ export default async function ComparePage({ searchParams }: { searchParams: Sear
       <header className="page-header">
         <h1>Porównaj szkoły</h1>
         <p className="lead">
-          Porównujesz od 2 do 4 szkół obok siebie. Każda pozycja ma wynik z przedziałem, liczebność kohorty i wersję
-          metodologii.
+          Porównujesz od 2 do 4 szkół obok siebie. Każda pozycja ma wynik z przedziałem, liczbę uczniów w grupie
+          porównawczej i wersję metodologii.
         </p>
       </header>
 
@@ -160,7 +160,7 @@ async function CompareResults({ slugs }: { slugs: string[] }) {
                 ))}
               </tr>
               <tr>
-                <th scope="row">Liczebność kohorty</th>
+                <th scope="row">Liczba uczniów w grupie porównawczej</th>
                 {items.map((school) => (
                   <td key={school.slug}>
                     {school.score ? formatStudents(school.score.cohortSize) : "brak danych"}
