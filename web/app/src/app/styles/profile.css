@@ -42,9 +42,10 @@
 /* Trend chart: value labels keep a surface halo so no gridline or whisker runs through a number, and the dot is a
    solid data point, not a hollow ring. */
 .site-main .trend__dot {
+  r: 4.5px;
   fill: var(--color-score);
   stroke: var(--color-surface);
-  stroke-width: 3;
+  stroke-width: 2;
 }
 
 .site-main .trend__value {
@@ -98,18 +99,16 @@
   }
 }
 
-/* Trend table at tablet width: the interval gets its own line and the value and status columns keep their room. */
+/* Trend table at tablet width: the interval gets its own line and cells are a little tighter, so the five columns fit
+   the container from 40rem without scrolling sideways. */
 @media (min-width: 40rem) and (max-width: 59.99rem) {
   .site-main .trend-table .trend__interval {
     display: block;
   }
 
-  .site-main .trend-table td[data-label="Wynik"] {
-    min-width: 12rem;
-  }
-
-  .site-main .trend-table td[data-label="Status"] {
-    min-width: 11rem;
+  .site-main .trend-table th,
+  .site-main .trend-table td {
+    padding-inline: var(--space-3);
   }
 }
 

@@ -62,8 +62,43 @@
     scroll-snap-type: x proximity;
   }
 
-  .site-main .table--compare thead th:not(:first-child) {
-    min-width: 11rem;
+  /* Geometry: a 7.5rem sticky label column and 10.5rem school columns with 12px side padding. The visible window
+     between the sticky column and the edge fade (360px screen: about 180px) then holds a whole header link plus its
+     focus ring, so the ring is never clipped when a link scrolls into view. */
+  .site-main .table-wrap--compare {
+    --compare-sticky-w: 7.5rem;
+  }
+
+  .site-main .table--compare {
+    min-width: 0;
+    width: max-content;
+  }
+
+  .site-main .table--compare th,
+  .site-main .table--compare td {
+    padding-inline: 12px;
+  }
+
+  .site-main .table--compare tbody th {
+    font-size: var(--text-xs);
+    line-height: var(--leading-snug);
+  }
+
+  /* Every value wraps inside its narrow column; nothing may spill into the next school. */
+  .site-main .table--compare .badge--demo,
+  .site-main .table--compare .nowrap {
+    white-space: normal;
+  }
+
+  .site-main .table--compare td {
+    overflow-wrap: anywhere;
+  }
+
+  .site-main .table--compare thead th:not(:first-child),
+  .site-main .table--compare tbody td {
+    width: 10.5rem;
+    min-width: 10.5rem;
+    max-width: 10.5rem;
   }
 
   .site-main .table--compare thead th:not(:first-child),
@@ -94,18 +129,11 @@
   }
 }
 
-/* ---------------------------------------------------------------- Preschool cards: two columns from 44rem */
+/* ---------------------------------------------------------------- Preschool cards: facts in a row from 44rem */
 
 .site-main .school-list {
   max-width: none;
   width: 100%;
-}
-
-@media (min-width: 44rem) {
-  .site-main .school-list__item--facts.card {
-    grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
-    align-items: start;
-  }
 }
 
 /* ---------------------------------------------------------------- Preschool filter form: two columns from 36rem */
@@ -351,11 +379,19 @@
   align-items: center;
   gap: var(--space-1);
   min-height: var(--tap);
-  padding: 0 var(--space-1) 0 var(--space-3);
-  border: 1px solid var(--color-border-input);
-  border-radius: var(--radius-pill);
-  background: var(--color-surface-sunken);
+  margin: 0;
+  padding: var(--space-2) var(--space-1) var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
   font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+}
+
+.site-main .compare-chips + p {
+  margin-top: var(--space-4);
 }
 
 .site-main .compare-chip__remove {
@@ -399,13 +435,37 @@
   flex: none;
 }
 
-/* ---------------------------------------------------------------- Preschool cards: the facts column reads like a data panel */
+/* ---------------------------------------------------------------- Preschool cards: the facts read like a data strip */
 
 .site-main .school-list__item--facts .school-list__facts {
-  padding-left: var(--space-4);
-  box-shadow: inset 2px 0 0 var(--color-border-strong);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
 }
 
 .site-main .school-list__item--facts .school-list__value {
   font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 44rem) {
+  .site-main .school-list__item--facts .school-list__facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-5);
+  }
+
+  .site-main .school-list__item--facts .school-list__fact + .school-list__fact {
+    padding-left: var(--space-5);
+    box-shadow: inset 1px 0 0 var(--color-border);
+  }
+}
+
+/* Preschool fact table between 40rem and 60rem: tighter cells and wrapping confidence pills keep five columns in view. */
+@media (min-width: 40rem) and (max-width: 59.99rem) {
+  .site-main .facts-table th,
+  .site-main .facts-table td {
+    padding-inline: var(--space-3);
+  }
+
+  .site-main .facts-table .badge {
+    white-space: normal;
+  }
 }

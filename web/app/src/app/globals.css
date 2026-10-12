@@ -517,14 +517,14 @@ hr {
 
 /* A full-bleed band behind a block inside the container (painted by ::before, clipped by .site-main). */
 .bleed,
-.site-container > :first-child > :is(.page-header, .profile-header):first-child,
+.site-container > :first-child > :is(.page-header, .profile-header, h1):first-child,
 .site-container > :is(.page-header, .profile-header):first-child {
   position: relative;
   isolation: isolate;
 }
 
 .bleed::before,
-.site-container > :first-child > :is(.page-header, .profile-header):first-child::before,
+.site-container > :first-child > :is(.page-header, .profile-header, h1):first-child::before,
 .site-container > :is(.page-header, .profile-header):first-child::before {
   content: "";
   position: absolute;
@@ -534,7 +534,7 @@ hr {
 }
 
 /* Page masthead: the first header of a page sits on a quiet band with a dot texture, under the site header. */
-.site-container > :first-child > :is(.page-header, .profile-header):first-child,
+.site-container > :first-child > :is(.page-header, .profile-header, h1):first-child,
 .site-container > :is(.page-header, .profile-header):first-child {
   margin-top: calc(var(--main-pad-top) * -1);
   padding-top: var(--space-6);
@@ -542,7 +542,7 @@ hr {
   margin-bottom: var(--space-6);
 }
 
-.site-container > :first-child > :is(.page-header, .profile-header):first-child::before,
+.site-container > :first-child > :is(.page-header, .profile-header, h1):first-child::before,
 .site-container > :is(.page-header, .profile-header):first-child::before {
   background:
     radial-gradient(circle at 1px 1px, var(--color-texture) 1px, transparent 1.6px) 0 0 / 18px 18px,
@@ -551,7 +551,7 @@ hr {
 }
 
 @media (min-width: 40rem) {
-  .site-container > :first-child > :is(.page-header, .profile-header):first-child,
+  .site-container > :first-child > :is(.page-header, .profile-header, h1):first-child,
   .site-container > :is(.page-header, .profile-header):first-child {
     padding-top: var(--space-7);
     padding-bottom: var(--space-6);
@@ -565,8 +565,8 @@ hr {
   flex: none;
   display: inline-grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 10px;
   background: var(--color-deep);
   color: #ffffff;
@@ -574,8 +574,20 @@ hr {
 }
 
 .brand-mark svg {
-  width: 26px;
-  height: 26px;
+  width: 25px;
+  height: 25px;
+}
+
+@media (min-width: 40rem) {
+  .brand-mark {
+    width: 38px;
+    height: 38px;
+  }
+
+  .brand-mark svg {
+    width: 28px;
+    height: 28px;
+  }
 }
 
 .brand-mark__dot {
@@ -602,7 +614,7 @@ hr {
 .site-header__brand {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: 0.625rem;
   min-height: var(--tap);
   margin-right: auto;
   color: var(--color-fg);
@@ -612,7 +624,7 @@ hr {
 .site-header__name {
   font-family: var(--font-serif);
   font-weight: var(--weight-bold);
-  font-size: 1.1875rem;
+  font-size: clamp(1.0625rem, 0.95rem + 0.5vw, 1.25rem);
   letter-spacing: -0.01em;
   line-height: 1.1;
 }
@@ -683,6 +695,15 @@ hr {
   }
 
   /* With scripts: a "Menu" button beside the brand opens the links as a panel over the page. */
+  .js .site-header__inner {
+    flex-wrap: nowrap;
+    gap: var(--space-2);
+  }
+
+  .js .site-header__brand {
+    min-width: 0;
+  }
+
   .js .site-nav {
     flex: 0 0 auto;
     margin: 0;
@@ -694,7 +715,7 @@ hr {
     align-items: center;
     gap: var(--space-2);
     min-height: var(--tap);
-    padding: 0 var(--space-4) 0 var(--space-3);
+    padding: 0 var(--space-3) 0 0.625rem;
     border: 1px solid var(--color-border-strong);
     border-radius: var(--radius-pill);
     background: var(--color-surface);
@@ -892,7 +913,7 @@ hr {
 .page-header h1,
 .profile-header h1 {
   margin: 0 0 var(--space-3);
-  max-width: 28ch;
+  max-width: 34ch;
 }
 
 .page-header > :last-child,
@@ -1311,6 +1332,12 @@ a:has(> .badge--demo) {
   gap: var(--space-2) var(--space-3);
 }
 
+@media (max-width: 35.99rem) {
+  .school-actions > .button {
+    flex: 1 1 14rem;
+  }
+}
+
 .school-actions > a,
 .actions > a {
   display: inline-flex;
@@ -1504,7 +1531,7 @@ legend {
   }
 
   .form-grid--address {
-    grid-template-columns: minmax(0, 1fr) minmax(8rem, 11rem);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 12.5rem);
   }
 
   .form-grid--filters {
@@ -1585,18 +1612,23 @@ legend {
   position: absolute;
   z-index: -1;
   top: 0;
-  right: calc(var(--gutter) * -1);
-  width: min(100% + var(--gutter) * 2, 52rem);
+  left: 50%;
+  width: 100vw;
   height: 100%;
+  transform: translateX(-50%);
   pointer-events: none;
-  opacity: 0.9;
 }
 
 .hero__art-streets path {
   fill: none;
-  stroke: rgb(255 255 255 / 0.09);
-  stroke-width: 10;
+  stroke: rgb(255 255 255 / 0.07);
+  stroke-width: 9;
   stroke-linecap: round;
+}
+
+.hero__art-streets .hero__art-minor {
+  stroke: rgb(255 255 255 / 0.06);
+  stroke-width: 3;
 }
 
 .hero__art-zone {
@@ -1709,15 +1741,29 @@ legend {
   }
 
   .hero__inner {
-    grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+    grid-template-columns: minmax(0, 11fr) minmax(0, 10fr);
     gap: var(--space-7);
+  }
+
+  .hero .form-grid--address {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 12.5rem);
   }
 }
 
 @media (max-width: 59.99rem) {
   .hero__art {
-    opacity: 0.55;
+    opacity: 0.6;
   }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hero__art-streets {
+    opacity: 0.6;
+  }
+}
+
+:root[data-theme="dark"] .hero__art-streets {
+  opacity: 0.6;
 }
 
 /* ---------------------------------------------------------------- Home: principles and search cards */
@@ -1749,6 +1795,7 @@ legend {
   font-size: var(--text-sm);
   color: var(--color-muted);
   max-width: none;
+  align-content: start;
 }
 
 .principles strong {
@@ -1768,7 +1815,7 @@ legend {
   color: var(--color-accent);
 }
 
-@media (min-width: 48rem) {
+@media (min-width: 60rem) {
   .principles {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-4);
@@ -1831,18 +1878,18 @@ legend {
 }
 
 .catchment__address {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
+  position: relative;
+  padding-left: 30px;
   font-size: var(--text-lg);
 }
 
 .catchment__address::before {
   content: "";
-  flex: none;
+  position: absolute;
+  left: 0;
+  top: 0.2em;
   width: 22px;
   height: 22px;
-  margin-top: 0.15em;
   background: var(--color-accent);
   -webkit-mask: var(--icon-pin) center / contain no-repeat;
   mask: var(--icon-pin) center / contain no-repeat;
@@ -1930,21 +1977,15 @@ legend {
 }
 
 .school-list__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
   font-size: var(--text-sm);
   margin: var(--space-1) 0 0;
 }
 
-.school-list__place {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3em;
-}
-
 .school-list__place::before {
   content: "";
+  display: inline-block;
+  vertical-align: -2px;
+  margin-right: 0.3em;
   width: 15px;
   height: 15px;
   background: currentColor;
@@ -1962,10 +2003,10 @@ legend {
   margin: 0;
 }
 
-/* Scored school cards and preschool cards share the two-column layout: identity left, data right. */
+/* Scored school cards: identity left, the complete score block right. Preschool cards: identity on top, the three
+   practical facts in a row under it. */
 @media (min-width: 44rem) {
-  .school-list__item--scored.card,
-  .school-list__item--facts.card {
+  .school-list__item--scored.card {
     grid-template-columns: minmax(0, 1fr) minmax(16rem, 21rem);
     align-items: start;
   }
@@ -2203,8 +2244,8 @@ legend {
 
 .score--limited .score__value::before {
   background: currentColor;
-  -webkit-mask-image: var(--icon-users);
-  mask-image: var(--icon-users);
+  -webkit-mask-image: var(--icon-info);
+  mask-image: var(--icon-info);
 }
 
 .score--limited .score__meta {
@@ -2325,6 +2366,7 @@ legend {
 .score--hero.score--limited {
   background: var(--color-surface-sunken);
   padding: var(--space-5);
+  box-shadow: none;
 }
 
 .score--hero.score--limited {
@@ -2345,7 +2387,19 @@ legend {
   margin-top: 0.05em;
 }
 
-@media (min-width: 40rem) {
+.result-card,
+.ai-explain__facts {
+  container-type: inline-size;
+}
+
+@container (min-width: 28rem) {
+  .score--hero[data-status="published"] .score__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3) var(--space-5);
+  }
+}
+
+@container (min-width: 46rem) {
   .score--hero[data-status="published"] {
     display: grid;
     grid-template-columns: minmax(0, auto) minmax(0, 1fr);
@@ -2359,6 +2413,7 @@ legend {
     padding: 0 0 0 var(--space-6);
     border-top: none;
     border-left: 1px solid var(--color-border);
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -2387,6 +2442,16 @@ legend {
 .facts dd {
   margin: 0;
   min-width: 0;
+}
+
+/* A record (status of a report, contact point) directly in a page reads as one panel. */
+article > dl.facts {
+  max-width: 44rem;
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
 @media (min-width: 36rem) {
@@ -2451,7 +2516,7 @@ thead th {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-muted);
-  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 tbody th {
@@ -2996,7 +3061,8 @@ tr[data-demo="true"] > td:first-child {
   gap: 0 var(--space-4);
 }
 
-.toc li {
+.toc li,
+.prose .toc li + li {
   margin: 0;
 }
 
@@ -3040,6 +3106,7 @@ tr[data-demo="true"] > td:first-child {
 
 .ai-panel__head h2 {
   margin: 0;
+  font-size: var(--text-xl);
 }
 
 .ai-explain h2,
@@ -3511,9 +3578,21 @@ details > summary + * {
 }
 
 .reviews > h2:first-child {
+  position: relative;
   margin-top: 0;
   padding-top: var(--space-4);
   border-top: 1px solid var(--color-border);
+}
+
+.reviews > h2:first-child::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 0;
+  width: 48px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-accent);
 }
 
 .correction-cta {
@@ -3625,6 +3704,11 @@ details > summary + * {
 
 .link-list > li + li {
   margin-top: 0;
+}
+
+.site-main .link-list > li > a:not([class]) {
+  margin-block: 0;
+  padding-block: 0;
 }
 
 .link-list a {

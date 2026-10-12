@@ -183,23 +183,27 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
  */
 function HeroArt() {
   return (
-    <svg className="hero__art" viewBox="0 0 640 420" preserveAspectRatio="xMaxYMid slice" aria-hidden="true" focusable="false">
+    <svg className="hero__art" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
       <g className="hero__art-streets">
-        <path d="M-20 70 L660 30" />
-        <path d="M-20 170 L660 140" />
-        <path d="M-20 290 L660 250" />
-        <path d="M-20 400 L660 360" />
-        <path d="M90 -20 L130 440" />
-        <path d="M250 -20 L270 440" />
-        <path d="M420 -20 L410 440" />
-        <path d="M560 -20 L540 440" />
-        <path d="M-20 240 Q200 200 330 330 T660 300" />
+        <path d="M-40 70 L1240 30" />
+        <path d="M-40 250 L1240 200" />
+        <path d="M-40 470 L1240 430" />
+        <path d="M130 -40 L170 560" />
+        <path d="M470 -40 L500 560" />
+        <path d="M820 -40 L800 560" />
+        <path d="M1080 -40 L1110 560" />
+        <path d="M-40 380 Q300 300 560 390 T1240 330" />
+        <path className="hero__art-minor" d="M-40 160 L1240 115" />
+        <path className="hero__art-minor" d="M-40 360 L1240 315" />
+        <path className="hero__art-minor" d="M300 -40 L330 560" />
+        <path className="hero__art-minor" d="M650 -40 L655 560" />
+        <path className="hero__art-minor" d="M960 -40 L950 560" />
       </g>
-      <path className="hero__art-zone" d="M262 150 L418 132 L428 262 L398 330 L276 340 L248 258 Z" />
-      <path className="hero__art-route" d="M270 300 L272 220 L413 205" />
-      <g className="hero__art-pin" transform="translate(413 205)">
-        <circle r="16" />
-        <circle className="hero__art-pin-core" r="6" />
+      <path className="hero__art-zone" d="M560 306 L690 292 L730 362 L700 466 L590 482 L548 404 Z" />
+      <path className="hero__art-route" d="M575 470 L570 424 L628 414" />
+      <g className="hero__art-pin" transform="translate(628 414)">
+        <circle r="18" />
+        <circle className="hero__art-pin-core" r="6.5" />
       </g>
     </svg>
   );
