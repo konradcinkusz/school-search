@@ -181,7 +181,12 @@ public sealed class PreschoolExtractTests
         Assert.True(PreschoolMoney.TryParseAmount("450.5", out var point));
         Assert.Equal(450.5m, point);
         Assert.False(PreschoolMoney.TryParseAmount("450,505", out _));
-        Assert.False(PreschoolMoney.TryParseAmount("1 200", out _));
+        Assert.True(PreschoolMoney.TryParseAmount("1 200", out var spaced));
+        Assert.Equal(1200m, spaced);
+        Assert.True(PreschoolMoney.TryParseAmount("1 200,50", out var spacedDecimal));
+        Assert.Equal(1200.50m, spacedDecimal);
+        Assert.False(PreschoolMoney.TryParseAmount("1 2000", out _));
+        Assert.False(PreschoolMoney.TryParseAmount("12 00", out _));
         Assert.False(PreschoolMoney.TryParseAmount("1.200,00", out _));
         Assert.False(PreschoolMoney.TryParseAmount("-10", out _));
         Assert.False(PreschoolMoney.TryParseAmount("100000000", out _));

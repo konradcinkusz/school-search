@@ -12,6 +12,8 @@ namespace SchoolSearch.Api.Services;
 public static class ScoreStatuses
 {
     public const string Published = "published";
+    /// <summary>5 to 8 pupils who sat: descriptive data and cohort size only, no score and no rank (ADR-0009).</summary>
+    public const string Limited = "limited";
     public const string InsufficientCohort = "insufficient_cohort";
     public const string NoExamData = "no_exam_data";
     public const string NoBaseline = "no_baseline";
@@ -19,7 +21,7 @@ public static class ScoreStatuses
 
 /// <summary>
 /// The outcome of scoring one school in one exam year. <see cref="Dto"/> is set only when the engine ran
-/// (published or insufficient_cohort); it is null for no_exam_data and no_baseline, where no number exists.
+/// (published, limited or insufficient_cohort); it is null for no_exam_data and no_baseline, where no number exists.
 /// </summary>
 public sealed record SchoolScore(
     string ScoreStatus,
@@ -232,8 +234,15 @@ public sealed class SchoolScoreService(CatalogDbContext db)
             ? Math.Round(Math.Min(100d, dto.CohortSize * 100d / headcount), 1)
             : (double?)null;
 
+        // The engine decides the band; this only names it. A limited profile carries no score and no rank.
+        var status = dto.Score is not null
+            ? ScoreStatuses.Published
+            : dto.Reason == ScoreDto.LimitedReason
+                ? ScoreStatuses.Limited
+                : ScoreStatuses.InsufficientCohort;
+
         return new SchoolScore(
-            dto.Score is null ? ScoreStatuses.InsufficientCohort : ScoreStatuses.Published,
+            status,
             examYear,
             dto,
             coverage,

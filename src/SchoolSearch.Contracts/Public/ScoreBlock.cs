@@ -5,7 +5,7 @@ namespace SchoolSearch.Contracts.Public;
 /// are present whenever a block exists (METRIC-ETHICS §3). Suppressed blocks carry a null score and a reason.
 /// </summary>
 /// <param name="Score">Percentage points versus the national mean (0 = national average), or null when suppressed.</param>
-/// <param name="Reason">"insufficient_cohort" when suppressed; null when published.</param>
+/// <param name="Reason">"limited" for 5 to 8 pupils (no score, no rank); "insufficient_cohort" below 5; null when published.</param>
 /// <param name="CohortSize">Pupils who sat the exam (the cohort behind the score).</param>
 /// <param name="IntervalLow">Lower bound of the 95% interval, or null when suppressed.</param>
 /// <param name="IntervalHigh">Upper bound of the 95% interval, or null when suppressed.</param>

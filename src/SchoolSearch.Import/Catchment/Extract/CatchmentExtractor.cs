@@ -309,8 +309,8 @@ public sealed class CatchmentExtractor(IImportLlm llm)
     }
 
     /// <summary>
-    /// A house number (when present) must occur in the quote as a whole digit run, so "2" does not match "12" or "2-18"
-    /// is read as the runs "2" and "18". A null number is not checked here.
+    /// A house number (when present) must occur in the quote as a whole digit run: "2" is not found inside "12", while
+    /// "2-18" holds the runs "2" and "18". A null number is not checked here.
     /// </summary>
     private static bool HouseNumberAppearsInQuote(int? number, string quote)
     {

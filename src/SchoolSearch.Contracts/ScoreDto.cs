@@ -3,13 +3,17 @@ namespace SchoolSearch.Contracts;
 /// <summary>
 /// A published score, always carried with its cohort size, interval and methodology version (METRIC-ETHICS gate).
 /// The type contract: a ScoreDto cannot be constructed without a cohort size and a methodology version.
-/// Below the cohort threshold, <see cref="Score"/> is null and <see cref="Reason"/> is
-/// <see cref="InsufficientCohortReason"/>. It is never 0 or a guess.
+/// When no score is published, <see cref="Score"/> is null and <see cref="Reason"/> is either
+/// <see cref="LimitedReason"/> (cohort of 5 to 8, ADR-0009: descriptive data only, no score, no rank) or
+/// <see cref="InsufficientCohortReason"/> (cohort below 5). It is never 0 or a guess.
 /// </summary>
 public sealed class ScoreDto
 {
-    /// <summary>The only reason value a null score may carry in v1.</summary>
+    /// <summary>Reason for a cohort below the CKE floor of 5 (ADR-0009).</summary>
     public const string InsufficientCohortReason = "insufficient_cohort";
+
+    /// <summary>Reason for a cohort of 5 to 8 pupils: a limited profile with no score and no rank (ADR-0009).</summary>
+    public const string LimitedReason = "limited";
 
     public ScoreDto(
         double? score,
@@ -34,9 +38,10 @@ public sealed class ScoreDto
 
         if (score is null)
         {
-            if (reason != InsufficientCohortReason)
+            if (reason != InsufficientCohortReason && reason != LimitedReason)
             {
-                throw new ArgumentException($"A null score must carry the reason '{InsufficientCohortReason}'.");
+                throw new ArgumentException(
+                    $"A null score must carry the reason '{InsufficientCohortReason}' or '{LimitedReason}'.");
             }
 
             if (intervalLow is not null)
@@ -60,7 +65,7 @@ public sealed class ScoreDto
     /// <summary>The score, or null when suppressed.</summary>
     public double? Score { get; }
 
-    /// <summary>Null when a score is published; otherwise <see cref="InsufficientCohortReason"/>.</summary>
+    /// <summary>Null when a score is published; otherwise <see cref="LimitedReason"/> or <see cref="InsufficientCohortReason"/>.</summary>
     public string? Reason { get; }
 
     /// <summary>The number of pupils behind the score. Always present.</summary>

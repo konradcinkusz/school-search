@@ -10,8 +10,8 @@ public static class ScoringEngine
 {
     /// <summary>
     /// Scores one school. Returns a <see cref="ScoreDto"/> that always carries cohort size and
-    /// methodology version; a suppressed result has a null score and reason <c>insufficient_cohort</c>,
-    /// never 0 and never a guess (METRIC-ETHICS §3).
+    /// methodology version; a suppressed result has a null score and reason <c>limited</c> (5 to 8 pupils, ADR-0009)
+    /// or <c>insufficient_cohort</c> (below 5), never 0 and never a guess (METRIC-ETHICS §3).
     /// </summary>
     /// <exception cref="ArgumentException">Year mismatch, duplicate subjects, or invalid values.</exception>
     /// <exception cref="InvalidOperationException">
@@ -105,11 +105,25 @@ public static class ScoringEngine
             cohort = Math.Max(cohort, result.PupilsSat);
         }
 
-        if (input.ClassVIIIHeadcount <= 0 || cohort < ScoringPolicy.PublicationThreshold)
+        // Below the CKE floor (5), or with no usable headcount, nothing about the exam is shown: insufficient_cohort.
+        if (input.ClassVIIIHeadcount <= 0 || cohort < ScoringPolicy.LimitedBandFloor)
         {
             return new ScoreDto(
                 null,
                 ScoreDto.InsufficientCohortReason,
+                cohort,
+                null,
+                null,
+                ScoringPolicy.MethodologyVersion);
+        }
+
+        // 5 to 8 pupils (ADR-0009): the limited profile. Descriptive data and cohort size only; no score, no
+        // interval and no rank. The score is never computed here, so no number can leak from this branch.
+        if (cohort < ScoringPolicy.PublicationThreshold)
+        {
+            return new ScoreDto(
+                null,
+                ScoreDto.LimitedReason,
                 cohort,
                 null,
                 null,

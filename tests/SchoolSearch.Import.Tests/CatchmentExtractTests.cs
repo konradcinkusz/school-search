@@ -18,8 +18,8 @@ public sealed class CatchmentExtractTests
 
     private static string Row(string school = "Szkoła Podstawowa nr 5", string street = "Kwiatową",
         string quote = "ulicę Kwiatową, numery parzyste 2-18", string parity = "\"even\"", string confidence = "\"high\"",
-        string extra = "") =>
-        "{\"school\":\"" + school + "\",\"street\":\"" + street + "\",\"numberFrom\":2,\"numberTo\":18," +
+        string extra = "", string numberFrom = "2", string numberTo = "18") =>
+        "{\"school\":\"" + school + "\",\"street\":\"" + street + "\",\"numberFrom\":" + numberFrom + ",\"numberTo\":" + numberTo + "," +
         "\"parity\":" + parity + ",\"conditions\":null,\"quote\":\"" + quote + "\",\"confidence\":" + confidence + extra + "}";
 
     private static string Answer(params string[] rows) => "{\"rows\":[" + string.Join(",", rows) + "]}";
@@ -51,6 +51,33 @@ public sealed class CatchmentExtractTests
         Assert.Empty(result.Rows);
         var rejection = Assert.Single(result.Rejected);
         Assert.Contains("verbatim", rejection.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task House_number_not_written_in_the_quote_rejects_the_row()
+    {
+        // The quote says 2-18; the model claims numberTo 99. The street is in the quote, so only the number check fails.
+        var llm = new CatchmentScriptedLlm(Answer(Row(numberTo: "99")));
+
+        var result = await new CatchmentExtractor(llm).RunAsync(Resolution, Gmina, Schools(), CancellationToken.None);
+
+        Assert.Empty(result.Rows);
+        var rejection = Assert.Single(result.Rejected);
+        Assert.Contains("a house number does not appear in the quote", rejection.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task House_number_inside_a_longer_digit_run_does_not_count_as_written()
+    {
+        // numberFrom 2 is a fragment of "12" in the quote, not the number 2 on its own.
+        var llm = new CatchmentScriptedLlm(Answer(Row(
+            quote: "ulicę Kwiatową, numery parzyste 12-18",
+            numberFrom: "2")));
+
+        var result = await new CatchmentExtractor(llm).RunAsync(Resolution.Replace("2-18", "12-18"), Gmina, Schools(), CancellationToken.None);
+
+        Assert.Empty(result.Rows);
+        Assert.Contains(result.Rejected, r => r.Reason.Contains("house number", StringComparison.Ordinal));
     }
 
     [Fact]
