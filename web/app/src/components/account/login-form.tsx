@@ -55,12 +55,19 @@ export function LoginForm() {
 
   return (
     <form onSubmit={onSubmit} noValidate>
+      <p className="field-hint">
+        Pola oznaczone * są wymagane.
+      </p>
       <div className="field">
-        <label htmlFor={ids.email}>Adres e-mail</label>
+        <label htmlFor={ids.email}>
+          Adres e-mail<span aria-hidden="true"> *</span>
+        </label>
         <input id={ids.email} name="email" type="email" autoComplete="email" maxLength={200} required />
       </div>
       <div className="field">
-        <label htmlFor={ids.password}>Hasło</label>
+        <label htmlFor={ids.password}>
+          Hasło<span aria-hidden="true"> *</span>
+        </label>
         <input id={ids.password} name="password" type="password" autoComplete="current-password" maxLength={200} required />
       </div>
       <button type="submit" className="button" disabled={sending}>

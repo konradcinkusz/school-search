@@ -12,6 +12,7 @@ import { catalog, type ScoreStatus, type SchoolProfile, type TrendPoint } from "
 import { asOfLabel, formatInteger, formatPercent, formatScore, formatStudents, schoolYearLabel } from "@/lib/format";
 import { siteOrigin } from "@/lib/site";
 import { intParam, isSlug, safeHttpUrl } from "@/lib/validation";
+import "../../styles/profile.css";
 
 // Data-driven: rendered per request, never prerendered without the API.
 export const dynamic = "force-dynamic";
@@ -67,6 +68,8 @@ export default async function SchoolPage({ params, searchParams }: Props) {
   const school = result.data;
   const gminaLabel = school.gminaName ?? `gmina TERYT ${school.gminaTeryt}`;
   const isDemo = school.provenance.some((row) => row.source.includes(DEMO_MARK));
+  const scoreRow = school.provenance.find((row) => row.field === "score");
+  const scoreProvenance = scoreRow ? { source: scoreRow.source, asOf: scoreRow.asOf } : null;
 
   return (
     <article>
@@ -109,6 +112,7 @@ export default async function SchoolPage({ params, searchParams }: Props) {
             status={school.scoreStatus}
             block={school.score}
             fallbackMethodologyVersion={school.methodologyVersion}
+            provenance={scoreProvenance}
             variant="hero"
           />
           <p className="score-explainer">
@@ -118,7 +122,14 @@ export default async function SchoolPage({ params, searchParams }: Props) {
           </p>
         </section>
 
-        <ExplainPanel slug={school.slug} />
+        {school.scoreStatus === "published" ? (
+          <ExplainPanel slug={school.slug} />
+        ) : (
+          <section aria-labelledby="explain-off-heading" className="card">
+            <h2 id="explain-off-heading">Wyjaśnienie wyniku</h2>
+            <p className="muted">Wyjaśnienie AI jest dostępne, gdy szkoła ma opublikowany wynik.</p>
+          </section>
+        )}
       </div>
 
       <section aria-labelledby="trend-heading" className="section">
@@ -133,7 +144,7 @@ export default async function SchoolPage({ params, searchParams }: Props) {
           <p className="muted">Brak danych o rocznikach.</p>
         ) : (
           <div className="table-wrap">
-            <table>
+            <table className="table--stack">
               <caption className="muted">Rocznik szkolny, klasa, liczba uczniów i oddziałów</caption>
               <thead>
                 <tr>
@@ -150,10 +161,14 @@ export default async function SchoolPage({ params, searchParams }: Props) {
               <tbody>
                 {school.cohorts.map((row) => (
                   <tr key={`${row.schoolYear}-${row.classLevel}`}>
-                    <td>{schoolYearLabel(row.schoolYear)}</td>
-                    <td>{row.classLevel}</td>
-                    <td className="num">{formatInteger(row.pupils)}</td>
-                    <td className="num">{formatInteger(row.oddzialy)}</td>
+                    <td data-label="Rok szkolny">{schoolYearLabel(row.schoolYear)}</td>
+                    <td data-label="Klasa">{row.classLevel}</td>
+                    <td className="num" data-label="Uczniowie">
+                      {formatInteger(row.pupils)}
+                    </td>
+                    <td className="num" data-label="Oddziały">
+                      {formatInteger(row.oddzialy)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -194,10 +209,14 @@ export default async function SchoolPage({ params, searchParams }: Props) {
 
       <SponsoredProfile slug={school.slug} />
 
-      <p className="notice correction-cta" role="note">
-        Widzisz błąd w danych tej szkoły?{" "}
-        <Link href={`/dla-szkol?slug=${encodeURIComponent(school.slug)}`}>Zgłoś błąd w danych</Link>.
-      </p>
+      <div className="notice correction-cta" role="note">
+        <p>Widzisz błąd w danych tej szkoły?</p>
+        <p className="actions">
+          <Link className="button button--secondary" href={`/dla-szkol?slug=${encodeURIComponent(school.slug)}`}>
+            Zgłoś błąd w danych
+          </Link>
+        </p>
+      </div>
 
       <SchoolJsonLd school={{ name: school.name, url: `${siteOrigin()}/szkoly/${school.slug}` }} />
     </article>
@@ -322,7 +341,7 @@ function ProvenanceTable({ rows }: { rows: SchoolProfile["provenance"] }) {
                 <td data-label="Pole">
                   <strong>{row.field}</strong>
                 </td>
-                <td data-label="Źródło">{demo ? <span className="badge badge--demo">{source}</span> : source}</td>
+                <td data-label="Źródło">{source}</td>
                 <td data-label="Stan">{asOfLabel(row.asOf)}</td>
                 <td data-label="Metoda">{row.method}</td>
               </tr>

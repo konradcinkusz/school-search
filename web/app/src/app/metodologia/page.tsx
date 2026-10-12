@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { catalog, type Methodology } from "@/lib/api";
 import { formatPercent } from "@/lib/format";
 import { MethodologyQa } from "@/components/ai/methodology-qa";
+import "../styles/static.css";
 
 // Live values come from /api/v1/methodology per request; the fallback is the documented 1.0.0 set.
 export const dynamic = "force-dynamic";
@@ -51,6 +52,7 @@ export default async function MethodologyPage() {
         )}
       </div>
 
+      <div className="measure-block">
       <nav className="toc" aria-label="Spis treści">
         <p>Na tej stronie</p>
         <ul>
@@ -79,6 +81,7 @@ export default async function MethodologyPage() {
       </nav>
 
       <MethodologyQa />
+      </div>
 
       <h2 id="czym-jest">Czym jest ta strona</h2>
       <p>

@@ -1,0 +1,120 @@
+/* Lists, comparison and preschool pages. Every selector is prefixed with .site-main so it wins over globals.css. */
+
+/* ---------------------------------------------------------------- Compare table: scroll cue, edge fade, snap */
+
+.site-main .compare-scroll-hint {
+  display: none;
+  font-size: var(--text-sm);
+  margin: var(--space-3) 0 0;
+}
+
+.site-main .compare-scroll {
+  position: relative;
+}
+
+.site-main .table-wrap--compare {
+  margin-top: var(--space-2);
+  scroll-padding-left: 0;
+}
+
+/* Fade on the right edge of the visible box, so the cut-off school names read as "more to the right". */
+.site-main .compare-scroll::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  right: 1px;
+  width: 1.75rem;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: linear-gradient(to right, transparent, var(--color-surface) 85%);
+  pointer-events: none;
+}
+
+@media (max-width: 39.99rem) {
+  .site-main .compare-scroll-hint {
+    display: block;
+  }
+
+  .site-main .table-wrap--compare {
+    scroll-snap-type: x mandatory;
+  }
+
+  .site-main .table--compare thead th:not(:first-child) {
+    min-width: 11rem;
+  }
+
+  .site-main .table--compare thead th:not(:first-child),
+  .site-main .table--compare tbody td {
+    scroll-snap-align: start;
+  }
+}
+
+@media (min-width: 40rem) {
+  .site-main .compare-scroll::after {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- Stacked tables: label above value on phone */
+
+@media (max-width: 39.99rem) {
+  .site-main .table--stack td[data-label] {
+    padding-left: 0;
+  }
+
+  .site-main .table--stack td[data-label]::before {
+    display: block;
+    float: none;
+    width: auto;
+    margin: 0 0 0.125rem;
+    padding-top: 0;
+  }
+}
+
+/* ---------------------------------------------------------------- Preschool cards: two columns from 44rem */
+
+.site-main .school-list {
+  max-width: none;
+  width: 100%;
+}
+
+@media (min-width: 44rem) {
+  .site-main .school-list__item--facts.card {
+    grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
+    align-items: start;
+  }
+}
+
+/* ---------------------------------------------------------------- Preschool filter form: two columns from 36rem */
+
+@media (min-width: 36rem) {
+  .site-main .form-grid--filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 52rem) {
+  .site-main .form-grid--filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ---------------------------------------------------------------- Ranking */
+
+/* Score block on one or two lines instead of four stacked lines, so the rows scan faster. */
+.site-main .ranking-table .score--compact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+
+.site-main .ranking-table .score--compact > p {
+  margin: 0;
+}
+
+.site-main .ranking-lead a {
+  display: inline-block;
+  padding: 0.5rem 0;
+  margin: -0.5rem 0;
+}

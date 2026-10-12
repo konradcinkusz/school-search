@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CorrectionForm } from "@/components/correction-form";
+import "../styles/static.css";
 
 // Reads ?slug= to prefill the form; no data is fetched here.
 export const dynamic = "force-dynamic";

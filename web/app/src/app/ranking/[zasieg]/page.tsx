@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Pagination } from "@/components/pagination";
 import { ScoreBadge, scoreStatusOf } from "@/components/score-badge";
 import { ServiceUnavailable } from "@/components/service-unavailable";
+import "@/app/styles/lists.css";
 import { catalog } from "@/lib/api";
 import { formatInteger } from "@/lib/format";
 import { parseRankingScope } from "@/lib/zasieg";
@@ -19,11 +20,18 @@ type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
+/** Gmina name from the catalogue; the TERYT code is the fallback when the name is not known. */
+async function gminaLabel(gminaTeryt: string): Promise<string> {
+  const gminas = await catalog.gminas();
+  const name = gminas.ok ? gminas.data.find((gmina) => gmina.teryt === gminaTeryt)?.name : null;
+  return name ? `w gminie ${name}` : `w gminie (TERYT ${gminaTeryt})`;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { zasieg } = await params;
   const scope = parseRankingScope(zasieg);
   if (!scope) return { title: "Ranking" };
-  const where = scope.kind === "country" ? "w kraju" : `w gminie (TERYT ${scope.gminaTeryt})`;
+  const where = scope.kind === "country" ? "w kraju" : await gminaLabel(scope.gminaTeryt);
   return {
     title: `Ranking szkół ${where}`,
     description: `Ranking szkół podstawowych ${where}, od najwyższego wyniku. Nie jest oficjalnym rankingiem.`,
@@ -41,21 +49,22 @@ export default async function RankingPage({ params, searchParams }: Props) {
   const year = intParam(sp.rok, 0, 9999);
 
   // Descending only, by design: there is no sort or direction parameter on this page or in the API.
-  const result = await catalog.ranking({
-    scope: scope.kind,
-    gmina: scope.kind === "gmina" ? scope.gminaTeryt : undefined,
-    year: year > 0 ? year : undefined,
-    page,
-    pageSize: PAGE_SIZE,
-  });
-
-  const where = scope.kind === "country" ? "w kraju" : "w gminie";
+  const [result, where] = await Promise.all([
+    catalog.ranking({
+      scope: scope.kind,
+      gmina: scope.kind === "gmina" ? scope.gminaTeryt : undefined,
+      year: year > 0 ? year : undefined,
+      page,
+      pageSize: PAGE_SIZE,
+    }),
+    scope.kind === "country" ? "w kraju" : gminaLabel(scope.gminaTeryt),
+  ]);
 
   return (
     <section>
       <header className="page-header">
         <h1>Ranking szkół podstawowych {where}</h1>
-        <p className="lead">
+        <p className="lead ranking-lead">
           Kolejność: od najwyższego wyniku. Szkoły bez wystarczającej kohorty nie są w rankingu.{" "}
           <Link href="/metodologia">Metodologia</Link>.
         </p>
@@ -102,7 +111,7 @@ export default async function RankingPage({ params, searchParams }: Props) {
                 <tbody>
                   {result.data.items.map((item) => (
                     <tr key={item.slug}>
-                      <td>
+                      <td data-label="Miejsce">
                         <span className="rank">{item.rank}</span>
                       </td>
                       <td>
@@ -112,7 +121,7 @@ export default async function RankingPage({ params, searchParams }: Props) {
                         <br />
                         <span className="muted">{item.gminaName ?? ""}</span>
                       </td>
-                      <td>
+                      <td data-label="Wynik">
                         <ScoreBadge status={scoreStatusOf(item.score)} block={item.score} variant="compact" />
                       </td>
                     </tr>

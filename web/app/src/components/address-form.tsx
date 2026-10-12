@@ -53,7 +53,7 @@ export function AddressForm({ gminas, values }: { gminas: readonly GminaItem[]; 
         />
       </div>
       <div className="form-grid__actions">
-        <button type="submit" className="button button--block">
+        <button type="submit" className="button button--block" style={{ textWrap: "balance" }}>
           Sprawdź obwód i szkoły w zasięgu
         </button>
       </div>

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { RegisterForm } from "@/components/account/register-form";
+import Link from "next/link";
 import { accountsConfigured } from "@/lib/bff-config";
+import "../../styles/static.css";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +27,15 @@ export default function RegisterPage() {
           <RegisterForm />
         </div>
       ) : (
-        <div className="notice" role="alert">
+        <div className="notice notice--caution" role="status">
           <p>
-            <strong>Konta są chwilowo niedostępne.</strong> Rejestracja nie jest teraz możliwa.
+            <strong>Konta są chwilowo niedostępne.</strong> Rejestracja nie jest teraz możliwa. Przeglądanie szkół i wyników działa bez konta.
+          </p>
+          <p className="actions">
+            <Link className="button button--secondary" href="/">
+              Przeglądaj szkoły
+            </Link>
+            <Link href="/konto/rejestracja">Spróbuj ponownie</Link>
           </p>
         </div>
       )}

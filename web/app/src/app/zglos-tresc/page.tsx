@@ -3,6 +3,7 @@ import Link from "next/link";
 import { NoticeForm } from "@/components/reviews/notice-form";
 import { NoticeStatus } from "@/components/reviews/notice-status";
 import { isSlug } from "@/lib/validation";
+import "../styles/static.css";
 
 // Notice-and-action intake (DSA art. 16). Reads the optional ?slug= and ?review= prefill only.
 export const dynamic = "force-dynamic";

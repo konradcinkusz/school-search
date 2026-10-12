@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AccountPanel } from "@/components/account/account-panel";
+import "../styles/static.css";
 
 // Client-driven: the session is read through the BFF on the client. Nothing sensitive is rendered on the server.
 export const dynamic = "force-dynamic";

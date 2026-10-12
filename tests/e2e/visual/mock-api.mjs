@@ -10,7 +10,7 @@
 // agent MOCK_AGENT_PORT (8084). Set MOCK_LOG=1 to log every request to stderr.
 
 import { createServer } from "node:http";
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
 
 // ---------------------------------------------------------------------------
@@ -29,8 +29,9 @@ const EXAM_YEARS = [2024, 2025];
 const DEFAULT_EXAM_YEAR = 2025;
 const SUBJECTS = ["polish", "mathematics", "foreign_language"];
 const SCHOOL_CLASS_LEVEL = "VIII";
+// Mirrors PreschoolReadModel.Notice (src/SchoolSearch.Api/Preschools/PreschoolReadModel.cs).
 const NOTICE_PRESCHOOL =
-  "Przedszkola nie mają wyniku jakości ani rankingu. Podane dane praktyczne pochodzą z podanych źródeł i mają datę.";
+  "Przedszkola nie mają wyniku jakości. Pokazujemy praktyczne informacje: lokalizację, opłaty, godziny i wolne miejsca, każdą ze źródłem i datą.";
 const REVIEWS_NOTICE =
   "Opinie pochodzą od zalogowanych użytkowników z potwierdzonym adresem e-mail. Nie weryfikujemy, czy autor jest rodzicem ucznia tej szkoły. Opinie nie wpływają na wynik szkoły.";
 
@@ -89,9 +90,24 @@ const PRESCHOOLS = [
 ];
 
 const DEMO_TOKEN = "demoTokenVisual0000000001";
+// Mirrors CorrectionRequestValidator (src/SchoolSearch.Api/Corrections/CorrectionRequestValidator.cs).
+const CORRECTION_FIELDS = new Set(["name", "governing_body", "cohort", "address", "fee", "attribute", "score", "methodology", "other"]);
+const CORRECTION_PRESCHOOL_FIELDS = new Set(["tuition_min", "tuition_max", "hours", "free_places", "address", "other"]);
+const CORRECTION_MIN_MESSAGE = 10;
+const CORRECTION_MAX_MESSAGE = 2000;
+const CORRECTION_MAX_RAW_MESSAGE = 8000;
+const CORRECTION_MAX_EMAIL = 200;
+const EMAIL_SHAPE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const corrections = new Map([
-  [DEMO_TOKEN, { status: "in_review", statusReason: null, schoolSlug: "demo-sp-1", field: "score", createdAt: "2026-10-01T10:00:00Z" }],
+  [
+    DEMO_TOKEN,
+    { status: "in_review", statusReason: null, schoolSlug: "demo-sp-1", field: "score", kind: "school", createdAt: "2026-10-01T10:00:00Z" },
+  ],
 ]);
+// Reviews service: notices received over POST /api/v1/notices (DsaEndpoints.SubmitNotice). Reviews are never stored
+// in the mock, so a reviewId always answers 404, as the real service does for an unknown review.
+const NOTICE_CATEGORIES = new Set(["illegal_content", "personal_data", "defamation", "other"]);
+const notices = new Map();
 
 // ---------------------------------------------------------------------------
 // Small helpers
@@ -110,6 +126,7 @@ const round2 = (x) => Math.round(x * 100) / 100;
 const fold = (s) => s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/ł/g, "l");
 const traceId = () => `mock-${randomBytes(6).toString("hex")}`;
 const isSlug = (s) => s.length <= 120 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(s);
+const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function intParam(raw, def, min, max) {
   if (raw === null || raw === undefined || raw === "") return def;
@@ -483,25 +500,65 @@ function catchmentHandler(sp, res) {
   });
 }
 
+// Same checks, same order and same messages as CorrectionRequestValidator.Validate. Returns { value } or { error }.
+function validateCorrection(body) {
+  const slug = typeof body.slug === "string" ? body.slug.trim() : "";
+  if (slug === "") return { error: "slug is required." };
+
+  const rawKind = typeof body.kind === "string" ? body.kind.trim().toLowerCase() : "";
+  const kind = rawKind === "" ? "school" : rawKind;
+  if (kind !== "school" && kind !== "preschool") return { error: "kind is not one of the allowed values." };
+
+  const field = typeof body.field === "string" ? body.field.trim().toLowerCase() : null;
+  const allowed = kind === "preschool" ? CORRECTION_PRESCHOOL_FIELDS : CORRECTION_FIELDS;
+  if (field === null || !allowed.has(field)) return { error: "field is not one of the allowed values." };
+
+  if (typeof body.message !== "string") return { error: "message is required." };
+  const rangeError = `message must be between ${CORRECTION_MIN_MESSAGE} and ${CORRECTION_MAX_MESSAGE} characters.`;
+  if (body.message.length > CORRECTION_MAX_RAW_MESSAGE) return { error: rangeError };
+  // NormalizeMessage: drop control characters except tab, CR and LF, then trim.
+  const message = [...body.message].filter((c) => !/\p{Cc}/u.test(c) || c === "\t" || c === "\n" || c === "\r").join("").trim();
+  if (message.length < CORRECTION_MIN_MESSAGE || message.length > CORRECTION_MAX_MESSAGE) return { error: rangeError };
+
+  let contactEmail = null;
+  if (typeof body.contactEmail === "string" && body.contactEmail.trim() !== "") {
+    contactEmail = body.contactEmail.trim();
+    if (contactEmail.length > CORRECTION_MAX_EMAIL || !EMAIL_SHAPE.test(contactEmail)) {
+      return { error: "contactEmail is not a valid address." };
+    }
+  }
+  return { value: { slug, kind, field, message, contactEmail } };
+}
+
 async function catalogPost(req, res, p) {
   if (p === "/api/v1/corrections") {
     let body;
     try {
       body = JSON.parse(await readBody(req));
     } catch {
-      return fail(res, 400, "bad_request", "Nieprawidłowy JSON.");
+      return fail(res, 400, "validation_failed", "Nieprawidłowy JSON.");
     }
-    if (!body || typeof body.schoolSlug !== "string" || typeof body.field !== "string") {
-      return fail(res, 400, "bad_request", "Brakuje schoolSlug albo field.");
+    const validation = validateCorrection(body && typeof body === "object" ? body : {});
+    if (!validation.value) return fail(res, 400, "validation_failed", validation.error);
+    const { slug, kind, field } = validation.value;
+
+    // Unknown target gets 404, as CorrectionEndpoints.TargetNotFound does.
+    if (kind === "preschool") {
+      if (!PRESCHOOLS.some((x) => x.slug === slug)) return fail(res, 404, "not_found", "Preschool not found.");
+    } else if (!findSchool(slug)) {
+      return fail(res, 404, "not_found", "School not found.");
     }
-    const token = randomBytes(18).toString("base64url");
+
+    const token = randomBytes(16).toString("base64url");
     corrections.set(token, {
       status: "new",
       statusReason: null,
-      schoolSlug: body.schoolSlug,
-      field: body.field,
+      schoolSlug: slug,
+      field,
+      kind,
       createdAt: new Date().toISOString(),
     });
+    res.setHeader("location", `/api/v1/corrections/${token}`);
     return send(res, 201, { token, status: "new" });
   }
   if (/^\/api\/v1\/schools\/[^/]+\/explain$/.test(p) || p === "/api/v1/ai/search-intent" || p === "/api/v1/ai/methodology-answer") {
@@ -571,7 +628,16 @@ async function catalogHandler(req, res, url) {
     const token = decodeSegment(m[1]);
     const rec = corrections.get(token);
     if (!rec) return fail(res, 404, "not_found", "Nie znaleziono zgłoszenia.");
-    return send(res, 200, { token, status: rec.status, statusReason: rec.statusReason, createdAt: rec.createdAt, schoolSlug: rec.schoolSlug, field: rec.field });
+    // CorrectionStatusResponse: no message, no contact email, no internal id.
+    return send(res, 200, {
+      token,
+      status: rec.status,
+      statusReason: rec.statusReason,
+      createdAt: rec.createdAt,
+      schoolSlug: rec.schoolSlug,
+      field: rec.field,
+      kind: rec.kind,
+    });
   }
 
   if (p === "/api/v1/preschools") {
@@ -623,10 +689,90 @@ async function catalogHandler(req, res, url) {
 // Satellite listeners: reviews, billing, agent
 // ---------------------------------------------------------------------------
 
+// Mirrors DsaValidation.ValidateNotice and DsaEndpoints.SubmitNotice. Error text is the real service's text.
+function cleanText(raw) {
+  if (typeof raw !== "string") return null;
+  const text = [...raw].filter((c) => !/\p{Cc}/u.test(c) || c === "\t" || c === "\n" || c === "\r").join("").trim();
+  return text === "" ? null : text;
+}
+
+function validateNotice(body) {
+  const reference = cleanText(body.contentReference);
+  const reviewId = body.reviewId ?? null;
+  if (reference === null && reviewId === null) return { error: "contentReference or reviewId is required." };
+  if (reference !== null && reference.length > 500) return { error: "contentReference must be at most 500 characters." };
+
+  const explanation = cleanText(body.explanation);
+  if (explanation === null || explanation.length < 20 || explanation.length > 3000) {
+    return { error: "explanation must be between 20 and 3000 characters." };
+  }
+  const category = typeof body.category === "string" ? body.category.trim() : null;
+  if (category === null || !NOTICE_CATEGORIES.has(category)) return { error: "category is not one of the allowed values." };
+  if (body.goodFaithConfirmed !== true) return { error: "goodFaithConfirmed must be true." };
+
+  const name = cleanText(body.submitterName);
+  if (name !== null && name.length > 120) return { error: "submitterName must be at most 120 characters." };
+  const email = cleanText(body.submitterEmail);
+  if (email !== null && (email.length > 200 || !EMAIL_SHAPE.test(email))) {
+    return { error: "submitterEmail is not a valid address." };
+  }
+  return {
+    value: {
+      reviewId,
+      contentReference: reference ?? `review:${reviewId}`,
+      explanation,
+      category,
+      submitterName: name,
+      submitterEmail: email,
+    },
+  };
+}
+
+async function noticePost(req, res) {
+  let body;
+  try {
+    body = JSON.parse(await readBody(req));
+  } catch {
+    return fail(res, 400, "invalid_json", "Request body is not valid JSON.");
+  }
+  if (body === null || typeof body !== "object") {
+    return fail(res, 400, "validation_failed", "Request body is required.");
+  }
+  const validation = validateNotice(body);
+  if (!validation.value) return fail(res, 400, "validation_failed", validation.error);
+  if (validation.value.reviewId !== null) return fail(res, 404, "not_found", "Review not found.");
+
+  const id = randomUUID();
+  const ackToken = randomBytes(16).toString("base64url");
+  const receivedAt = new Date().toISOString();
+  notices.set(id, { ackToken, category: validation.value.category, contentReference: validation.value.contentReference, receivedAt });
+  res.setHeader("location", `/api/v1/notices/${id}`);
+  // NoticeReceipt: the acknowledgement token is shown once and is the only handle to the notice.
+  return send(res, 201, { id, ackToken, receivedAt });
+}
+
+function noticeGet(res, id, token) {
+  const rec = UUID_SHAPE.test(id) ? notices.get(id) : undefined;
+  // Unknown ids and wrong tokens get the same 404 (DsaEndpoints.GetNotice).
+  if (!rec || !token || token !== rec.ackToken) return fail(res, 404, "not_found", "Notice not found.");
+  return send(res, 200, {
+    id,
+    status: "received",
+    category: rec.category,
+    contentReference: rec.contentReference,
+    reviewId: null,
+    receivedAt: rec.receivedAt,
+    decision: null,
+  });
+}
+
 async function reviewsHandler(req, res, url) {
   const p = url.pathname;
   if (p === "/alive") return send(res, 200, { status: "ok", service: "mock-reviews", data: DEMO_SOURCE });
   if (req.method !== "GET" && req.method !== "POST") return fail(res, 405, "method_not_allowed", "Metoda niedozwolona.");
+  if (p === "/api/v1/notices" && req.method === "POST") return noticePost(req, res);
+  let nm = p.match(/^\/api\/v1\/notices\/([^/]+)$/);
+  if (nm && req.method === "GET") return noticeGet(res, decodeSegment(nm[1]), url.searchParams.get("token"));
   if (p === "/api/v1/legal/terms") return send(res, 200, { version: "2026-01-01" });
   if (p === "/api/v1/legal/contact") {
     // The real service answers 503 contact_not_configured until its contact details are set.

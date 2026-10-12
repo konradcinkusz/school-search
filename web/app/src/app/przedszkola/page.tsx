@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@/app/styles/lists.css";
 import { PreschoolFilters } from "@/components/preschool-filters";
 import { PreschoolList } from "@/components/preschool-list";
 import { Pagination } from "@/components/pagination";

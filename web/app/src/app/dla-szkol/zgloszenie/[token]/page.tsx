@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ServiceUnavailable } from "@/components/service-unavailable";
 import { catalog, type CorrectionStatus } from "@/lib/api";
 import { formatDatePl } from "@/lib/format";
 import { isToken } from "@/lib/validation";
+import "../../../styles/static.css";
 
 // Looked up per request; the status must never be cached.
 export const dynamic = "force-dynamic";
@@ -44,6 +46,10 @@ export default async function CorrectionStatusPage({ params }: Props) {
       <article>
         <h1>Status zgłoszenia</h1>
         <ServiceUnavailable what="status zgłoszenia" />
+        <p className="actions">
+          <Link href={`/dla-szkol/zgloszenie/${token}`}>Odśwież stronę</Link>
+          <Link href="/">Wróć do wyszukiwarki</Link>
+        </p>
       </article>
     );
   }

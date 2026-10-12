@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import "@/app/styles/lists.css";
 import { PreschoolJsonLd } from "@/components/preschool-jsonld";
 import { ServiceUnavailable } from "@/components/service-unavailable";
 import { catalog, type GoverningBody, type PreschoolFactsBlock } from "@/lib/api";
@@ -19,6 +20,11 @@ import { isSlug, safeHttpUrl } from "@/lib/validation";
 export const dynamic = "force-dynamic";
 
 const UNKNOWN = "brak danych";
+
+/** The date alone: the column header already says "Stan na". */
+function asOfDate(iso: string | null | undefined): string {
+  return asOfLabel(iso).replace(/^stan na /, "");
+}
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -190,7 +196,7 @@ function FactsTable({ facts }: { facts: PreschoolFactsBlock | null }) {
                     <span className="muted">—</span>
                   )}
                 </td>
-                <td data-label="Stan na">{known ? asOfLabel(row.asOf) : <span className="muted">—</span>}</td>
+                <td data-label="Stan na">{known ? asOfDate(row.asOf) : <span className="muted">—</span>}</td>
                 <td data-label="Pewność">
                   {known && source ? (
                     <span className="badge" data-confidence={source.confidence}>

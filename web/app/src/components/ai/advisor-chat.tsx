@@ -137,6 +137,11 @@ export function AdvisorChat() {
             disabled={full}
             onChange={(event) => setDraft(event.target.value)}
           />
+          {draft.length >= TURN_MAX * 0.8 ? (
+            <p className="field-hint" aria-live="polite">
+              {draft.length}/{TURN_MAX} znaków
+            </p>
+          ) : null}
         </div>
         <div className="ai-chat__actions">
           <button type="submit" className="button" disabled={sending || full}>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ServiceUnavailable } from "@/components/service-unavailable";
 import { legalContact } from "@/lib/reviews";
 import { safeHttpUrl } from "@/lib/validation";
+import "../styles/static.css";
 
 // Single point of contact for authorities and users (DSA art. 11 and 12), read from the Reviews service.
 export const dynamic = "force-dynamic";
@@ -41,16 +42,22 @@ export default async function ContactPage() {
             ) : null}
           </dl>
         ) : (
-          <div className="notice" role="note">
-            Punkt kontaktowy nie jest jeszcze skonfigurowany.
+          <div className="notice notice--caution" role="note">
+            Kontakt w sprawach serwisu będzie dostępny wkrótce.
           </div>
         )
       ) : contact.reason === "error" && contact.status === 503 ? (
-        <div className="notice" role="note">
-          Punkt kontaktowy nie jest jeszcze skonfigurowany.
+        <div className="notice notice--caution" role="note">
+          Kontakt w sprawach serwisu będzie dostępny wkrótce.
         </div>
       ) : (
-        <ServiceUnavailable what="dane kontaktowe" />
+        <>
+          <ServiceUnavailable what="dane kontaktowe" />
+          <p className="actions">
+            <a href="/kontakt">Odśwież stronę</a>
+            <a href="/">Wróć do wyszukiwarki</a>
+          </p>
+        </>
       )}
       <p>
         Zgłoszenia treści składasz przez formularz <a href="/zglos-tresc">Zgłoś treść</a>.

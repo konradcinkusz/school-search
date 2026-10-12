@@ -111,9 +111,12 @@ export function AccountPanel() {
   if (state === "loading") return <p className="muted">Ładowanie…</p>;
   if (state === "unavailable") {
     return (
-      <div className="notice" role="alert">
+      <div className="notice notice--caution" role="status">
         <p>
-          <strong>Konta są chwilowo niedostępne.</strong>
+          <strong>Konta są chwilowo niedostępne.</strong> Przeglądanie szkół i wyników działa bez konta.
+        </p>
+        <p className="actions">
+          <Link href="/">Wróć do wyszukiwarki</Link>
         </p>
       </div>
     );

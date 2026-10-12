@@ -13,7 +13,7 @@ import { firstParam, intParam, isTeryt } from "@/lib/validation";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Start",
+  title: { absolute: "Start | Wyszukiwarka szkół" },
   description:
     "Wpisz adres, aby zobaczyć obwód szkolny i szkoły w zasięgu wraz z wynikami, ich niepewnością i liczebnością kohort. Nie jest oficjalnym rankingiem.",
 };

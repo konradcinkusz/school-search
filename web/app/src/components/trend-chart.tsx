@@ -80,6 +80,9 @@ export function TrendChart({ points }: { points: readonly TrendPoint[] }) {
   const zeroY = yFor(0);
   // Axis labels that would overlap the zero label are dropped; the grid keeps the zero line.
   const ticks = [yMax, 0, yMin].filter((tick) => tick === 0 || Math.abs(yFor(tick) - zeroY) >= 22);
+  // The top tick label is dropped when a value label sits on top of it; the grid line stays.
+  const topTickY = yFor(yMax);
+  const topTickClashes = published.some((p) => Math.abs(yFor(p.high) - 10 - topTickY) < 28);
 
   return (
     <figure className="trend">
@@ -100,9 +103,11 @@ export function TrendChart({ points }: { points: readonly TrendPoint[] }) {
         {ticks.map((tick) => (
           <g key={`tick-${tick}`}>
             <line className="trend__grid" x1={PAD_LEFT} x2={WIDTH - PAD_RIGHT} y1={yFor(tick)} y2={yFor(tick)} />
-            <text className="trend__text trend__tick" x={PAD_LEFT - 10} y={yFor(tick) + 5} textAnchor="end">
-              {formatScore(tick)}
-            </text>
+            {tick === yMax && topTickClashes ? null : (
+              <text className="trend__text trend__tick" x={PAD_LEFT - 10} y={yFor(tick) + 5} textAnchor="end">
+                {formatScore(tick)}
+              </text>
+            )}
           </g>
         ))}
 
