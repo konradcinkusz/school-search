@@ -20,7 +20,7 @@ public sealed class MigrationHostedService(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         integrations.Register(IntegrationNames.CatalogDatabase, IntegrationState.Degraded, "migrating");
-        integrations.Register(IntegrationNames.Scoring, IntegrationState.Disabled, "Phase B: scoring engine not yet implemented");
+        integrations.Register(IntegrationNames.Scoring, IntegrationState.Ok, "in-process scoring engine");
 
         try
         {

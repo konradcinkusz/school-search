@@ -89,6 +89,50 @@ public sealed class CorrectionTriageUnitTests
         Assert.NotNull(CorrectionTriageParser.Parse(answer, facts));
     }
 
+    [Theory]
+    [InlineData("Gwarantujemy zmianę.")]
+    [InlineData("To najlepsza szkoła w okolicy.")]
+    [InlineData("Zgłoszenie: pewnie zostanie poprawione.")]
+    [InlineData("Dane zweryfikowano w rejestrze.")]
+    public void A_draft_with_a_banned_claim_is_refused(string draft) =>
+        Assert.Null(CorrectionTriageParser.Parse(AnswerWithDraft("outdated", draft), Facts));
+
+    [Theory]
+    [InlineData("source_error")]
+    [InlineData("outdated")]
+    [InlineData("typo")]
+    [InlineData("score_dispute")]
+    [InlineData("removal_request")]
+    [InlineData("other")]
+    public void A_banned_claim_is_refused_in_every_category(string category) =>
+        Assert.Null(CorrectionTriageParser.Parse(AnswerWithDraft(category, "Gwarantujemy zmianę."), Facts));
+
+    [Fact]
+    public void A_clean_draft_with_the_same_shape_still_parses()
+    {
+        var draft = CorrectionTriageParser.Parse(
+            AnswerWithDraft("outdated", "Dziękujemy za zgłoszenie. Prosimy o wskazanie źródła."),
+            Facts);
+
+        Assert.NotNull(draft);
+    }
+
+    [Fact]
+    public void A_draft_of_900_characters_is_accepted()
+    {
+        var draft = new string('a', CorrectionTriageParser.MaxDraftLength);
+
+        Assert.NotNull(CorrectionTriageParser.Parse(AnswerWithDraft("outdated", draft), Facts));
+    }
+
+    [Fact]
+    public void A_draft_of_901_characters_is_refused()
+    {
+        var draft = new string('a', CorrectionTriageParser.MaxDraftLength + 1);
+
+        Assert.Null(CorrectionTriageParser.Parse(AnswerWithDraft("outdated", draft), Facts));
+    }
+
     [Fact]
     public void A_score_dispute_is_routed_to_methodology_whatever_the_model_proposed()
     {
@@ -164,6 +208,10 @@ public sealed class CorrectionTriageUnitTests
         Assert.False(limiter.TryAcquire("moderator-a"));
         Assert.True(limiter.TryAcquire("moderator-b"));
     }
+
+    private static string AnswerWithDraft(string category, string draft) =>
+        "{\"category\":\"" + category + "\",\"fieldLooksValid\":true,\"severity\":\"medium\",\"suggestedAction\":\"request_source\"," +
+        "\"draftReplyPl\":\"" + draft + "\"}";
 
     private static int Count(string text, string value)
     {

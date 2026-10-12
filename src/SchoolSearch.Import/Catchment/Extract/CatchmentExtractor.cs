@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using SchoolSearch.Import.Ai;
 
@@ -236,6 +237,11 @@ public sealed class CatchmentExtractor(IImportLlm llm)
             return (null, "the street name does not appear in the quote");
         }
 
+        if (!HouseNumberAppearsInQuote(numberFrom, quote) || !HouseNumberAppearsInQuote(numberTo, quote))
+        {
+            return (null, "a house number does not appear in the quote");
+        }
+
         var confidence = ModelJson.String(element, "confidence");
         if (confidence is null || Array.IndexOf(Confidences, confidence) < 0)
         {
@@ -300,6 +306,43 @@ public sealed class CatchmentExtractor(IImportLlm llm)
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// A house number (when present) must occur in the quote as a whole digit run, so "2" does not match "12" or "2-18"
+    /// is read as the runs "2" and "18". A null number is not checked here.
+    /// </summary>
+    private static bool HouseNumberAppearsInQuote(int? number, string quote)
+    {
+        if (number is not int value)
+        {
+            return true;
+        }
+
+        var wanted = value.ToString(CultureInfo.InvariantCulture);
+        var runStart = -1;
+        for (var i = 0; i <= quote.Length; i++)
+        {
+            var isDigit = i < quote.Length && quote[i] >= '0' && quote[i] <= '9';
+            if (isDigit)
+            {
+                if (runStart < 0)
+                {
+                    runStart = i;
+                }
+            }
+            else if (runStart >= 0)
+            {
+                if (string.Equals(quote.Substring(runStart, i - runStart), wanted, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+
+                runStart = -1;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

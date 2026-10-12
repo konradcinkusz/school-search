@@ -304,7 +304,19 @@ public static partial class PreschoolMoney
             return false;
         }
 
-        if (!decimal.TryParse(text.Replace(',', '.'), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsed))
+        // A space is accepted only as a thousands separator in groups of three ("1 200", "1 200,50"); any other space is refused.
+        var compact = text;
+        if (text.Contains(' '))
+        {
+            if (!ThousandsSpaced().IsMatch(text))
+            {
+                return false;
+            }
+
+            compact = text.Replace(" ", string.Empty, StringComparison.Ordinal);
+        }
+
+        if (!decimal.TryParse(compact.Replace(',', '.'), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var parsed))
         {
             return false;
         }
@@ -341,4 +353,7 @@ public static partial class PreschoolMoney
 
     [GeneratedRegex(@"(?<!\d)\d{1,3}(?:[  ]\d{3})+(?:[.,]\d{1,2})?(?!\d)|(?<!\d)\d+(?:[.,]\d{1,2})?(?!\d)", RegexOptions.CultureInvariant)]
     private static partial Regex AmountToken();
+
+    [GeneratedRegex(@"^[0-9]{1,3}(?: [0-9]{3})+(?:[.,][0-9]{1,2})?\z", RegexOptions.CultureInvariant)]
+    private static partial Regex ThousandsSpaced();
 }

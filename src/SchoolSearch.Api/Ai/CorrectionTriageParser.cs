@@ -8,9 +8,9 @@ namespace SchoolSearch.Api.Ai;
 /// expected keys, closed vocabularies, a boolean and a plain-text draft that passes the number grounding check and the
 /// personal-data guard. Any deviation returns null: the caller then answers with a safe fallback, never partial trust.
 /// </summary>
-public static class CorrectionTriageParser
+public static partial class CorrectionTriageParser
 {
-    public const int MaxDraftLength = 1500;
+    public const int MaxDraftLength = 900;
 
     private static readonly string[] RequiredKeys = ["category", "fieldLooksValid", "severity", "suggestedAction", "draftReplyPl"];
 
@@ -19,6 +19,10 @@ public static class CorrectionTriageParser
         @"\b(zmieni|podwyższ|obniż|poprawi|podniesi)\w*",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase,
         TimeSpan.FromSeconds(1));
+
+    // Banned claims of AI-EVALS section 3 and prompt rule 4. Refused in every category, not only score disputes.
+    [GeneratedRegex(@"gwarant\w*|najlepsz\w*|najgorsz\w*|pewnie|zweryfikowan\w*", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, 1000)]
+    private static partial Regex BannedClaim();
 
     /// <param name="modelText">Raw text of the model answer.</param>
     /// <param name="factsJson">The facts payload the model was given; the draft's digits must occur in it.</param>
@@ -65,6 +69,11 @@ public static class CorrectionTriageParser
             }
 
             if (CorrectionTriagePreSendGuard.ContainsPersonalData(draft) || !NumberGuard.IsGrounded(draft, factsJson))
+            {
+                return null;
+            }
+
+            if (BannedClaim().IsMatch(draft))
             {
                 return null;
             }
