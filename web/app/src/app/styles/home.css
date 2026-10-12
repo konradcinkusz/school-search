@@ -30,12 +30,6 @@
   outline: none;
 }
 
-/* The limited profile (5 to 8 pupils) shows its label and line of text only; no dashed marker that could read as loading. */
-.site-main .score--limited .score__value::before {
-  content: none;
-  display: none;
-}
-
 /* Doradca: the AI notice spans the same width as the form below it. */
 .site-main .advisor .notice--ai {
   max-width: none;

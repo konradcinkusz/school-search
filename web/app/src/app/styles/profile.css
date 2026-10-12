@@ -6,12 +6,6 @@
   align-items: start;
 }
 
-/* Limited profile: no dashed marker (it read as a loading spinner). The label and the explicit line carry the state. */
-.site-main .score--limited .score__value::before {
-  content: none;
-  display: none;
-}
-
 /* Trend chart: value labels keep a surface halo so no gridline or whisker runs through a number, and the dot is a
    solid data point, not a hollow ring. */
 .site-main .trend__dot {

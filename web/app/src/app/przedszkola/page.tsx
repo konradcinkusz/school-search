@@ -47,7 +47,6 @@ export default async function PreschoolsPage({ searchParams }: { searchParams: S
     }),
   ]);
   const gminaList: readonly GminaItem[] = gminas.ok ? gminas.data : [];
-  const factsBySlug = result.ok && result.data.items.length > 0 ? await factsFor(result.data.items) : {};
 
   /** Any submitted filter field (the GET form sends them all) or a page number means a search ran. */
   const submitted = [sp.gmina, sp.q, sp.maxTuition, sp.publicOnly, sp.hasFreePlaces, sp.page].some(
@@ -101,11 +100,7 @@ export default async function PreschoolsPage({ searchParams }: { searchParams: S
           </p>
           {submitted ? <FocusOnResults key={searchKey} targetId="wyniki-liczba" /> : null}
           <h2 className="visually-hidden">Wyniki wyszukiwania</h2>
-          <PreschoolList
-            items={result.data.items}
-            emptyText="Brak przedszkoli spełniających te kryteria."
-            factsBySlug={factsBySlug}
-          />
+          <PreschoolList items={result.data.items} emptyText="Brak przedszkoli spełniających te kryteria." />
           <Pagination
             page={result.data.page}
             pageSize={result.data.pageSize}

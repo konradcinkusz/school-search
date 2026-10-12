@@ -122,8 +122,9 @@ description and the docs URL. Maps to `GET /api/v1/methodology`. No arguments.
 ### find_preschools
 
 Finds preschools (przedszkola). Maps to `GET /api/v1/preschools`. **Preschools have no quality score** (ADR-0014).
-The reply carries practical facts only, and each fact has its source, as-of date and confidence. No argument
-sorts or filters by a score.
+The reply carries practical facts only, and each fact has its source, as-of date and confidence. Each list item
+carries `facts`: the same block `get_preschool` returns (null when no facts row exists), so the source and date of
+the tuition, free places and opening hours come with the list. No argument sorts or filters by a score.
 
 | Argument | Type | Required | Meaning |
 |---|---|---|---|

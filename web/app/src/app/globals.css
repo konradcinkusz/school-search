@@ -1611,8 +1611,8 @@ legend {
   vertical-align: 0.05em;
 }
 
-/* Limited profile (ADR-0009, 5 to 8 pupils): a calm, static info block. Solid rules in the info tokens and a
-   filled dot as the marker (not a dashed ring, which reads as a loading spinner). Distinct from the grey
+/* Limited profile (ADR-0009, 5 to 8 pupils): a calm, static info block. Solid rules in the info tokens, no marker
+   (the label and the explicit line carry the state). Distinct from the grey
    suppressed box above, which has an open circle, a solid left rule and a surface background. */
 .score--limited {
   background: var(--color-info-bg);
