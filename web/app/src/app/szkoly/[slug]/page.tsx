@@ -130,9 +130,16 @@ export default async function SchoolPage({ params, searchParams }: Props) {
         ) : null}
         <p className="school-actions">
           <Link href={`/ranking/gmina:${school.gminaTeryt}`} className="button button--secondary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false">
+              <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />
+            </svg>
             Ranking w gminie
           </Link>
           <Link href={`/porownaj?s=${encodeURIComponent(school.slug)}`} className="button button--secondary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+              <rect x="3.5" y="5" width="7" height="14" rx="1.5" />
+              <rect x="13.5" y="5" width="7" height="14" rx="1.5" />
+            </svg>
             Dodaj do porównania
           </Link>
         </p>
@@ -247,7 +254,9 @@ export default async function SchoolPage({ params, searchParams }: Props) {
       <SponsoredProfile slug={school.slug} />
 
       <div className="notice correction-cta" role="note">
-        <p>Widzisz błąd w danych tej szkoły?</p>
+        <p>
+          <strong>Widzisz błąd w danych tej szkoły?</strong>
+        </p>
         <p className="actions">
           <Link className="button button--secondary" href={`/dla-szkol?slug=${encodeURIComponent(school.slug)}`}>
             Zgłoś błąd w danych

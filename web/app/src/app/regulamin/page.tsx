@@ -19,6 +19,7 @@ export default async function TermsPage() {
   return (
     <article className="prose">
       <header className="page-header">
+        <p className="eyebrow">Informacje prawne</p>
         <h1>Regulamin</h1>
         <p className="lead">Zasady kont i opinii w wyszukiwarce szkół.</p>
       </header>

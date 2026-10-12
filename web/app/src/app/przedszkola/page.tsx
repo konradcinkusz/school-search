@@ -65,6 +65,7 @@ export default async function PreschoolsPage({ searchParams }: { searchParams: S
   return (
     <section>
       <header className="page-header">
+        <p className="eyebrow">Lokalizacja, czesne, wolne miejsca</p>
         <h1>Przedszkola</h1>
         <p className="lead">
           Nie porównujemy przedszkoli według jakości. Pokazujemy praktyczne informacje: lokalizację, czesne, godziny

@@ -143,6 +143,7 @@ public sealed class AgentToolRunner(SchoolTools schools, PreschoolTools preschoo
     {
         "street_list_match" => "Ulica jest na liście obwodu.",
         "no_match" => "Ulicy nie ma na liście obwodu.",
+        "no_number_match" => "Ulica jest na liście obwodu, ale żaden jej przedział nie obejmuje tego numeru.",
         "no_data" => "Gmina nie opublikowała listy ulic.",
         _ => "Sprawdzono obwód.",
     };

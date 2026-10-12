@@ -22,6 +22,7 @@ export default async function PricingPage() {
   return (
     <article className="prose">
       <header className="page-header">
+        <p className="eyebrow">Dla szkół</p>
         <h1>Cennik</h1>
         <p className="lead">
           Profil rozszerzony jest płatny. Obejmuje treść przygotowaną przez przedstawiciela szkoły oraz formularz kontaktu

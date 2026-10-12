@@ -150,7 +150,7 @@ export interface CatchmentResponse {
     readonly resolutionUrl: string | null;
     readonly resolutionDate: string | null;
   };
-  readonly match: "street_list_match" | "no_match" | "no_data";
+  readonly match: "street_list_match" | "no_match" | "no_number_match" | "no_data";
   readonly schools: readonly SchoolListItem[];
   readonly disclaimer: string;
 }

@@ -33,6 +33,7 @@ export default async function ReportPage({ searchParams }: { searchParams: Searc
   return (
     <article className="prose">
       <header className="page-header">
+        <p className="eyebrow">Informacje prawne</p>
         <h1>Zgłoś treść</h1>
         <p className="lead">
           Zgłoszenie dotyczy treści na tym serwisie, na przykład opinii, które naruszają prawo lub{" "}

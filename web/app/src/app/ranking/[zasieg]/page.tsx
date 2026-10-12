@@ -59,7 +59,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 function UnrankedSection({ count }: { readonly count: number }) {
   const { noun, verb } = schoolsCount(count);
   return (
-    <section className="unranked" aria-labelledby="unranked-heading">
+    <section className="unranked card" aria-labelledby="unranked-heading">
       <h2 id="unranked-heading">Szkoły bez wyniku</h2>
       <p>
         {formatInteger(count)} {noun} {verb} w rankingu, ponieważ nie ma dla {count === 1 ? "niej" : "nich"}{" "}
@@ -98,6 +98,7 @@ export default async function RankingPage({ params, searchParams }: Props) {
   return (
     <section>
       <header className="page-header">
+        <p className="eyebrow">Zestawienie wyników</p>
         <h1>
           Ranking szkół podstawowych {isGmina ? `w gminie ${gminaName ?? "Nieznana gmina"}` : "w kraju"}
           {isGmina && gminaName === null ? (
@@ -172,8 +173,7 @@ export default async function RankingPage({ params, searchParams }: Props) {
                         <Link href={`/szkoly/${item.slug}`} className="ranking-table__name">
                           {item.name}
                         </Link>
-                        <br />
-                        <span className="muted">{item.gminaName ?? ""}</span>
+                        {item.gminaName ? <span className="ranking-table__place muted">{item.gminaName}</span> : null}
                       </td>
                       <td data-label="Wynik">
                         <ScoreBadge status={scoreStatusOf(item.score)} block={item.score} variant="compact" />

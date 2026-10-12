@@ -14,6 +14,7 @@ export default function PrivacyPage() {
   return (
     <article className="prose">
       <header className="page-header">
+        <p className="eyebrow">Informacje prawne</p>
         <h1>Polityka prywatności</h1>
         <p className="lead">Jakie dane zbiera serwis i po co je wykorzystuje.</p>
       </header>

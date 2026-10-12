@@ -24,6 +24,7 @@ export default async function ForSchoolsPage({ searchParams }: { searchParams: S
   return (
     <article className="prose">
       <header className="page-header">
+        <p className="eyebrow">Korekty danych i profil rozszerzony</p>
         <h1>Dla szkół</h1>
         <p className="lead">
           Jeśli prowadzisz szkołę albo widzisz błędne dane o szkole, możesz zgłosić korektę. Każde zgłoszenie zostanie

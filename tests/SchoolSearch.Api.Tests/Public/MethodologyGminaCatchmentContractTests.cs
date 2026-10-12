@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using SchoolSearch.Api.Demo;
 using SchoolSearch.Api.Scoring;
 using Xunit;
 using SchoolSearch.Api.Tests.Security;
@@ -65,7 +66,8 @@ public sealed class GminasContractTests
 
 /// <summary>
 /// Contract tests for GET /api/v1/catchment. The rules: no boundary is ever synthesised from distance
-/// (no_data), a street list answers only for the numbers it covers (street_list_match), and anything else is no_match.
+/// (no_data), a street list answers only for the numbers it covers (street_list_match), a listed street whose rules
+/// do not cover the number is no_number_match, and a street that is not listed is no_match.
 /// </summary>
 public sealed class CatchmentContractTests
 {
@@ -118,7 +120,7 @@ public sealed class CatchmentContractTests
     }
 
     [Fact]
-    public async Task Number_outside_the_street_range_is_no_match()
+    public async Task Number_outside_the_street_range_is_no_number_match()
     {
         using var factory = new ConfiguredApiFactory();
         await factory.SeedAsync(PublicSeed.ApplyAsync);
@@ -126,7 +128,7 @@ public sealed class CatchmentContractTests
         var root = await JsonTestHelpers.ReadJsonAsync(await factory.CreateClient().GetAsync(
             $"/api/v1/catchment?gmina={PublicSeed.GminaWithStreetList}&street=Lipowa&number=99"));
 
-        Assert.Equal("no_match", root.GetProperty("match").GetString());
+        Assert.Equal("no_number_match", root.GetProperty("match").GetString());
         Assert.Equal(0, ContractNav.Length(root.GetProperty("schools")));
     }
 
@@ -153,12 +155,57 @@ public sealed class CatchmentContractTests
         // School C covers even numbers 1 to 50 on "Dluga": 7 is odd, 8 is even.
         var odd = await JsonTestHelpers.ReadJsonAsync(await client.GetAsync(
             $"/api/v1/catchment?gmina={PublicSeed.GminaWithStreetList}&street=Dluga&number=7"));
-        Assert.Equal("no_match", odd.GetProperty("match").GetString());
+        Assert.Equal("no_number_match", odd.GetProperty("match").GetString());
 
         var even = await JsonTestHelpers.ReadJsonAsync(await client.GetAsync(
             $"/api/v1/catchment?gmina={PublicSeed.GminaWithStreetList}&street=Dluga&number=8"));
         Assert.Equal("street_list_match", even.GetProperty("match").GetString());
         Assert.Equal(new[] { PublicSeed.SchoolC }, ContractNav.Slugs(even.GetProperty("schools")));
+    }
+
+    [Fact]
+    public async Task Unknown_street_on_the_demo_gmina_is_no_match_even_with_a_house_number()
+    {
+        using var factory = new ConfiguredApiFactory();
+        await factory.SeedAsync(db => DemoSeed.ApplyAsync(db, CancellationToken.None));
+
+        var root = await JsonTestHelpers.ReadJsonAsync(await factory.CreateClient().GetAsync(
+            $"/api/v1/catchment?gmina={DemoSeed.GminaTeryt}&street=Nieistniejaca&number=45"));
+
+        Assert.Equal("no_match", root.GetProperty("match").GetString());
+        Assert.Equal(0, ContractNav.Length(root.GetProperty("schools")));
+    }
+
+    [Fact]
+    public async Task Listed_street_with_numbers_outside_every_rule_is_no_number_match()
+    {
+        using var factory = new ConfiguredApiFactory();
+        await factory.SeedAsync(db => DemoSeed.ApplyAsync(db, CancellationToken.None));
+        var client = factory.CreateClient();
+
+        // Demo rules for Przykladowa cover 1 to 40 only, so 45 and 85 are listed streets with no covering rule.
+        foreach (var number in new[] { "45", "85" })
+        {
+            var root = await JsonTestHelpers.ReadJsonAsync(await client.GetAsync(
+                $"/api/v1/catchment?gmina={DemoSeed.GminaTeryt}&street=Przykladowa&number={number}"));
+
+            Assert.Equal("no_number_match", root.GetProperty("match").GetString());
+            Assert.Equal(0, ContractNav.Length(root.GetProperty("schools")));
+            Assert.Equal("street_list", root.GetProperty("coverage").GetProperty("state").GetString());
+        }
+    }
+
+    [Fact]
+    public async Task Listed_street_with_a_covered_number_keeps_street_list_match()
+    {
+        using var factory = new ConfiguredApiFactory();
+        await factory.SeedAsync(db => DemoSeed.ApplyAsync(db, CancellationToken.None));
+
+        var root = await JsonTestHelpers.ReadJsonAsync(await factory.CreateClient().GetAsync(
+            $"/api/v1/catchment?gmina={DemoSeed.GminaTeryt}&street=Przykladowa&number=5"));
+
+        Assert.Equal("street_list_match", root.GetProperty("match").GetString());
+        Assert.Equal(new[] { "demo-sp-1" }, ContractNav.Slugs(root.GetProperty("schools")));
     }
 
     [Fact]

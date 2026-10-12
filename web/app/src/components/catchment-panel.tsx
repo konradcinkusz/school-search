@@ -8,6 +8,14 @@ import { ServiceUnavailable } from "@/components/service-unavailable";
 const REACH_RADIUS_KM = 3;
 const REACH_PAGE_SIZE = 20;
 
+/** Match values with their own message; "no_match" and unknown values share the street-not-found message. */
+const KNOWN_NON_MATCH: ReadonlySet<string> = new Set(["no_number_match", "no_data"]);
+
+/** "szkoły" after "z 1", "szkół" after any other count ("pokazujemy 13 z 13 szkół"). */
+function schoolsGenitive(total: number): string {
+  return total === 1 ? "szkoły" : "szkół";
+}
+
 export interface CatchmentPanelProps {
   readonly gmina: GminaItem;
   readonly street: string;
@@ -59,14 +67,20 @@ export async function CatchmentPanel({ gmina, street, number }: CatchmentPanelPr
           </div>
         </>
       ) : null}
-      {data.match === "no_match" ? (
+      {data.match === "no_number_match" ? (
         <div className="notice notice--caution" role="note">
-          Nie znaleźliśmy tej ulicy na liście obwodów tej gminy. Sprawdź pisownię nazwy ulicy albo uchwałę gminy.
+          Tego numeru nie ma na liście obwodu tej ulicy. Sprawdź numer albo uchwałę gminy.
         </div>
       ) : null}
       {data.match === "no_data" ? (
         <div className="notice notice--caution" role="note">
           Ta gmina nie ma w serwisie danych o obwodach. Obwód ustala gmina. Nie wyznaczamy go na podstawie odległości.
+        </div>
+      ) : null}
+      {!KNOWN_NON_MATCH.has(data.match) && data.match !== "street_list_match" ? (
+        // "no_match" and any value this version does not know yet.
+        <div className="notice notice--caution" role="note">
+          Nie znaleźliśmy tej ulicy na liście obwodów tej gminy. Sprawdź pisownię nazwy ulicy albo uchwałę gminy.
         </div>
       ) : null}
 
@@ -76,6 +90,7 @@ export async function CatchmentPanel({ gmina, street, number }: CatchmentPanelPr
       <InReach
         gmina={gmina}
         anchor={data.match === "street_list_match" ? anchor ?? null : null}
+        fallbackReason={data.match === "street_list_match" ? "no_coordinates" : "no_catchment_school"}
         excludeSlugs={catchmentSlugs}
       />
       <p className="actions">
@@ -90,10 +105,13 @@ export async function CatchmentPanel({ gmina, street, number }: CatchmentPanelPr
 async function InReach({
   gmina,
   anchor,
+  fallbackReason,
   excludeSlugs,
 }: {
   gmina: GminaItem;
   anchor: SchoolListItem | null;
+  /** Why the list falls back to the whole gmina when there is no anchor. */
+  fallbackReason: "no_coordinates" | "no_catchment_school";
   excludeSlugs: ReadonlySet<string>;
 }) {
   if (anchor && anchor.latitude !== null && anchor.longitude !== null) {
@@ -126,8 +144,11 @@ async function InReach({
   return (
     <>
       <p className="muted">
-        Brak współrzędnych szkoły obwodowej, więc pokazujemy szkoły w gminie (pierwsze {REACH_PAGE_SIZE} z{" "}
-        {inGmina.data.total}). To nie jest lista szkół obwodowych.
+        {fallbackReason === "no_coordinates"
+          ? "Szkoła obwodowa nie ma w danych współrzędnych"
+          : "Nie ustaliliśmy szkoły obwodowej dla tego adresu"}
+        , więc pokazujemy {items.length} z {inGmina.data.total} {schoolsGenitive(inGmina.data.total)} w gminie. To nie
+        jest lista szkół obwodowych.
       </p>
       <SchoolList items={items} emptyText="Brak szkół w tej gminie." />
     </>

@@ -39,6 +39,7 @@ export default async function MethodologyPage() {
   return (
     <article className="prose">
       <header className="page-header">
+        <p className="eyebrow">Jak liczymy</p>
         <h1>Metodologia</h1>
         <p className="lead">Jak liczymy i pokazujemy wyniki szkół, czego nie mierzą i jakie mają ograniczenia.</p>
       </header>
@@ -135,7 +136,7 @@ export default async function MethodologyPage() {
           porównywalne. Nie korygujemy tego w wersji {version}.
         </li>
         <li>
-          <strong>Selekcja do egzaminu.</strong> Nawet z wskaźnikiem pokrycia część zniekształceń pozostaje, zwłaszcza w
+          <strong>Selekcja do egzaminu.</strong> Nawet ze wskaźnikiem udziału w egzaminie część zniekształceń pozostaje, zwłaszcza w
           małych grupach porównawczych.
         </li>
         <li>

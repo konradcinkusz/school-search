@@ -18,6 +18,7 @@ export default async function ContactPage() {
   return (
     <article className="prose">
       <header className="page-header">
+        <p className="eyebrow">Serwis</p>
         <h1>Kontakt</h1>
         <p className="lead">Punkt kontaktowy dla organów państwowych i użytkowników serwisu (art. 11 i 12 DSA).</p>
       </header>

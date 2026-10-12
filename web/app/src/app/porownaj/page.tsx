@@ -28,6 +28,7 @@ export default async function ComparePage({ searchParams }: { searchParams: Sear
   return (
     <section>
       <header className="page-header">
+        <p className="eyebrow">Od 2 do 4 szkół obok siebie</p>
         <h1>Porównaj szkoły</h1>
         <p className="lead">
           Porównujesz od 2 do 4 szkół obok siebie. Każda pozycja ma wynik z przedziałem, liczbę uczniów w grupie

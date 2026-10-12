@@ -484,11 +484,10 @@ function catchmentHandler(sp, res) {
   let match = "no_data";
   const schools = [];
   if (coverage.state !== "none") {
-    const rows = STREETS.filter(
-      (r) =>
-        r.gmina === gmina &&
-        r.street === street &&
-        (Number.isNaN(number) || r.from === null || (number >= r.from && number <= r.to)),
+    // Same rule as RowCovers in CatchmentEndpoints.cs: a row with a range needs a number inside it.
+    const streetRows = STREETS.filter((r) => r.gmina === gmina && r.street === street);
+    const rows = streetRows.filter(
+      (r) => r.from === null || (!Number.isNaN(number) && number >= r.from && number <= r.to),
     );
     const seen = new Set();
     for (const r of rows) {
@@ -497,7 +496,8 @@ function catchmentHandler(sp, res) {
       const s = SCHOOLS.find((x) => x.id === r.schoolId);
       if (s) schools.push(listItem(s, DEFAULT_EXAM_YEAR, null));
     }
-    match = schools.length > 0 ? "street_list_match" : "no_match";
+    // Listed street, no covering rule for this number: no_number_match. Unknown street: no_match.
+    match = schools.length > 0 ? "street_list_match" : rows.length === 0 && streetRows.length > 0 ? "no_number_match" : "no_match";
   }
 
   send(res, 200, {
