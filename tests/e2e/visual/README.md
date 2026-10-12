@@ -72,12 +72,14 @@ A 404 answer on the not-found route is expected and passes.
 
 Catalog (`/api/v1/...`): `gminas`, `schools` (q, gmina, isPublic, lat/lon/radiusKm, sort, page, pageSize),
 `schools/{slug}`, `schools/by-id/{id}`, `ranking` (scope, gmina, year, page), `compare`, `methodology`, `catchment`,
-`corrections/{token}` (GET) and `corrections` (POST, returns 201 with a token), `preschools` (filters),
+`corrections/{token}` (GET) and `corrections` (POST: body `{slug, field, message, contactEmail?, kind?}`, checked as
+`CorrectionRequestValidator` does, returns 201 with `{token, status}`), `preschools` (filters),
 `preschools/{slug}`, `meta`. The AI routes (`schools/{slug}/explain`, `ai/search-intent`, `ai/methodology-answer`)
 answer 503 `ai_unavailable`, as the real service does without a key.
 
-Reviews (8082): `schools/{slug}/reviews` (empty list), `legal/terms`, `legal/contact` (503 `contact_not_configured`),
-`reviews/mine` (401).
+Reviews (8082): `schools/{slug}/reviews` (empty list, same envelope as `ReviewsEnvelope`), `notices` (POST returns 201
+with `{id, ackToken, receivedAt}`, validated as `DsaValidation.ValidateNotice`; GET `notices/{id}?token=` for the
+status), `legal/terms`, `legal/contact` (503 `contact_not_configured`), `reviews/mine` (401).
 
 Billing (8083): `plans` (empty, note "Cennik w przygotowaniu."), `schools/{slug}/premium` (tier none),
 `legal/enquiry-consent` (draft text).
