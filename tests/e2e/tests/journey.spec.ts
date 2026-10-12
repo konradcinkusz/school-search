@@ -73,11 +73,21 @@ test.describe("public journey on the synthetic demo gmina", () => {
 
     await lookUpCatchment(page, DEMO_GMINA, DEMO_STREET, DEMO_NUMBER);
 
-    const school = page.getByText(CATCHMENT_SCHOOL, { exact: true }).first();
-    await expect(school).toBeVisible();
-    await expect(page.getByText(/\d+(?:[.,]\d+)?\s*±\s*\d+(?:[.,]\d+)?/).first()).toBeVisible();
-    await expect(page.getByText(/\d+\s+uczniów/).first()).toBeVisible();
-    await expect(page.getByText(methodology.version, { exact: false }).first()).toBeVisible();
+    // The catchment school is the only item in the catchment block (.catchment__school). The alternatives
+    // ("Szkoły w zasięgu") render in a separate block, so every score assertion below is scoped to this item.
+    const catchmentSchool = page
+      .locator(".catchment__school li")
+      .filter({ has: page.getByRole("link", { name: CATCHMENT_SCHOOL, exact: true }) });
+    await expect(catchmentSchool).toHaveCount(1);
+    await expect(catchmentSchool).toBeVisible();
+    await expect(catchmentSchool).not.toContainText("Brak wyniku");
+
+    const scoreBlock = catchmentSchool.locator('[data-status="published"]');
+    await expect(scoreBlock).toHaveCount(1);
+    await expect(scoreBlock.getByText(/\d+(?:[.,]\d+)?\s*±\s*\d+(?:[.,]\d+)?/)).toBeVisible();
+    await expect(scoreBlock.getByText(/\d+\s+uczniów/)).toBeVisible();
+    await expect(scoreBlock).toContainText(methodology.version);
+
     await expect(page.getByText("Obwody: lista ulic", { exact: true }).first()).toBeVisible();
     await expect(page.getByText(/Szkoły w zasięgu/).first()).toBeVisible();
   });
@@ -94,10 +104,10 @@ test.describe("public journey on the synthetic demo gmina", () => {
     await expect(provenance.getByRole("row").filter({ hasText: "DEMO SEED" }).first()).toBeVisible();
   });
 
-  test("8-sat school shows the small-group message and no numeric score", async ({ page }) => {
+  test("8-sat school shows the limited profile and no numeric score (ADR-0009)", async ({ page }) => {
     await page.goto(`/szkoly/${EIGHT_SAT_SLUG}`);
 
-    await expect(page.getByText("zbyt mała grupa", { exact: false }).first()).toBeVisible();
+    await expect(page.getByText("Dla tej grupy nie publikujemy wyniku ani miejsca w zestawieniu.", { exact: true })).toBeVisible();
     await expect(page.getByText(/±/)).toHaveCount(0);
   });
 

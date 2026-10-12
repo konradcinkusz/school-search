@@ -54,7 +54,7 @@ public sealed class SchoolsContractTests
     }
 
     [Fact]
-    public async Task Suppressed_school_has_null_score_and_insufficient_cohort_reason_never_zero()
+    public async Task Limited_school_has_null_score_and_limited_reason_never_zero()
     {
         using var factory = new ConfiguredApiFactory();
         await factory.SeedAsync(PublicSeed.ApplyAsync);
@@ -62,11 +62,12 @@ public sealed class SchoolsContractTests
         var root = await JsonTestHelpers.ReadJsonAsync(await factory.CreateClient().GetAsync("/api/v1/schools?pageSize=100"));
         var school = ContractNav.BySlug(root.GetProperty("items"), PublicSeed.SchoolE);
 
-        Assert.Equal("insufficient_cohort", school.GetProperty("scoreStatus").GetString());
+        // School E has 5 pupils who sat: the limited band (ADR-0009), with no value, no interval and no rank.
+        Assert.Equal("limited", school.GetProperty("scoreStatus").GetString());
         var score = school.GetProperty("score");
         ContractAssert.ExactKeys(score, ContractKeys.ScoreBlock);
         Assert.Equal(JsonValueKind.Null, score.GetProperty("score").ValueKind);
-        Assert.Equal("insufficient_cohort", score.GetProperty("reason").GetString());
+        Assert.Equal("limited", score.GetProperty("reason").GetString());
         Assert.Equal(5, score.GetProperty("cohortSize").GetInt32());
         Assert.Equal(JsonValueKind.Null, score.GetProperty("intervalLow").ValueKind);
         Assert.Equal(JsonValueKind.Null, score.GetProperty("intervalHigh").ValueKind);

@@ -274,14 +274,16 @@ On 429, wait for `Retry-After` seconds and retry. Do not retry in a tight loop.
 
 | Item | State |
 |---|---|
-| Server code (`src/SchoolSearch.Mcp`) | Written. **Not compiled** in the authoring environment (no .NET SDK there). CI is the compiler. |
-| Protocol test (`tests/SchoolSearch.Mcp.Tests`) | Written, raw JSON-RPC over HTTP against a stub catalog. **Not run in CI yet.** |
-| Container image | Dockerfile written. Not built in this environment. |
+| Server code (`src/SchoolSearch.Mcp`) | Built by CI: `dotnet build SchoolSearch.sln -warnaserror` in the `dotnet build and test` job. Green on the merged Phase I commit (`aff25c8`, PR #10). |
+| Protocol test (`tests/SchoolSearch.Mcp.Tests`) | Raw JSON-RPC over HTTP against a stub catalog. In `SchoolSearch.sln`, so `dotnet test` in the `dotnet build and test` job runs it. Passed there on `aff25c8`. |
+| Container image | Built in CI (`docker build (no push)` job, `school-search-mcp:ci`). `/health` smoke-tested on :8081. Not pushed. |
 | Deployment (`school-search-mcp-dev`) | **Not deployed.** No tag has been pushed. Agents do not deploy. |
 | Planned URL `https://school-search-mcp-dev.fly.dev/mcp` | **Does not resolve yet.** |
-| Dependency versions | `ModelContextProtocol.AspNetCore` 2.2.0 and `Anthropic` 12.55.0 are the versions the design names. Confirm they resolve on NuGet in CI. |
+| Dependency versions | `ModelContextProtocol.AspNetCore` 2.2.0 and `Anthropic` 12.55.0 (`Directory.Packages.props`). They restored and built in CI on `aff25c8`. |
 
-Until the protocol test is green in CI on the merged commit, MCP is not exposed (ADR-0006).
+The protocol test is green in CI on the merged Phase I commit, which is the test condition of ADR-0006. MCP is still not
+exposed: it is not deployed and no tag has been pushed. **NOT RUN:** the deployment, the planned URL, and any live agent
+call (CI sets no `ANTHROPIC_API_KEY`, so `POST /agent/chat` answers 503 `ai_unavailable` there).
 
 ## 9. The agent endpoint (Phase G, not MCP)
 

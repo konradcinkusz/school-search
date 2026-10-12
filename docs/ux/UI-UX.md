@@ -7,11 +7,11 @@ is in English. Labels below are the intended Polish labels where known, and are 
 
 | Route (proposed; `web/app` is authoritative once written) | Purpose | Phase A state |
 |---|---|---|
-| `/` | Entry: address or school search box | Polish stub, no address search (ADR-0010 pending) |
-| `/szkola/[rspo]` | School profile: identity, type, location, the data this portal holds | Stub, reads the catalog API |
+| `/` | Entry: address form (gmina, street, number) with the catchment panel, and a school name search below it | Address form and catchment panel in place (`web/app/src/app/page.tsx`); name search reads the catalog API |
+| `/szkoly/[slug]` | School profile: identity, type, location, the data this portal holds (was `/szkola/[rspo]`) | Reads the catalog API |
 | `/metodologia` | Methodology page, versioned, with the reading guide for score and confidence | Content in place; marked draft |
 | `/dla-szkol` | For schools: what is shown, how to request a correction | Stub |
-| `/sitemap.xml`, `/robots.txt` | Search engine surface | Generated |
+| `/robots.txt`, `/sitemap/<id>.xml` | Search engine surface. There is no `/sitemap.xml`; `robots.ts` lists ids 0 (static pages), 1 to 5 (school profiles) and 6 (preschool profiles) | Generated (`web/app/src/app/robots.ts`, `sitemap.ts`, `lib/sitemap-config.ts`) |
 
 Other routes from the brief (catchment result, comparison, ranking) are Phase B and C. They are not scaffolded
 as working screens.
@@ -40,6 +40,16 @@ labelled `DEMO SEED (synthetic)`. The demo data is fictional and must never be r
 
 Not yet tested in CI: the trend chart is checked only as a visible `svg`; the axe scan and the phone-width viewport
 test are not written yet.
+
+## Phase I status
+
+Phase I redesigned the UI. The visual system is in `docs/ux/DESIGN-SYSTEM.md`: plain CSS in `web/app/src/app/globals.css`,
+phone first at 360 px, with the score, its interval and the caveats kept in one block. A visual harness in
+`tests/e2e/visual` visits every public route at 360, 768 and 1366 px and writes screenshots and findings. It runs
+locally against a mock catalog, not in CI, and it asserts only that pages load. CI on `main` was green through Phase I
+(PR #10, 13 checks). Still open: a CI gate for phone-width overflow (row 8), an accessibility pass with an axe check in
+CI (row 9), the limited-confidence band (row 7), and live runs of the AI features and of the authservice login (rows 14
+and 15).
 
 ## Flows
 
@@ -70,15 +80,15 @@ Status column shows what Phase C delivered; open items are the ones still gated.
 | 4 | Gmina with no catchment data shows "brak danych", never a guessed school | A guessed school is a false statement about a child's school | e2e no-data gmina | Done in the e2e suite; needs its first CI run |
 | 5 | Methodology page: "nie jest oficjalnym rankingiem", reading guide, version, draft status | Users need to know what a score means before reading one | e2e methodology text | Text checked; reading guide still in review |
 | 6 | Correction path for schools (`/dla-szkol`) | Required for a public data portal | e2e token on submit; admin flow after ADR-0008 | Token path checked; operator review is manual |
-| 7 | Limited-confidence profile band (ADR-0009: cohort 5 to 8) | Keeps about 1 550 schools informative without a rank | Boundary tests at 4, 5, 8, 9 | Boundary data seeded (8 and 9 pupils); band UI not yet built |
-| 8 | Phone-width layout with no horizontal scroll | Most searches happen on phones | Playwright viewport test | Not started |
-| 9 | Accessibility pass: keyboard, contrast, screen-reader labels on all states | Required for a public service | axe check in Playwright | Not started |
+| 7 | Limited-confidence profile band (ADR-0009: cohort 5 to 8) | Keeps about 1 550 schools informative without a rank | Boundary tests at 4, 5, 8, 9 | Built: engine returns `limited` for 5 to 8 (no score, no rank), dashed badge and profile copy, excluded from ranking; boundary unit tests and `limited-band.spec.ts` need their first CI run |
+| 8 | Phone-width layout with no horizontal scroll | Most searches happen on phones | Playwright viewport test | Partly. Visual collector at 360, 768 and 1366 px in `tests/e2e/visual` (run locally, not in CI). It asserts load and status only, not overflow. No CI gate yet |
+| 9 | Accessibility pass: keyboard, contrast, screen-reader labels on all states | Required for a public service | axe check in Playwright | Partly. Contrast is measured in `docs/ux/DESIGN-SYSTEM.md`. The visual collector counts images without alt and unnamed form fields (local only). No axe test, not in CI |
 | 10 | Catchment by street and number (`street_list` only; no polygon, no distance guess) | The wedge; the gmina decides the boundary | Gmina resolution linked; ADR-0010 | Working for the demo gmina; real gminas wait on data |
 | 11 | Compare two to four schools | Useful after profiles are trusted | e2e three-column compare | Working; needs its first CI run |
 | 12 | Ranking list (country and gmina) | Only after cohort rules and methodology are final | e2e descending scores and no sort control | Working; needs Phase B methodology sign-off |
-| 13 | Preschool cost and availability (no quality score) | Phase D; a different data shape | Phase D scope | Not started |
-| 14 | Parent reviews and accounts | Phase E; DSA machinery required first | authservice wired; DSA terms | Not started |
-| 15 | AI explanation panel ("Wyjaśnij ten wynik"): delimited box, label "Wygenerowano przez AI — to nie jest ocena szkoły", structured facts beside it, link to `/metodologia`, graceful messages for 503, 502 and 429 | Reader harm if the text reads as a verdict; the facts must stay next to it (ADR-0011 B6) | Playwright: label and facts visible; 503 and 502 messages; no HTML from the model | Written at PR 4, not run in CI; needs O1 (retention) before public launch |
+| 13 | Preschool cost and availability (no quality score) | Phase D; a different data shape | Phase D scope | Pages exist: `/przedszkola` and `/przedszkola/[slug]`, practical facts only, no score. Gmina tuition tables are still OPEN in `docs/data/SOURCES.md` |
+| 14 | Parent reviews and accounts | Phase E; DSA machinery required first | authservice wired; DSA terms | Pages and components exist: `/konto` (login, register, school claims), reviews and billing components. Login against authservice is NOT RUN in CI (`AUTH_BASE_URL` unset there) |
+| 15 | AI explanation panel ("Wyjaśnij ten wynik"): delimited box, label "Wygenerowano przez AI — to nie jest ocena szkoły", structured facts beside it, link to `/metodologia`, graceful messages for 503, 502 and 429 | Reader harm if the text reads as a verdict; the facts must stay next to it (ADR-0011 B6) | Playwright: label and facts visible; 503 and 502 messages; no HTML from the model | Built (`web/app/src/components/explain-panel.tsx`). `ai-surface.spec.ts` runs in the CI e2e job. No live model call in CI (no key). Needs O1 (retention) before public launch |
 | 16 | MCP connection page (`/mcp` docs) and the agent-facing wording of scores (score with interval, `n uczniów`, version) | Agents repeat numbers without context; the wording is the only guard they see | Protocol test on tool descriptions; review of the example conversation in `docs/mcp/MCP.md` | Written at PR 4; no public page yet; MCP not deployed |
 
 ## Rules for every screen

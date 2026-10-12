@@ -81,8 +81,11 @@ that reaches it stops and says so. It writes no partial file that looks complete
 
 ## 5. Evals and the gate
 
-- Each feature has an eval set and a pass threshold in `docs/ai/AI-EVALS.md`. A feature is not switched on until its set is
-  built and its threshold is met on the pinned model (`AI_MODEL`, default `claude-haiku-5-5`).
+- Each feature has an eval set and a pass threshold. The eval sets are the nine folders under `evals/datasets/`. The Tier A
+  thresholds (four features) are in `evals/thresholds.json`; the Tier B thresholds are in the table below and in
+  `docs/ai/AI-EVALS.md`. A feature is not switched on until its set is built and its threshold is met on the pinned model
+  (`AI_MODEL`, default `claude-haiku-5-5`).
+
 - A change of model, prompt version or effort setting is a new eval run. The result is recorded with the date and the model id.
 - Eval sets contain no real pupil data and no real review text. Use synthetic or public examples.
 - The eval run is a person's task. It is not automated in CI, because it calls the live model and spends the budget.
@@ -96,6 +99,22 @@ that reaches it stops and says so. It writes no partial file that looks complete
 - **Reading a result.** A `FAIL` names the case ids and the checks. Follow section 7 for the response, then add the case
   to the dataset. A `PASS` on a partial run (`partial: true`) covers only the cases that ran.
 - **Thresholds** are proposals until the owner records a decision in `docs/ai/AI-EVALS.md` section 0 (owner decisions).
+  The Tier A thresholds are in `evals/thresholds.json` (four features, all `decided_by_owner: false`). The Tier B thresholds
+  are not in that file.
+
+Datasets and runners. The nine folders under `evals/datasets/` and the runner for each:
+
+| Dataset folder | Tier | Runner | Live run |
+|---|---|---|---|
+| `agent`, `explain`, `methodology`, `search-intent` | A (Node) | `evals/features/<feature>.mjs`, run by `evals/run.mjs` | `node evals/run.mjs --live --feature <feature>` (`EVAL_API_BASE`, `EVAL_AGENT_BASE`) |
+| `catchment-extract` | B (.NET) | `tests/SchoolSearch.Evals.Tests/ExtractorCatchmentLiveTests.cs` | `EVALS_LIVE=1` and `ANTHROPIC_API_KEY` set; `dotnet test` |
+| `correction-triage` | B (.NET) | `tests/SchoolSearch.Evals.Tests/CorrectionTriageLiveEvalTests.cs` | same |
+| `preschool-extract` | B (.NET) | `tests/SchoolSearch.Evals.Tests/ExtractorPreschoolLiveTests.cs` | same |
+| `profile-copy` | B (.NET) | `tests/SchoolSearch.Evals.Tests/ProfileCopyLiveTests.cs` | same |
+| `review-triage` | B (.NET) | `tests/SchoolSearch.Evals.Tests/ReviewTriageLiveEvalTests.cs` | same |
+
+The Tier B live tests skip in CI by design, and every live run stays NOT RUN until a person runs it. `evals/README.md` has
+the offline test files and the threshold for each dataset.
 
 ## 6. Monitoring and cost
 

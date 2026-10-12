@@ -12,6 +12,30 @@ public sealed class RankingBuilderTests
     private static ScoreDto Suppressed(int cohort) =>
         new(null, ScoreDto.InsufficientCohortReason, cohort, null, null, ScoringPolicy.MethodologyVersion);
 
+    private static ScoreDto Limited(int cohort) =>
+        new(null, ScoreDto.LimitedReason, cohort, null, null, ScoringPolicy.MethodologyVersion);
+
+    [Fact]
+    public void Limited_schools_are_never_ranked_even_beside_higher_published_scores()
+    {
+        // Cohorts 5 to 8 (ADR-0009) carry no score and no rank: they are counted as unranked, never placed.
+        var schools = new (string Slug, ScoreDto Score)[]
+        {
+            ("school-l1", Limited(5)),
+            ("school-p1", Published(-3.0)),
+            ("school-l2", Limited(8)),
+            ("school-p2", Published(20.0)),
+        };
+
+        var ranked = RankingBuilder.RankDescending(schools, out var unranked);
+
+        Assert.Equal(new[] { "school-p2", "school-p1" }, ranked.Select(r => r.Slug).ToArray());
+        Assert.Equal(new[] { 1, 2 }, ranked.Select(r => r.Rank).ToArray());
+        Assert.Equal(new[] { "school-l1", "school-l2" }, unranked.Select(u => u.Slug).ToArray());
+        Assert.All(unranked, u => Assert.Equal(ScoreDto.LimitedReason, u.Score.Reason));
+        Assert.All(unranked, u => Assert.Null(u.Score.Score));
+    }
+
     [Fact]
     public void Ranks_descending_and_tied_schools_share_a_rank_with_stable_slug_order()
     {

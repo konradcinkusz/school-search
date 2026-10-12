@@ -1,6 +1,6 @@
 # ADR-0009: Cohort publication threshold
 
-- **Status:** Accepted (9 for a score, 5 as the floor for any exam figure; the 5 to 8 profile is deferred to Phase C)
+- **Status:** Accepted (9 for a score, 5 as the floor for any exam figure). The 5 to 8 limited profile is built (`scoreStatus` `limited`, no score, no rank; backlog A-11, not yet compiled in this environment); below 5 stays `insufficient_cohort`
 - **Date:** 2026-10-11
 - **Deciders:** owner (Konrad Cinkusz), to confirm at Phase B review. The one wording point under "Open points"
   must be confirmed before the first public score.

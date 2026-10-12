@@ -7,7 +7,9 @@ same year, plus the descending ranking of published scores. No I/O, no clock. Th
 ## Invariants
 
 - **Never null, 0 or a guess below the threshold.** Cohort below `ScoringPolicy.PublicationThreshold` (9 pupils
-  who sat, ADR-0009) yields `ScoreDto` with a null score and reason `insufficient_cohort`. The threshold lives only in `ScoringPolicy`.
+  who sat, ADR-0009) yields `ScoreDto` with a null score. From `ScoringPolicy.LimitedBandFloor` (5) up to 8 the
+  reason is `limited` (descriptive data only, no score, no rank); below 5 it is `insufficient_cohort`. The thresholds
+  live only in `ScoringPolicy`.
 - **Every score carries its cohort, interval and methodology version** in the same `ScoreDto` (METRIC-ETHICS §3).
 - **Counter-metric blended, not beside.** Coverage (sat / class VIII headcount) multiplies every subject mean
   below `CoverageFloor` (0.8), so the score cannot rise by lowering coverage (METRIC-ETHICS §2).

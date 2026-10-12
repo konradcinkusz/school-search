@@ -333,7 +333,7 @@ The model never hides, rejects, publishes or edits a review. The output is shown
 
 **Data sent (exact).**
 - The correction text, capped at 2000 characters, untrusted.
-- The claimed field (enum: `nazwa`, `adres`, `typ`, `obwod`, `czesne`, `wynik`, `inne`).
+- The claimed field (enum: `name`, `governing_body`, `cohort`, `address`, `fee`, `attribute`, `score`, `methodology`, `other`; the allowlist in `src/SchoolSearch.Api/Corrections/CorrectionRequestValidator.cs`).
 - The current published value for that field, with `source`, `sourceUrl` and `asOf` (from the database).
 - The submitter role enum (`dyrektor`, `nauczyciel`, `rodzic`, `inny`), no name.
 

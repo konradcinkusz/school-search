@@ -31,6 +31,7 @@ const DEMO_MARK = "DEMO SEED";
 
 const STATUS_LABEL: Record<ScoreStatus, string> = {
   published: "wynik opublikowany",
+  limited: "profil ograniczony: mała grupa, bez wyniku i miejsca",
   insufficient_cohort: "brak wyniku: zbyt mała grupa",
   no_exam_data: "brak danych egzaminacyjnych",
   no_baseline: "brak danych porównawczych",

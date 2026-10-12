@@ -12,7 +12,8 @@ public static class ScoringPolicy
     /// <summary>
     /// Minimum number of pupils who sat the exam before a score is published (ADR-0009). Counts pupils
     /// who SAT, not class headcount. THE only place the threshold lives. Below it the engine suppresses
-    /// the score with <c>insufficient_cohort</c> (METRIC-ETHICS §3: no number without its cohort).
+    /// the score: <c>limited</c> from <see cref="LimitedBandFloor"/>, <c>insufficient_cohort</c> below that
+    /// (METRIC-ETHICS §3: no number without its cohort).
     /// </summary>
     public const int PublicationThreshold = 9;
 

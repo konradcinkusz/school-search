@@ -1,8 +1,8 @@
 namespace SchoolSearch.Contracts.Public;
 
 /// <summary>
-/// One school in a list. <see cref="ScoreStatus"/> is "published", "insufficient_cohort", "no_exam_data" or
-/// "no_baseline". <see cref="Score"/> is null for the last two (no number exists to show).
+/// One school in a list. <see cref="ScoreStatus"/> is "published", "limited", "insufficient_cohort", "no_exam_data" or
+/// "no_baseline". <see cref="Score"/> is null for every status except "published" (no number exists to show).
 /// </summary>
 public sealed record SchoolListItem(
     string Slug,

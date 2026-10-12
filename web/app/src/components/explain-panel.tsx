@@ -39,6 +39,7 @@ const KNOWN_CODES: ReadonlySet<string> = new Set<ExplainErrorCode>([
 
 const SCORE_STATUSES: ReadonlySet<string> = new Set<ScoreStatus>([
   "published",
+  "limited",
   "insufficient_cohort",
   "no_exam_data",
   "no_baseline",

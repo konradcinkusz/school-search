@@ -47,10 +47,11 @@ All tokens are custom properties on `:root`. Dark mode redefines the colour toke
 
 Semantic tones come as `bg` / `fg` / `border` triples: `info`, `warn`, `danger`, `success`, `ai`, `sponsor`, `demo`.
 
-Measured contrast (WCAG 2.x), light / dark: body text 15.7 / 14.9; muted on background 6.4 / 7.9; accent on surface
-8.3 / 8.2; button text on accent 8.3 / 8.6; every tone's text on its own background ≥ 6.9 / ≥ 9.6; input border on
-surface 4.0 / 4.2 (non-text, needs 3); focus ring on background 5.2 / 8.6. All pass AA; text pairs pass AAA except
-the success tone in light mode (6.9).
+Measured contrast (WCAG 2.x, computed from the token values in `globals.css`), light / dark: body text 15.7 / 14.9;
+muted on background 6.4 / 8.7; accent on surface 8.3 / 8.2; button text on accent 8.3 / 8.6; every tone's text on its
+own background ≥ 6.88 / ≥ 9.6 (lowest: success in light, 6.88; AI in dark, 9.61); input border on surface 4.0 / 4.25
+(non-text, needs 3); focus ring on background 5.2 / 8.6. All pass AA. Text pairs pass AAA except light-mode muted text
+(6.4 on background, 6.9 on surface) and the success tone in light mode (6.88).
 
 ### Type
 

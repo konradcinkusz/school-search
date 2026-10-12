@@ -1524,6 +1524,30 @@ legend {
   vertical-align: 0.05em;
 }
 
+/* Limited profile (ADR-0009, 5 to 8 pupils): dashed on every side in the info tokens. Distinct from the grey
+   suppressed box above, which has a solid left rule and a surface background. */
+.score--limited {
+  background: var(--color-info-bg);
+  border: 1px dashed var(--color-info-border);
+  border-left: 4px dashed var(--color-info-fg);
+}
+
+.score--limited .score__value {
+  color: var(--color-info-fg);
+  font-size: var(--text-base);
+}
+
+.score--limited .score__value::before {
+  content: "";
+  display: inline-block;
+  width: 0.6em;
+  height: 0.6em;
+  margin-right: 0.45em;
+  border: 2px dashed var(--color-info-fg);
+  border-radius: 50%;
+  vertical-align: 0.05em;
+}
+
 .score--compact {
   padding: var(--space-2) var(--space-3);
 }

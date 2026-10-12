@@ -38,7 +38,7 @@ public sealed class RankingContractTests
 
         // Suppressed E is counted, never listed, never placed at the bottom.
         var suppressed = root.GetProperty("unrankedCount").GetInt32();
-        Assert.True(suppressed >= 1, "The insufficient-cohort school must be counted in unrankedCount.");
+        Assert.True(suppressed >= 1, "The limited-band school must be counted in unrankedCount.");
         Assert.DoesNotContain(PublicSeed.SchoolE, ContractNav.Slugs(items));
 
         // total is the number of ranked schools (the pagination total of items).
