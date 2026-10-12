@@ -2,7 +2,7 @@
 
 import "@/app/styles/forms.css";
 import Link from "next/link";
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { AI_LABEL, parseSearchIntent, type SchoolKind, type SearchIntentFilters, type SearchIntentResult } from "@/lib/ai-contract";
 import { aiFailureText } from "@/lib/ai-messages";
 import { bffRequest, type BffResponse } from "@/lib/bff-client";
@@ -71,6 +71,12 @@ export function SearchIntentBox() {
   const [failure, setFailure] = useState<string | null>(null);
   const [result, setResult] = useState<SearchIntentResult | null>(null);
   const [draft, setDraft] = useState<Editable | null>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  // A new result is announced by moving focus to it (WCAG 4.1.3), as the explain panel does.
+  useEffect(() => {
+    if (result !== null) resultRef.current?.focus();
+  }, [result]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -156,7 +162,7 @@ export function SearchIntentBox() {
       ) : null}
 
       {result !== null && draft !== null && link !== null ? (
-        <div className="ai-search__result">
+        <div ref={resultRef} tabIndex={-1} className="ai-search__result focus-region">
           <p className="ai-box__label">{result.aiLabel || AI_LABEL}</p>
           <fieldset className="chips" id={ids.filters}>
             <legend className="muted">Zinterpretowane filtry (możesz je poprawić)</legend>

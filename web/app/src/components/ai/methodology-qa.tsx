@@ -1,7 +1,7 @@
 "use client";
 
 import "@/app/styles/forms.css";
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { AI_LABEL, parseMethodologyAnswer, type MethodologyAnswer } from "@/lib/ai-contract";
 import { aiFailureText } from "@/lib/ai-messages";
 import { bffRequest, type BffResponse } from "@/lib/bff-client";
@@ -20,6 +20,12 @@ export function MethodologyQa() {
   const [localError, setLocalError] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [answer, setAnswer] = useState<MethodologyAnswer | null>(null);
+  const answerRef = useRef<HTMLElement>(null);
+
+  // A new answer is announced by moving focus to it (WCAG 4.1.3), as the explain panel does.
+  useEffect(() => {
+    if (answer !== null) answerRef.current?.focus();
+  }, [answer]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -96,7 +102,7 @@ export function MethodologyQa() {
       ) : null}
 
       {answer !== null ? (
-        <section className="ai-box" aria-label="Odpowiedź AI">
+        <section ref={answerRef} tabIndex={-1} className="ai-box focus-region" aria-label="Odpowiedź AI">
           <p className="ai-box__label">{answer.aiLabel || AI_LABEL}</p>
           <p className="ai-box__text">{answer.answer}</p>
           {answer.citedSections.length > 0 ? (

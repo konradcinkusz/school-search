@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import Link from "next/link";
-import { SiteHeader } from "@/components/site-header";
+import { BrandMark, SiteHeader } from "@/components/site-header";
 
 export const metadata: Metadata = {
   title: {
@@ -19,27 +19,34 @@ export const viewport: Viewport = {
   initialScale: 1,
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#1b1e23" },
+    { media: "(prefers-color-scheme: dark)", color: "#121a1f" },
   ],
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="pl">
+    <html lang="pl" suppressHydrationWarning>
+      <head>
+        {/* Marks that scripts run, so the phone menu can collapse behind its button without a layout jump. */}
+        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
+      </head>
       <body>
         <a href="#main" className="skip-link">
           Przejdź do treści
         </a>
         <SiteHeader />
         <main id="main" className="site-main" tabIndex={-1}>
-          {children}
+          <div className="site-container">{children}</div>
         </main>
         <footer className="site-footer">
           <div className="site-footer__inner">
-            <div>
-              <p className="site-footer__brand">Wyszukiwarka szkół</p>
+            <div className="site-footer__about">
+              <p className="site-footer__brand">
+                <BrandMark className="brand-mark brand-mark--footer" />
+                <span>Wyszukiwarka szkół</span>
+              </p>
               <p>Dane: publiczne zbiory danych oświatowych. Wyniki mają charakter orientacyjny.</p>
-              <p>Projekt niezależny. Nie jest oficjalnym rankingiem żadnego organu.</p>
+              <p className="site-footer__claim">Projekt niezależny. Nie jest oficjalnym rankingiem żadnego organu.</p>
             </div>
             <nav aria-label="Serwis">
               <p className="site-footer__heading">Serwis</p>

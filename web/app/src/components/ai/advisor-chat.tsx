@@ -23,7 +23,7 @@ interface Turn {
 }
 
 export function AdvisorChat() {
-  const ids = { input: useId(), heading: useId(), error: useId() };
+  const ids = { input: useId(), heading: useId(), error: useId(), limit: useId() };
   const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -125,6 +125,12 @@ export function AdvisorChat() {
         </p>
       ) : null}
 
+      {full ? (
+        <p role="status" id={ids.limit} className="notice">
+          Ta rozmowa osiągnęła limit. Zacznij nową rozmowę, aby zadać kolejne pytanie.
+        </p>
+      ) : null}
+
       <form onSubmit={onSubmit} noValidate className="ai-chat__form">
         <p className="field-hint">Pola oznaczone * są wymagane.</p>
         <div className="field">
@@ -136,10 +142,10 @@ export function AdvisorChat() {
             rows={3}
             maxLength={TURN_MAX}
             value={draft}
-            disabled={full}
+            readOnly={full}
             required
             aria-invalid={draftInvalid ? true : undefined}
-            aria-describedby={draftInvalid ? ids.error : undefined}
+            aria-describedby={[draftInvalid ? ids.error : null, full ? ids.limit : null].filter(Boolean).join(" ") || undefined}
             onChange={(event) => setDraft(event.target.value)}
           />
           {draft.length >= TURN_MAX * 0.8 ? (

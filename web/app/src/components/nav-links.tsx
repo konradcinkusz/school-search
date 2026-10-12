@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useId, useState } from "react";
 
 /**
  * Main navigation links. The current section is marked with aria-current="page" so it is announced and styled.
- * On a phone the list is one horizontally scrollable row; the current link is scrolled into that row's view
- * (the row only, never the page).
+ * Below 62rem the list sits behind a "Menu" disclosure button, so no link is ever cut off at the screen edge.
+ * Without JavaScript (no `js` class on <html>, set by the inline script in layout.tsx) the button is hidden and the
+ * links stay visible as a wrapped row.
  */
 const LINKS: ReadonlyArray<{ readonly href: string; readonly label: string; readonly section: string }> = [
   { href: "/ranking/country", label: "Ranking", section: "/ranking" },
@@ -25,52 +26,54 @@ function isCurrent(pathname: string, section: string): boolean {
 
 export function NavLinks() {
   const pathname = usePathname() ?? "/";
-  const listRef = useRef<HTMLUListElement>(null);
+  const listId = useId();
+  const [open, setOpen] = useState(false);
 
-  /** Sets data-end on the list when no link lies beyond the right edge; the CSS cue (globals.css) hides then. */
-  const updateEnd = useCallback(() => {
-    const list = listRef.current;
-    if (list === null) return;
-    const atEnd = list.scrollWidth - list.clientWidth - list.scrollLeft <= 2;
-    list.dataset.end = String(atEnd);
-  }, []);
-
+  // A new page closes the menu.
   useEffect(() => {
-    const list = listRef.current;
-    if (list === null) return;
-    if (list.scrollWidth <= list.clientWidth) {
-      updateEnd();
-      return;
+    setOpen(false);
+  }, [pathname]);
+
+  // Escape closes the open menu and returns focus to its button.
+  useEffect(() => {
+    if (!open) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      document.getElementById(`${listId}-toggle`)?.focus();
     }
-    const current = list.querySelector<HTMLElement>('[aria-current="page"]');
-    if (current === null) {
-      list.scrollLeft = 0;
-      updateEnd();
-      return;
-    }
-    // Viewport rectangles, not offsetLeft: offsetLeft is measured from a different offsetParent and clipped the active item.
-    // The 16px inset matches the row's left padding; the 48px inset on the right matches the cue area in globals.css.
-    const box = list.getBoundingClientRect();
-    const item = current.getBoundingClientRect();
-    const LEFT_INSET = 16;
-    const RIGHT_INSET = 48;
-    if (item.left < box.left + LEFT_INSET) {
-      list.scrollLeft -= box.left + LEFT_INSET - item.left;
-    } else if (item.right > box.right - RIGHT_INSET) {
-      list.scrollLeft += item.right - (box.right - RIGHT_INSET);
-    }
-    updateEnd();
-  }, [pathname, updateEnd]);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, listId]);
 
   return (
-    <ul ref={listRef} onScroll={updateEnd}>
-      {LINKS.map((link) => (
-        <li key={link.href}>
-          <Link href={link.href} aria-current={isCurrent(pathname, link.section) ? "page" : undefined}>
-            {link.label}
-          </Link>
-        </li>
-      ))}
-    </ul>
+    <>
+      <button
+        type="button"
+        id={`${listId}-toggle`}
+        className="site-nav__toggle"
+        aria-expanded={open}
+        aria-controls={listId}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false">
+          {open ? (
+            <path d="M6 6l12 12M18 6 6 18" />
+          ) : (
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          )}
+        </svg>
+        <span>Menu</span>
+      </button>
+      <ul id={listId} className="site-nav__list" data-open={open ? "true" : "false"}>
+        {LINKS.map((link) => (
+          <li key={link.href}>
+            <Link href={link.href} aria-current={isCurrent(pathname, link.section) ? "page" : undefined}>
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
