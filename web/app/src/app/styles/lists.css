@@ -45,7 +45,10 @@
     display: block;
   }
 
+  /* At the far right the last column stops short of the edge fade, so its header focus ring (3px ring, 2px offset)
+     is never painted under the fade. */
   .site-main .table-wrap--compare {
+    padding-inline-end: calc(1.75rem + 6px);
     scroll-snap-type: x mandatory;
   }
 

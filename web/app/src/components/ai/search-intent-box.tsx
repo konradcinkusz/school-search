@@ -135,6 +135,11 @@ export function SearchIntentBox() {
             aria-invalid={localError !== null ? true : undefined}
             aria-describedby={localError !== null ? `${ids.status} ${ids.localError}` : ids.status}
           />
+          {localError !== null ? (
+            <p role="alert" id={ids.localError} className="field-error">
+              {localError}
+            </p>
+          ) : null}
         </div>
         <button type="submit" className="button" aria-disabled={sending ? true : undefined}>
           {sending ? "Przygotowywanie filtrów…" : "Przygotuj filtry"}
@@ -144,11 +149,6 @@ export function SearchIntentBox() {
       <div id={ids.status} role="status" aria-live="polite">
         {sending ? <p className="muted">Przygotowywanie filtrów…</p> : null}
       </div>
-      {localError !== null ? (
-        <p role="alert" id={ids.localError} className="notice">
-          {localError}
-        </p>
-      ) : null}
       {failure !== null ? (
         <p role="alert" className="notice">
           {failure}

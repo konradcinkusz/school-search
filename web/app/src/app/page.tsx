@@ -1,12 +1,14 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { AddressForm, HOUSE_NUMBER_MESSAGE, HOUSE_NUMBER_PATTERN } from "@/components/address-form";
+import { AddressForm } from "@/components/address-form";
 import { SearchIntentBox } from "@/components/ai/search-intent-box";
 import { CatchmentPanel } from "@/components/catchment-panel";
+import { FocusOnResults } from "@/components/focus-on-results";
 import { Pagination } from "@/components/pagination";
 import { SchoolList } from "@/components/school-list";
 import { ServiceUnavailable } from "@/components/service-unavailable";
 import { catalog, type GminaItem } from "@/lib/api";
+import { HOUSE_NUMBER_MESSAGE, HOUSE_NUMBER_PATTERN } from "@/lib/house-number";
 import { firstParam, intParam, isTeryt } from "@/lib/validation";
 
 // Data-driven: never prerendered at build time, when the API is not reachable.
@@ -75,6 +77,10 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
     gminaParam && isTeryt(gminaParam) ? gminaList.find((gmina) => gmina.teryt === gminaParam) : undefined;
 
   const hasLookup = selectedGmina !== undefined && street !== undefined && street !== "" && numberValid;
+  const hasNameResults = nameQuery !== undefined && nameQuery.length >= NAME_QUERY_MIN;
+  // After a GET search, focus the new result heading (the catchment panel first). Keyed by the search so a new one remounts it.
+  const focusTarget = hasLookup ? "catchment-heading" : hasNameResults ? "name-results-heading" : undefined;
+  const focusKey = `${gminaParam ?? ""}|${street ?? ""}|${number ?? ""}|${nameQuery ?? ""}|${page}`;
 
   return (
     <div>
@@ -121,6 +127,7 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
       {selectedGmina && street && numberValid ? (
         <CatchmentPanel gmina={selectedGmina} street={street} number={number} />
       ) : null}
+      {focusTarget !== undefined ? <FocusOnResults key={focusKey} targetId={focusTarget} /> : null}
 
       <div className="home-grid">
         <SearchIntentBox />
