@@ -20,11 +20,21 @@
   scroll-padding-inline: calc(var(--compare-sticky-w) + 0.5rem) 2rem;
 }
 
-/* Inner padding around the header link: the focus ring (3px ring plus 2px offset) sits inside the cell. */
+/* Inner padding around the header link: the focus ring (3px ring plus 2px offset) sits inside the cell. The scroll
+   margin keeps a focused link clear of the sticky first column on the left and of the edge fade on the right. */
 .site-main .table--compare thead th a {
   display: inline-block;
   padding: 0.25rem 0.375rem;
   margin: -0.25rem -0.375rem;
+  scroll-margin-inline: calc(var(--compare-sticky-w) + 0.5rem) calc(1.75rem + 8px);
+}
+
+/* The sticky first column is exactly --compare-sticky-w wide, so the scroll padding and margins above line up with it. */
+.site-main .table--compare thead th:first-child,
+.site-main .table--compare tbody th:first-child {
+  width: var(--compare-sticky-w);
+  min-width: var(--compare-sticky-w);
+  max-width: var(--compare-sticky-w);
 }
 
 /* Fade on the right edge of the visible box, so the cut-off school names read as "more to the right". */
@@ -49,7 +59,7 @@
      is never painted under the fade. */
   .site-main .table-wrap--compare {
     padding-inline-end: calc(1.75rem + 6px);
-    scroll-snap-type: x mandatory;
+    scroll-snap-type: x proximity;
   }
 
   .site-main .table--compare thead th:not(:first-child) {
@@ -114,18 +124,6 @@
 
 /* ---------------------------------------------------------------- Ranking */
 
-/* Score block on one or two lines instead of four stacked lines, so the rows scan faster. */
-.site-main .ranking-table .score--compact {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-1) var(--space-3);
-}
-
-.site-main .ranking-table .score--compact > p {
-  margin: 0;
-}
-
 .site-main .ranking-lead a {
   display: inline-block;
   padding: 0.5rem 0;
@@ -138,11 +136,12 @@
   display: inline-flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-  margin: var(--space-3) 0 var(--space-4);
+  margin: var(--space-2) 0 0;
   padding: var(--space-1);
-  border: 1px solid var(--color-border-input);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-pill);
-  background: var(--color-surface-sunken);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .site-main .scope-switch__link {
@@ -176,6 +175,20 @@
   width: 100%;
   max-width: none;
   margin: var(--space-6) 0 var(--space-4);
+  border-style: dashed;
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-sunken);
+  box-shadow: none;
+}
+
+.site-main .unranked h2 {
+  font-size: var(--text-xl);
+  margin: 0 0 var(--space-2);
+}
+
+/* Ranking meta badges sit between the caveat and the table, close to the table they describe. */
+.site-main .ranking-table caption {
+  font-weight: var(--weight-semibold);
 }
 
 /* ---------------------------------------------------------------- Preschool list cards: label above value, source below */
@@ -231,10 +244,12 @@
 
 .site-main .fact-summary__item {
   margin: 0;
-  padding: var(--space-3) var(--space-4);
+  max-width: none;
+  padding: var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-surface);
+  box-shadow: inset 0 3px 0 var(--color-accent);
 }
 
 .site-main .fact-summary__label {
@@ -247,10 +262,11 @@
 }
 
 .site-main .fact-summary__value {
-  margin: var(--space-1) 0;
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  line-height: 1.3;
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
 }
 
 .site-main .fact-summary__meta {
@@ -381,4 +397,15 @@
   height: 1.25rem;
   margin: 0;
   flex: none;
+}
+
+/* ---------------------------------------------------------------- Preschool cards: the facts column reads like a data panel */
+
+.site-main .school-list__item--facts .school-list__facts {
+  padding-left: var(--space-4);
+  box-shadow: inset 2px 0 0 var(--color-border-strong);
+}
+
+.site-main .school-list__item--facts .school-list__value {
+  font-variant-numeric: tabular-nums;
 }

@@ -1,15 +1,50 @@
 /* School profile only (imported from app/szkoly/[slug]/page.tsx). Scoped under .site-main to win over globals.css. */
 
-/* The result is the only card in its row; the AI explanation sits below it, full width. */
+/* The result card leads. With a published score the AI explanation sits beside it on wide screens; without one the
+   result card has the row to itself. */
 .site-main .profile-grid--result {
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
 }
 
+@media (min-width: 60rem) {
+  .site-main .profile-grid--result:has(> .ai-explain) {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+    align-items: stretch;
+  }
+}
+
+.site-main .result-card {
+  box-shadow: var(--shadow);
+}
+
+.site-main .result-card > h2 {
+  font-size: var(--text-2xl);
+}
+
+/* The provenance version line and the correction prompt close the page quietly. */
+.site-main .correction-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.site-main .correction-cta > p {
+  margin: 0;
+}
+
+.site-main .correction-cta .actions {
+  margin: 0;
+}
+
 /* Trend chart: value labels keep a surface halo so no gridline or whisker runs through a number, and the dot is a
    solid data point, not a hollow ring. */
 .site-main .trend__dot {
-  fill: var(--color-score-rule);
+  fill: var(--color-score);
+  stroke: var(--color-surface);
+  stroke-width: 3;
 }
 
 .site-main .trend__value {
@@ -49,10 +84,11 @@
   }
 
   /* Provenance and other stacked tables: links keep a 44px tap target. */
-  .site-main .table--stack td a {
+  .site-main .table--stack td a,
+  .site-main .table--stack td[data-label="Źródło"] a {
     display: inline-flex;
     align-items: center;
-    min-height: 44px;
+    min-height: var(--tap);
   }
 
   /* Stacked cohort table: numbers sit next to their label, not at the far edge of the card. */
