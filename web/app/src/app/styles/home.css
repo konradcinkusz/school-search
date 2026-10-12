@@ -1,0 +1,56 @@
+/* Home (imported from app/page.tsx) and the Doradca page (imported from app/doradca/page.tsx). Every selector is
+   scoped under .site-main so it wins over globals.css without editing it. */
+
+/* Desktop hero: intro and address panel share the top row; the three principles run full width under both. */
+@media (min-width: 60rem) {
+  .site-main .hero__inner {
+    grid-template-areas:
+      "intro panel"
+      "principles principles";
+  }
+
+  .site-main .hero .principles {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-5);
+  }
+}
+
+/* The name search card keeps its own height; only the AI card stretches to the row. */
+@media (min-width: 60rem) {
+  .site-main .name-search {
+    align-self: start;
+  }
+}
+
+/* Focus moves to a result heading after a search (focus-on-results). The heading is not a control, so the
+   full-width outline is dropped here. Focus still moves, so screen readers still announce the new result. */
+.site-main #catchment-heading:focus,
+.site-main #name-results-heading:focus {
+  outline: none;
+}
+
+/* The limited profile (5 to 8 pupils) shows its label and line of text only; no dashed marker that could read as loading. */
+.site-main .score--limited .score__value::before {
+  content: none;
+  display: none;
+}
+
+/* Doradca: the AI notice spans the same width as the form below it. */
+.site-main .advisor .notice--ai {
+  max-width: none;
+}
+
+/* Doradca: the AI pill stays beside the heading when there is room, and wraps under it when there is not. */
+.site-main .advisor__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.site-main .advisor__head h1 {
+  flex: 1 1 12rem;
+  min-width: 0;
+  margin: 0;
+}

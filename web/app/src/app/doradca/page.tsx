@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AdvisorChat } from "@/components/ai/advisor-chat";
 import { agentBaseUrl } from "@/lib/bff-config";
 import "../styles/static.css";
+import "../styles/home.css";
 
 // Client-driven advisor. Nothing is fetched on the server: the conversation goes through the BFF /api/agent route.
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export default function AdvisorPage() {
   const available = agentBaseUrl() !== null;
   return (
     <article className="advisor">
-      <header className="page-header ai-panel__head">
+      <header className="page-header ai-panel__head advisor__head">
         <h1>Doradca wyboru szkoły</h1>
         <span className="badge badge--ai" aria-hidden="true">
           AI

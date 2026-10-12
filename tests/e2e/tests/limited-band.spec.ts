@@ -18,7 +18,7 @@ test.describe("limited-confidence band, 8 pupils (ADR-0009)", () => {
     await expect(block).toHaveCount(1);
     await expect(block).toBeVisible();
     await expect(block.getByText(LIMITED_LINE, { exact: true })).toBeVisible();
-    await expect(block.getByText("Kohorta: 8 uczniów", { exact: true })).toBeVisible();
+    await expect(block.getByText("Grupa porównawcza: 8 uczniów", { exact: true })).toBeVisible();
 
     // No number, no interval and no "±" anywhere on the page for this school.
     await expect(block.locator(".score__number")).toHaveCount(0);

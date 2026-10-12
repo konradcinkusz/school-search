@@ -10,12 +10,13 @@ import { ServiceUnavailable } from "@/components/service-unavailable";
 import { catalog, type GminaItem } from "@/lib/api";
 import { HOUSE_NUMBER_MESSAGE, HOUSE_NUMBER_PATTERN } from "@/lib/house-number";
 import { firstParam, intParam, isTeryt } from "@/lib/validation";
+import "./styles/home.css";
 
 // Data-driven: never prerendered at build time, when the API is not reachable.
 export const dynamic = "force-dynamic";
 
 const HOME_DESCRIPTION =
-  "Wpisz adres, aby zobaczyć obwód szkolny i szkoły w zasięgu wraz z wynikami, ich niepewnością i liczebnością kohort. Nie jest oficjalnym rankingiem.";
+  "Wpisz adres, aby zobaczyć obwód szkolny i szkoły w zasięgu wraz z wynikami, ich niepewnością i liczbą uczniów w grupie porównawczej. Nie jest oficjalnym rankingiem.";
 const HOME_TITLE = "Sprawdź obwód szkolny i szkoły w zasięgu";
 
 const NAME_QUERY_MIN = 2;
@@ -90,8 +91,8 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
             <p className="eyebrow">Niezależna wyszukiwarka szkół podstawowych</p>
             <h1 id="home-heading">Znajdź szkołę podstawową dla swojego adresu</h1>
             <p className="hero__lead">
-              Wpisz adres, a zobaczysz obwód szkolny oraz szkoły w zasięgu, z wynikami, ich niepewnością i liczebnością
-              kohort.
+              Wpisz adres, a zobaczysz obwód szkolny oraz szkoły w zasięgu, z wynikami, ich niepewnością i liczbą uczniów,
+              na których je liczymy.
             </p>
           </div>
 
@@ -172,7 +173,7 @@ function Principles() {
         </svg>
         <span>
           <strong>Wynik zawsze z niepewnością</strong>
-          Przedział 95%, liczebność kohorty i wersja metodologii są przy każdym wyniku.
+          Przedział 95%, liczba uczniów w grupie porównawczej i wersja metodologii są przy każdym wyniku.
         </span>
       </li>
       <li>

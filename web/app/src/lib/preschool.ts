@@ -1,5 +1,5 @@
-import type { MoneyRange, OpeningHours } from "@/lib/api";
-import { formatInteger } from "@/lib/format";
+import type { FactSource, MoneyRange, OpeningHours } from "@/lib/api";
+import { asOfLabel, formatInteger } from "@/lib/format";
 
 /** Preschool presentation helpers. Values come from the API; these only format them, never judge them. */
 
@@ -35,16 +35,33 @@ export function hoursLabel(hours: OpeningHours): string | null {
   return null;
 }
 
-/** Null when the count is unknown. Zero is a real answer: no vacancies were reported. */
-export function freePlacesLabel(count: number | null): string | null {
+/** The count alone, for a value cell under its own label. Null when unknown. */
+export function freePlacesValue(count: number | null): string | null {
   if (count === null) return null;
   if (count === 0) return "brak wolnych miejsc";
-  return `wolne miejsca: ${formatInteger(count)}`;
+  return formatInteger(count);
 }
 
-/** Badge text for a fact's confidence. An unknown value is shown as unknown, never as verified. */
+/**
+ * Badge text for a fact's confidence, as the API defines it: "reported" is a value copied from a primary public
+ * source (no check by this portal is implied), "unverified" is a submitted value that has not been checked.
+ * An unknown value is shown as unknown, never as verified.
+ */
 export function confidenceLabel(confidence: string): string {
-  if (confidence === "reported") return "zweryfikowane źródło";
+  if (confidence === "reported") return "podane przez źródło";
   if (confidence === "unverified") return "niezweryfikowane";
   return "pewność nieznana";
+}
+
+/**
+ * "Źródło: DEMO SEED (synthetic) · stan na 1 stycznia 2026". The source name is omitted when the API sends none;
+ * the date reads "data nieznana" when it is missing, so a value never appears without its date.
+ */
+export function sourceLine(source: FactSource | null | undefined, asOf?: string | null): string {
+  const name = source?.source?.trim() ?? "";
+  const date = asOf !== undefined ? asOf : (source?.asOf ?? null);
+  const parts: string[] = [];
+  if (name !== "") parts.push(`Źródło: ${name}`);
+  parts.push(asOfLabel(date));
+  return parts.join(" · ");
 }

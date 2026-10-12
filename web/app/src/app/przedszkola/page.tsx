@@ -5,7 +5,7 @@ import { PreschoolList } from "@/components/preschool-list";
 import { FocusOnResults } from "@/components/focus-on-results";
 import { Pagination } from "@/components/pagination";
 import { ServiceUnavailable } from "@/components/service-unavailable";
-import { catalog, type GminaItem } from "@/lib/api";
+import { catalog, type GminaItem, type PreschoolFactsBlock, type PreschoolListItem } from "@/lib/api";
 import { formatInteger } from "@/lib/format";
 import { firstParam, intParam, isTeryt, moneyParam } from "@/lib/validation";
 
@@ -22,6 +22,17 @@ export const metadata: Metadata = {
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+/**
+ * Source, date and opening hours are in each preschool's profile, not in the list. The page loads the profiles of the
+ * items it shows (one cached request each); a failed lookup leaves that card's source as unknown.
+ */
+async function factsFor(items: readonly PreschoolListItem[]): Promise<Record<string, PreschoolFactsBlock | null>> {
+  const profiles = await Promise.all(
+    items.map(async (item) => [item.slug, await catalog.preschool(item.slug)] as const),
+  );
+  return Object.fromEntries(profiles.map(([slug, profile]) => [slug, profile.ok ? profile.data.facts : null]));
+}
 
 export default async function PreschoolsPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
@@ -47,6 +58,7 @@ export default async function PreschoolsPage({ searchParams }: { searchParams: S
     }),
   ]);
   const gminaList: readonly GminaItem[] = gminas.ok ? gminas.data : [];
+  const factsBySlug = result.ok && result.data.items.length > 0 ? await factsFor(result.data.items) : {};
 
   /** Any submitted filter field (the GET form sends them all) or a page number means a search ran. */
   const submitted = [sp.gmina, sp.q, sp.maxTuition, sp.publicOnly, sp.hasFreePlaces, sp.page].some(
@@ -100,7 +112,11 @@ export default async function PreschoolsPage({ searchParams }: { searchParams: S
           </p>
           {submitted ? <FocusOnResults key={searchKey} targetId="wyniki-liczba" /> : null}
           <h2 className="visually-hidden">Wyniki wyszukiwania</h2>
-          <PreschoolList items={result.data.items} emptyText="Brak przedszkoli spełniających te kryteria." />
+          <PreschoolList
+            items={result.data.items}
+            emptyText="Brak przedszkoli spełniających te kryteria."
+            factsBySlug={factsBySlug}
+          />
           <Pagination
             page={result.data.page}
             pageSize={result.data.pageSize}

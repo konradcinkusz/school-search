@@ -78,15 +78,19 @@ export function TrendChart({ points }: { points: readonly TrendPoint[] }) {
   const yFor = (value: number): number => PAD_TOP + ((yMax - value) / (yMax - yMin)) * plotHeight;
 
   const zeroY = yFor(0);
-  // Axis labels that would overlap the zero label are dropped; the grid keeps the zero line.
-  const ticks = [yMax, 0, yMin].filter((tick) => tick === 0 || Math.abs(yFor(tick) - zeroY) >= 22);
-  // The top tick label is dropped when a value label sits on top of it; the grid line stays.
+  // The top gridline is dropped too when a value label would sit on it, so no line runs through a number.
   const topTickY = yFor(yMax);
   const topTickClashes = published.some((p) => Math.abs(yFor(p.high) - 10 - topTickY) < 28);
+  // Axis labels that would overlap the zero label are dropped; the grid keeps the zero line.
+  const ticks = [yMax, 0, yMin].filter(
+    (tick) => (tick === 0 || Math.abs(yFor(tick) - zeroY) >= 22) && !(tick === yMax && topTickClashes),
+  );
+  // Only longer series scroll sideways on a phone; two or three years are drawn to the full width.
+  const scrollClass = years.length > 3 ? "trend__scroll trend__scroll--wide" : "trend__scroll";
 
   return (
     <figure className="trend">
-      <div className="trend__scroll" role="region" aria-label="Wykres wyników (przewiń w bok na małym ekranie)" tabIndex={0}>
+      <div className={scrollClass} role="region" aria-label="Wykres wyników" tabIndex={0}>
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         width="100%"
@@ -103,11 +107,9 @@ export function TrendChart({ points }: { points: readonly TrendPoint[] }) {
         {ticks.map((tick) => (
           <g key={`tick-${tick}`}>
             <line className="trend__grid" x1={PAD_LEFT} x2={WIDTH - PAD_RIGHT} y1={yFor(tick)} y2={yFor(tick)} />
-            {tick === yMax && topTickClashes ? null : (
-              <text className="trend__text trend__tick" x={PAD_LEFT - 10} y={yFor(tick) + 5} textAnchor="end">
-                {formatScore(tick)}
-              </text>
-            )}
+            <text className="trend__text trend__tick" x={PAD_LEFT - 10} y={yFor(tick) + 5} textAnchor="end">
+              {formatScore(tick)}
+            </text>
           </g>
         ))}
 
@@ -152,7 +154,7 @@ export function TrendChart({ points }: { points: readonly TrendPoint[] }) {
       </div>
       <figcaption className="muted">
         Wykres pokazuje wynik i przedział 95% dla lat z publikowanym wynikiem. Pionowa kreska to przedział, a liczba
-        pod rokiem to liczebność kohorty.
+        pod rokiem to liczba uczniów w grupie porównawczej.
       </figcaption>
     </figure>
   );

@@ -231,7 +231,7 @@ test.describe("public journey on the synthetic demo gmina", () => {
     await expect(main.getByText("Przedszkola nie mają wyniku jakości", { exact: false })).toBeVisible();
     await expect(main.getByRole("heading", { name: "Opłaty, godziny i wolne miejsca" })).toBeVisible();
     // Every fact row shows either a value with its confidence badge or "brak danych"; never a blank cell.
-    await expect(main.getByText(/zweryfikowane źródło|niezweryfikowane|brak danych/).first()).toBeVisible();
+    await expect(main.getByText(/podane przez źródło|niezweryfikowane|brak danych/).first()).toBeVisible();
 
     // The fixed notice itself contains "wyniku jakości", so the check is on whole words only.
     const text = await main.innerText();

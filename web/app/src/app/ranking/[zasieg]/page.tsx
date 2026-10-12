@@ -20,6 +20,18 @@ type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
+/**
+ * Polish noun and verb for a count of schools: "1 szkoła nie jest", "2 szkoły nie są", "5 szkół nie jest".
+ * Numerals ending in 2 to 4 (except 12 to 14) take the plural form; 1 takes the singular; the rest take the genitive.
+ */
+function schoolsCount(count: number): { readonly noun: string; readonly verb: string } {
+  const last = count % 10;
+  const lastTwo = count % 100;
+  if (count === 1) return { noun: "szkoła", verb: "nie jest" };
+  if (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14)) return { noun: "szkoły", verb: "nie są" };
+  return { noun: "szkół", verb: "nie jest" };
+}
+
 /** Gmina name from the catalogue, or null when the name is not known (the TERYT code is shown as secondary text). */
 async function gminaNameOf(gminaTeryt: string): Promise<string | null> {
   const gminas = await catalog.gminas();
@@ -37,6 +49,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: `Ranking szkół podstawowych ${where}, od najwyższego wyniku. Nie jest oficjalnym rankingiem.`,
     alternates: { canonical: `/ranking/${scope.param}` },
   };
+}
+
+/**
+ * Schools with no published score. The ranking API returns only their count (RankingPage.UnrankedCount), not their
+ * names or reasons, so this section states the count and the reasons a school can have, and nothing per school.
+ * No rank and no score is shown for them.
+ */
+function UnrankedSection({ count }: { readonly count: number }) {
+  const { noun, verb } = schoolsCount(count);
+  return (
+    <section className="unranked" aria-labelledby="unranked-heading">
+      <h2 id="unranked-heading">Szkoły bez wyniku</h2>
+      <p>
+        {formatInteger(count)} {noun} {verb} w rankingu, ponieważ nie ma dla {count === 1 ? "niej" : "nich"}{" "}
+        publikowanego wyniku.
+      </p>
+      <p className="muted">
+        Powody braku wyniku: profil ograniczony (mała grupa uczniów), zbyt mała grupa, brak danych egzaminacyjnych.
+        Brak wyniku nie oznacza zera ani oceny.
+      </p>
+    </section>
+  );
 }
 
 export default async function RankingPage({ params, searchParams }: Props) {
@@ -71,7 +105,7 @@ export default async function RankingPage({ params, searchParams }: Props) {
           ) : null}
         </h1>
         <p className="lead ranking-lead">
-          Kolejność: od najwyższego wyniku. Szkoły bez wystarczającej kohorty nie są w rankingu.{" "}
+          Kolejność: od najwyższego wyniku. Szkoły bez wyniku nie są w rankingu, ich liczbę i powody podajemy niżej.{" "}
           <Link href="/metodologia">Metodologia</Link>.
         </p>
         <nav aria-label="Zasięg rankingu" className="scope-switch">
@@ -151,10 +185,7 @@ export default async function RankingPage({ params, searchParams }: Props) {
             </div>
           )}
           {result.data.unrankedCount > 0 ? (
-            <p className="notice" role="note">
-              {formatInteger(result.data.unrankedCount)} szkół nie jest w rankingu, bo nie ma dla nich wyniku (zbyt
-              mała kohorta). Brak wyniku nie oznacza zera ani oceny.
-            </p>
+            <UnrankedSection count={result.data.unrankedCount} />
           ) : null}
           <Pagination
             page={result.data.page}

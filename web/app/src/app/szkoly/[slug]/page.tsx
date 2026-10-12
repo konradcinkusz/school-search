@@ -65,7 +65,7 @@ const STATUS_LABEL: Record<ScoreStatus, string> = {
   published: "wynik opublikowany",
   limited: "profil ograniczony: mała grupa, bez wyniku i miejsca",
   insufficient_cohort: "brak wyniku: zbyt mała grupa",
-  no_exam_data: "brak danych egzaminacyjnych",
+  no_exam_data: "nie ma danych egzaminacyjnych",
   no_baseline: "brak danych porównawczych",
 };
 
@@ -77,7 +77,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const school = result.data;
   return {
     title: school.name,
-    description: `Profil szkoły ${school.name}: wynik z przedziałem, liczebność kohorty, źródła i metodologia. Nie jest oficjalnym rankingiem.`,
+    description: `Profil szkoły ${school.name}: wynik z przedziałem, liczba uczniów w grupie porównawczej, źródła i metodologia. Nie jest oficjalnym rankingiem.`,
     alternates: { canonical: `/szkoly/${slug}` },
   };
 }
@@ -138,7 +138,8 @@ export default async function SchoolPage({ params, searchParams }: Props) {
         </p>
       </header>
 
-      <div className="profile-grid">
+      {/* One column: the result is the only card in its row. The AI explanation sits below it, full width. */}
+      <div className="profile-grid profile-grid--result">
         <section aria-labelledby="result-heading" className="card result-card">
           <h2 id="result-heading">Wynik</h2>
           <ScoreBadge
@@ -148,27 +149,30 @@ export default async function SchoolPage({ params, searchParams }: Props) {
             provenance={scoreProvenance}
             variant="hero"
           />
-          <p className="score-explainer">
-            Wskaźnik pokazuje, jak wynik egzaminów szkoły różni się od średniej krajowej, z uwzględnieniem udziału
-            uczniów, którzy przystąpili do egzaminu. Nie jest oficjalnym rankingiem i nie ocenia nauczycieli ani
-            uczniów. Zasady są w <Link href="/metodologia">metodologii</Link>.
-          </p>
+          {school.scoreStatus === "published" ? (
+            <p className="score-explainer">
+              Wskaźnik pokazuje, jak wynik egzaminów szkoły różni się od średniej krajowej, z uwzględnieniem udziału
+              uczniów, którzy przystąpili do egzaminu. Nie jest oficjalnym rankingiem i nie ocenia nauczycieli ani
+              uczniów. Zasady są w <Link href="/metodologia">metodologii</Link>.
+            </p>
+          ) : (
+            <p className="score-explainer">
+              Wynik jest liczony tylko wtedy, gdy w egzaminach przystąpiło wystarczająco dużo uczniów. Zasady są w{" "}
+              <Link href="/metodologia">metodologii</Link>.
+            </p>
+          )}
         </section>
 
-        {school.scoreStatus === "published" ? (
-          <ExplainPanel slug={school.slug} />
-        ) : (
-          <section aria-labelledby="explain-off-heading" className="card">
-            <h2 id="explain-off-heading">Wyjaśnienie wyniku</h2>
-            <p className="muted">Wyjaśnienie AI jest dostępne, gdy szkoła ma opublikowany wynik.</p>
-          </section>
-        )}
+        {school.scoreStatus === "published" ? <ExplainPanel slug={school.slug} /> : null}
       </div>
 
       <section aria-labelledby="trend-heading" className="section">
         <h2 id="trend-heading">Wyniki w kolejnych latach</h2>
         <TrendChart points={school.trend} />
         <TrendTable trend={school.trend} />
+        {school.scoreStatus === "published" ? null : (
+          <p className="muted explain-off">Wyjaśnienie AI jest dostępne, gdy szkoła ma opublikowany wynik.</p>
+        )}
       </section>
 
       <section aria-labelledby="cohorts-heading" className="section">
@@ -219,14 +223,14 @@ export default async function SchoolPage({ params, searchParams }: Props) {
         <section aria-labelledby="faith-heading" className="card">
           <h2 id="faith-heading">Charakter wyznaniowy</h2>
           <p>
-            {school.faith.derived
-              ? "Ustalone pośrednio: wyprowadzone z organu prowadzącego, nie z nazwy szkoły."
-              : "Nie wyprowadzono z nazwy szkoły."}{" "}
+            {school.faith.derived ? "Ustalone pośrednio na podstawie organu prowadzącego, nie nazwy szkoły. " : null}
             {school.faith.declared === true
               ? "Szkoła deklaruje charakter wyznaniowy."
               : school.faith.declared === false
                 ? "Szkoła deklaruje brak charakteru wyznaniowego."
-                : "Brak deklaracji szkoły."}
+                : school.faith.derived
+                  ? null
+                  : "Szkoła nie zadeklarowała charakteru wyznaniowego."}
           </p>
           {school.faith.note ? <p className="muted">{school.faith.note}</p> : null}
         </section>
@@ -281,7 +285,7 @@ function TrendTable({ trend }: { trend: readonly TrendPoint[] }) {
   const rows = [...trend].sort((a, b) => a.examYear - b.examYear);
   return (
     <div className="table-wrap">
-      <table className="table--stack">
+      <table className="table--stack trend-table">
         <caption className="muted">Wyniki i statusy według roku egzaminu</caption>
         <thead>
           <tr>
@@ -304,7 +308,7 @@ function TrendTable({ trend }: { trend: readonly TrendPoint[] }) {
                   <>
                     {formatScore(row.score.score)}
                     {row.score.intervalLow !== null && row.score.intervalHigh !== null ? (
-                      <span className="muted">
+                      <span className="muted trend__interval">
                         {" "}
                         (od {formatScore(row.score.intervalLow)} do {formatScore(row.score.intervalHigh)})
                       </span>
@@ -313,7 +317,7 @@ function TrendTable({ trend }: { trend: readonly TrendPoint[] }) {
                     <span className="muted">{formatStudents(row.score.cohortSize)}</span>
                   </>
                 ) : (
-                  <span className="muted">brak wyniku</span>
+                  <span className="muted">nie dotyczy</span>
                 )}
               </td>
               <td data-label="Pokrycie">
