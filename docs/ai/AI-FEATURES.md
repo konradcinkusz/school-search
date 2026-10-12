@@ -45,7 +45,7 @@ These are rules, not preferences. Each one has a test or a construction that mak
 
 | # | Boundary | How it is enforced |
 |---|---|---|
-| B1 | **AI never computes or alters a score, confidence, cohort size, interval, or `insufficient_cohort` state.** It may only describe values it was given. | `Api/Scoring/` must not reference any Anthropic or AI type (architecture test, same pattern as the billing ban in MASTER-PROMPT §3 and §9 gate F). AI services receive the score object read-only and return text, never a number that is stored. |
+| B1 | **AI never computes or alters a score, confidence, cohort size, interval, or suppression state (`limited` or `insufficient_cohort`).** It may only describe values it was given. | `Api/Scoring/` must not reference any Anthropic or AI type (architecture test, same pattern as the billing ban in MASTER-PROMPT §3 and §9 gate F). AI services receive the score object read-only and return text, never a number that is stored. |
 | B2 | **AI never ranks.** No feature sorts schools by AI judgement. Results order is the fixed UI/API order (no ascending composite sort, MASTER-PROMPT §3). | NL search (feature 2) passes model output through an enum allowlist into the existing deterministic query. The model has no access to result rows. |
 | B3 | **Pupil names are never sent.** Olympiad pupil names exist only transiently in memory and are never persisted, logged or sent to any model (MASTER-PROMPT §5). | No pupil entity exists (MASTER-PROMPT §3). Payload builders have a forbidden-field list and a fixture test. |
 | B4 | **Personal data of private-individual operators is never sent.** Operators with `idTypOrgProw` 141, 146 or 150 are stored by type only; their name is never exposed (MASTER-PROMPT §5). | Payload builders take a school view that has no operator-name field. Test: a fixture with a private-individual operator name must not appear in any serialised payload. |
@@ -164,11 +164,11 @@ Summary:
   "scoreScale": "standardised, 0 = national mean",
   "confidence": 0.3,
   "cohortSize": 14,
+  "scoreStatus": "published",
   "cohortThreshold": 5,
   "intervalLow": -0.1,
   "intervalHigh": 0.9,
   "coverage": {"ckeSat": 11, "sioClassVIII": 15},
-  "insufficientCohort": false,
   "methodologyVersion": "0.0-draft",
   "asOf": "2026-06-30",
   "subjectsIncluded": ["polski", "matematyka", "jezyk_obcy"]
@@ -184,7 +184,8 @@ Note on `coverage`: the counter-metric is blended into the score (MASTER-PROMPT 
 **Output contract and grounding check.**
 - Every number in the text must appear in the payload after locale formatting (decimal comma). Any other number fails the check.
 - Every `factRefs` key must exist in the payload.
-- If `insufficientCohort` is true the text must not contain a score at all. The response shows the `insufficient_cohort` message from the template.
+- If `scoreStatus` is `limited` (5 to 8 pupils who sat) or `insufficient_cohort` (below 5), the payload carries no score, interval or rank, and the text must not contain a score at all. The response shows the message of that state from the template (for `limited`: cohort size and the line that no score or place is published for the group).
+- `cohortThreshold` is the publication floor for any exam figure (5, ADR-0009). The score threshold is 9 and is not sent to the model.
 - Failure: show the template sentences (deterministic, built from the same facts, labelled "opis automatyczny", not AI).
 
 **Cost guard.** Cache key = `sha256(promptVersion, model, canonical payload)`. A school's explanation changes only when its score object changes, so the cost is bounded by schools times methodology versions, not by page views. `max_tokens` 400. Feature-level daily budget.
@@ -514,7 +515,7 @@ Follows `docs/guides/AI-EVALS.md`. Each feature gets a spec (behaviours, hard co
 - Payload builder: serialised payload contains none of the forbidden fields for each feature (fixture includes a private-individual operator name, a pupil name, an e-mail, a reviewer id, a billing flag). Hard block.
 - Output: schema valid; enums respected; every number in feature 1 text appears in the payload; every `quote` is verbatim in its input; every `rspo` is from the supplied list; label present when text is present.
 - Feature 2 tool call: arguments validate against the catalogue; no result rows in the prompt.
-- No `insufficient_cohort` item shows a score in text.
+- No `limited` or `insufficient_cohort` item shows a score in text.
 - Termination: the call ended by `end_turn` or a tool result, not by `max_tokens` (a `max_tokens` stop is a failure scenario, not a silent pass).
 - No guard-then-bail: a scenario whose model call did not happen fails, it is not skipped.
 
@@ -816,7 +817,7 @@ page `/doradca` in the web app, reached through the BFF route `/api/agent`. Phas
   A limit reached returns `stopReason` and a safe reply.
 - **Untrusted data.** Every tool result is data inside an `<untrusted>` block. Review text is marked `userGenerated`. The system
   rules forbid ranking, quality judgements and invented facts, and require the citation of school slugs and the disclaimer
-  "obwód ustala gmina" for catchment results. `no_data` and `insufficient_cohort` are explained, never turned into a number.
+  "obwód ustala gmina" for catchment results. `no_data`, `limited` and `insufficient_cohort` are explained, never turned into a number.
 - **Grounding.** Every number in the final reply must occur in a tool result. A reply that fails is replaced by a safe message that
   lists the tool facts only.
 - **The SDK seam.** `IAgentLlm` has one turn method, `NextAsync`. `AnthropicAgentLlm` is the only file in the agent that touches the

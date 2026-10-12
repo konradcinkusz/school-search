@@ -5,7 +5,7 @@
     "status": 200,
     "body": {
       "slug": "demo-sp-3",
-      "text": "Liczba uczniów, którzy przystąpili do egzaminu, to 8 i jest poniżej progu 9, dlatego wynik nie jest podawany. To nie jest zero ani ocena szkoły. Wynik nie jest oficjalnym rankingiem i nie ocenia nauczycieli ani uczniów.",
+      "text": "W egzaminie w 2025 roku zdawało 8 uczniów, czyli mała grupa. Dlatego nie publikujemy wyniku ani miejsca w zestawieniu, a pokrycie wynosi 100 procent. To nie jest ocena szkoły. Wynik nie jest oficjalnym rankingiem i nie ocenia nauczycieli ani uczniów.",
       "label": "Wygenerowano przez AI",
       "model": "claude-haiku-5-5",
       "methodologyVersion": "1.0.0",
@@ -13,7 +13,7 @@
       "facts": {
         "score": {
           "score": null,
-          "reason": "insufficient_cohort",
+          "reason": "limited",
           "cohortSize": 8,
           "intervalLow": null,
           "intervalHigh": null,
@@ -22,7 +22,7 @@
           "asOf": "2026-01-01",
           "source": "DEMO SEED (synthetic)"
         },
-        "scoreStatus": "insufficient_cohort",
+        "scoreStatus": "limited",
         "coveragePercent": 100,
         "cohortSize": 8,
         "publicationThreshold": 9,
@@ -32,5 +32,5 @@
       "cached": false
     }
   },
-  "note": "No score shown; the threshold and the cohort are stated."
+  "note": "Limited band (8 pupils, ADR-0009): no score and no interval in the facts; the text says no score is published for this small group and gives no number other than the cohort and coverage. Replaces good-insufficient-sp3.json, which encoded the pre-ADR-0009 behaviour."
 }

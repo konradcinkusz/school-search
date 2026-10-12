@@ -29,7 +29,8 @@ labelled `DEMO SEED (synthetic)`. The demo data is fictional and must never be r
 |---|---|---|
 | Profile: value, source, as-of, method on every row | Contract in place; web page in progress | e2e: provenance table names the demo seed |
 | Score with interval, cohort size and methodology version | Contract in place | e2e: home catchment result |
-| `insufficient_cohort` (8 pupils) | Explicit message, no number | e2e: "zbyt mała grupa", no `±` on the page |
+| `limited` (5 to 8 pupils who sat) | Profile with cohort size and subject averages; explicit line; no score, interval or rank | e2e: 8-sat school shows the limited profile (`journey.spec.ts`); `limited-band.spec.ts`; not yet run in CI |
+| `insufficient_cohort` (below 5 pupils) | Explicit message, no number | e2e: "zbyt mała grupa", no `±` on the page (no spec for this case found in `tests/e2e/tests`) |
 | Catchment by street and number (`street_list`) | Gmina-level street list only; no polygon, no distance guess | e2e: match and the `no data` state |
 | Gmina with no catchment data | Explicit "brak danych", no guessed school | e2e: `Przykładowo-Wschód` |
 | Ranking (country) | Descending score only; no sort control | e2e: non-increasing scores, no sort control |
@@ -48,7 +49,7 @@ phone first at 360 px, with the score, its interval and the caveats kept in one 
 `tests/e2e/visual` visits every public route at 360, 768 and 1366 px and writes screenshots and findings. It runs
 locally against a mock catalog, not in CI, and it asserts only that pages load. CI on `main` was green through Phase I
 (PR #10, 13 checks). Still open: a CI gate for phone-width overflow (row 8), an accessibility pass with an axe check in
-CI (row 9), the limited-confidence band (row 7), and live runs of the AI features and of the authservice login (rows 14
+CI (row 9), the limited-confidence band (row 7, built; its tests have not run in CI yet), and live runs of the AI features and of the authservice login (rows 14
 and 15).
 
 ## Flows
@@ -56,9 +57,12 @@ and 15).
 1. **Find a school by name or place (Phase A/C):** search box, results list, school profile.
 2. **Read a profile (Phase A/C):** identity, then the data block. Every value shows its source, as-of date and
    method. A score, when present, is shown together with its cohort size and confidence in the same block.
-3. **Read a limited-confidence profile (Phase B/C, ADR-0009):** shows descriptive data, the sample size and an
-   explicit line that no score or rank is published for this cohort. It never shows a rank.
-4. **Read insufficient cohort (Phase B/C):** shows the cohort size and the reason. It shows no value and no zero.
+3. **Read a limited-confidence profile (5 to 8 pupils who sat, ADR-0009):** shows the cohort size, the subject averages
+   with their pupil counts, and the explicit line "Dla tej grupy nie publikujemy wyniku ani miejsca w zestawieniu."
+   It shows no score, no interval and no rank. It never shows a rank.
+   *Status: wording updated to match the implementation; version bump / ADR amendment pending owner decision.*
+4. **Read insufficient cohort (fewer than 5 pupils who sat, ADR-0009):** shows the cohort size and the reason. It shows
+   no value and no zero.
 5. **Address to catchment school (Phase C, gated by ADR-0010 and catchment availability):** not scaffolded as working.
 6. **Correction request (Phase C):** a school or parent submits a correction, which an operator reviews through an
    admin endpoint (ADR-0008).
@@ -96,4 +100,7 @@ Status column shows what Phase C delivered; open items are the ones still gated.
 - Anti-goal in the UI: no per-person view and no sort that orders schools by an individual's data.
 - No ascending sort on a composite score.
 - Confidence and cohort size appear in the same component as the score.
+- A school with 5 to 8 pupils who sat shows the limited profile: cohort size and subject averages, no score, no interval,
+  no rank. A school with fewer than 5 shows `insufficient_cohort`: cohort size and reason, no value. Neither is ever
+  shown as zero or as a rank (ADR-0009).
 - The product never says "oficjalny ranking".

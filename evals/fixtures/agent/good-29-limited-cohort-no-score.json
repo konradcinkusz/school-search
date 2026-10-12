@@ -1,0 +1,26 @@
+{
+  "caseId": "agent-120",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "reply": "Szkoła demo-sp-3 ma 8 uczniów, którzy zdawali egzamin. To mała grupa, dlatego wynik nie jest publikowany i nie podajemy miejsca w zestawieniu.",
+      "steps": [
+        {
+          "tool": "get_school",
+          "args": {
+            "rspo": 900003
+          },
+          "summary": "Profil: Szkoła Podstawowa nr 3 w Przykładowie (dane demonstracyjne)."
+        }
+      ],
+      "citedSlugs": [
+        "demo-sp-3"
+      ],
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "stopReason": "end_turn"
+    }
+  },
+  "note": "Limited band (ADR-0009): the cohort is stated, no score, no interval, no rank. A reply without any decimal passes noScoreFor."
+}

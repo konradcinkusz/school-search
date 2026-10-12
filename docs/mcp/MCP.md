@@ -111,7 +111,7 @@ A ranking of schools that have a published score. Maps to `GET /api/v1/ranking`.
 | `pageSize` | integer | no | Page size, capped at 50. |
 
 There is **no** `sort`, `direction` or `order` argument, and none will be added. The ranking is descending by score.
-Schools with `insufficient_cohort` are not in the ranking. They are counted in `unrankedCount`. This is not a list of
+Schools with `limited` or `insufficient_cohort` (no score) are not in the ranking. They are counted in `unrankedCount`. This is not a list of
 "official" positions. Do not call it one.
 
 ### get_methodology
@@ -207,9 +207,10 @@ real data and must not be read as a result. The values are invented; the structu
 > better or worse than another school. The interval shows how much the number could move with more data.
 >
 > *(calls `get_school` for a second school)*
-> **Szkoła Podstawowa nr 2 (demo)** has **no score**: the reason is `insufficient_cohort`. Only **n = 7 uczniów** sat the
-> exam, below the publication threshold of 9. That is **not a zero** and it does not mean the school is weak. The school
-> has no comparable number for that year.
+> **Szkoła Podstawowa nr 2 (demo)** has **no score**: the reason is `limited`. Only **n = 7 uczniów** sat the
+> exam, below the publication threshold of 9 but in the limited band of 5 to 8. The school is shown with its cohort
+> size and its subject averages, and no score, interval or rank. That is **not a zero** and it does not mean the school
+> is weak. The school has no comparable number for that year.
 >
 > This is not an official ranking, and I cannot tell you which of these is "best". Do you want me to compare the two on
 > the attributes that matter to you (languages, travel time, public or non-public)?
@@ -219,7 +220,7 @@ What the example shows, and what an agent must do every time:
 - Quote the score **with** its interval, the cohort size in words (`n = 14 uczniów`), the exam year and the
   `methodologyVersion`, in the same sentence or block.
 - Say the number is relative to the national average, and that it is an early reading when the interval is wide.
-- Say `insufficient_cohort` as a reason, with the cohort size, and give no number.
+- Say `limited` (5 to 8 pupils who sat) or `insufficient_cohort` (below 5) as the reason, with the cohort size, and give no number.
 
 ## 5. Anti-patterns
 
@@ -227,7 +228,7 @@ Do not do these. Each one is a way to mislead a parent, and each one is checked 
 
 | Anti-pattern | Why it is wrong | What to do instead |
 |---|---|---|
-| Presenting `insufficient_cohort` as zero, "0 pkt", or "weak school" | A null score is not a zero. A zero reads as a bad school. | Say there is no score, give the cohort size and the reason. |
+| Presenting `limited` or `insufficient_cohort` as zero, "0 pkt", or "weak school" | A null score is not a zero. A zero reads as a bad school. | Say there is no score, give the cohort size and the reason. |
 | Comparing a suppressed school with a published one | The suppressed school has no comparable number. | Say they cannot be compared on the score. |
 | Quoting a score without its interval, cohort size or methodology version | A bare number cannot be told apart from a noisy one. | Quote all four (see the example). |
 | Mixing scores from different `methodologyVersion` values | The methods differ, so the numbers are not on the same scale. | Compare only within one version. |

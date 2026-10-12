@@ -23,6 +23,7 @@ const DEMO_METHOD = "synthetic";
 const AS_OF = "2026-01-01";
 const METHODOLOGY_VERSION = "1.0.0";
 const PUBLICATION_THRESHOLD = 9; // ScoringPolicy.PublicationThreshold
+const LIMITED_BAND_FLOOR = 5; // ScoringPolicy.LimitedBandFloor (ADR-0009): below this, insufficient_cohort
 const COVERAGE_FLOOR = 0.8; // ScoringPolicy.CoverageFloor
 const INTERVAL_Z = 1.96; // ScoringPolicy.IntervalZ
 const EXAM_YEARS = [2024, 2025];
@@ -204,10 +205,18 @@ function scoreFor(s, year) {
     source: DEMO_SOURCE,
     cohortSize: exam.sat,
   };
-  if (exam.sat < PUBLICATION_THRESHOLD) {
+  // Below the CKE floor (5): nothing about the exam is shown.
+  if (exam.sat < LIMITED_BAND_FLOOR) {
     return {
       status: "insufficient_cohort",
       block: { ...base, score: null, reason: "insufficient_cohort", intervalLow: null, intervalHigh: null },
+    };
+  }
+  // 5 to 8 pupils (ADR-0009): limited profile. Cohort size only; no score, no interval, no rank.
+  if (exam.sat < PUBLICATION_THRESHOLD) {
+    return {
+      status: "limited",
+      block: { ...base, score: null, reason: "limited", intervalLow: null, intervalHigh: null },
     };
   }
   const mean = (exam.polish + exam.mathematics + exam.foreign_language) / 3;
