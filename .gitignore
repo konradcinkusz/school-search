@@ -45,3 +45,6 @@ Thumbs.db
 
 # Eval reports from `node evals/run.mjs --live` (run metadata and per-case results; never commit)
 evals/out/
+
+# Visual harness output (screenshots and findings from tests/e2e/visual/run.sh; never commit)
+tests/e2e/visual/out/
