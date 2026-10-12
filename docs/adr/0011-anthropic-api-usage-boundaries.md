@@ -72,7 +72,7 @@ The constraints that bind it are:
 8. **Output guard.** After the call, every digit sequence in the returned text must appear in the facts payload
    (score, interval bounds, cohort size, exam year, coverage, methodology version). If any does not, the text is
    discarded and the endpoint returns 502 `ai_output_rejected`. Ungrounded numbers are never published.
-   The text must also not contain a score when the status is `insufficient_cohort`, `no_exam_data` or `no_baseline`.
+   The text must also not contain a score when the status is `limited`, `insufficient_cohort`, `no_exam_data` or `no_baseline`.
 9. **Refusal and truncation.** A stop reason of `refusal` or `max_tokens` is a failure (502), never an empty success.
 10. **Cache.** In-memory, 24 hours, keyed by (slug, methodologyVersion, examYear, lang), size 1 per entry, because the
     shared cache has a size limit. A hit does not consume budget. The cache is per process and is lost on restart.

@@ -22,6 +22,8 @@
   --color-border-strong: #c4c0b4;
   /* Form control boundary: 3:1 or more against the surface (WCAG 1.4.11). */
   --color-border-input: #847f72;
+  /* Non-text state line (dashed suppressed-score outline): 3:1 or more against the surface (WCAG 1.4.11). */
+  --color-state-line: #767676;
 
   /* Colour: brand and interaction */
   --color-accent: #1f4e8c;
@@ -94,6 +96,8 @@
   --shadow-sm: 0 1px 2px rgb(20 24 31 / 0.06);
   --shadow: 0 1px 2px rgb(20 24 31 / 0.06), 0 4px 14px rgb(20 24 31 / 0.06);
   --shadow-lg: 0 2px 4px rgb(20 24 31 / 0.06), 0 12px 32px rgb(20 24 31 / 0.08);
+  /* Edge that says a phone scroll box (trend chart) continues to the right. */
+  --shadow-scroll-edge: inset -14px 0 12px -12px rgb(20 24 31 / 0.35);
 
   /* Layout */
   --container: 70rem;
@@ -121,6 +125,7 @@
     --color-border: #2f343b;
     --color-border-strong: #424851;
     --color-border-input: #7a818b;
+    --color-state-line: #6b7380;
     --color-accent: #8fb9f0;
     --color-accent-hover: #b0cdf5;
     --color-accent-fg: #0c1a2c;
@@ -152,6 +157,7 @@
     --shadow-sm: none;
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
     --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.45);
+    --shadow-scroll-edge: inset -14px 0 12px -12px rgb(233 231 226 / 0.28);
     color-scheme: dark;
   }
 }
@@ -166,6 +172,7 @@
   --color-border: #2f343b;
   --color-border-strong: #424851;
   --color-border-input: #7a818b;
+  --color-state-line: #6b7380;
   --color-accent: #8fb9f0;
   --color-accent-hover: #b0cdf5;
   --color-accent-fg: #0c1a2c;
@@ -197,6 +204,7 @@
   --shadow-sm: none;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.45);
+  --shadow-scroll-edge: inset -14px 0 12px -12px rgb(233 231 226 / 0.28);
   color-scheme: dark;
 }
 
@@ -516,6 +524,12 @@ hr {
   color: var(--color-accent);
   background: var(--color-accent-soft);
   box-shadow: inset 0 -3px 0 var(--color-accent);
+}
+
+/* Keyboard focus rings are drawn inside these scroll and tab containers, which clip anything outside their box. */
+.site-nav a:focus-visible,
+.tabs__tab:focus-visible {
+  outline-offset: -3px;
 }
 
 /* Phone: a fade on the right edge says that more links sit off-screen; the extra right padding lets the last link scroll clear of the fade. */
@@ -987,6 +1001,12 @@ select {
   width: 100%;
   max-width: 100%;
   transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+/* Hint text uses the muted token (dark: 8.2:1 on the field; the UA default grey was 3.6:1). */
+::placeholder {
+  color: var(--color-muted);
+  opacity: 1;
 }
 
 textarea {
@@ -1504,6 +1524,7 @@ legend {
 .score--suppressed {
   background: var(--color-surface);
   border-style: dashed;
+  border-color: var(--color-state-line);
   border-left-style: solid;
   border-left-color: var(--color-muted);
 }
@@ -1520,6 +1541,30 @@ legend {
   height: 0.6em;
   margin-right: 0.45em;
   border: 2px solid var(--color-muted);
+  border-radius: 50%;
+  vertical-align: 0.05em;
+}
+
+/* Limited profile (ADR-0009, 5 to 8 pupils): dashed on every side in the info tokens. Distinct from the grey
+   suppressed box above, which has a solid left rule and a surface background. */
+.score--limited {
+  background: var(--color-info-bg);
+  border: 1px dashed var(--color-info-border);
+  border-left: 4px dashed var(--color-info-fg);
+}
+
+.score--limited .score__value {
+  color: var(--color-info-fg);
+  font-size: var(--text-base);
+}
+
+.score--limited .score__value::before {
+  content: "";
+  display: inline-block;
+  width: 0.6em;
+  height: 0.6em;
+  margin-right: 0.45em;
+  border: 2px dashed var(--color-info-fg);
   border-radius: 50%;
   vertical-align: 0.05em;
 }
@@ -2684,9 +2729,68 @@ details > summary + * {
     display: none !important;
   }
 
+  /* Paper is light whatever the OS or data-theme says. Every dark selector is repeated here, because a bare :root
+     (specificity 0,1,0) would lose to the dark blocks (0,2,0). Browsers do not print backgrounds by default, so
+     text is black on white and every tone keeps a dark border. */
+  :root,
+  :root:not([data-theme="light"]),
+  :root[data-theme="dark"] {
+    color-scheme: light;
+    --color-bg: #fff;
+    --color-bg-band: #fff;
+    --color-surface: #fff;
+    --color-surface-sunken: #fff;
+    --color-fg: #000;
+    --color-muted: #333;
+    --color-border: #999;
+    --color-border-strong: #666;
+    --color-border-input: #666;
+    --color-state-line: #666;
+    --color-accent: #000;
+    --color-accent-hover: #000;
+    --color-accent-fg: #000;
+    --color-accent-soft: #fff;
+    --color-focus: #000;
+    --color-score: #000;
+    --color-score-rule: #000;
+    --color-info-bg: #fff;
+    --color-info-fg: #000;
+    --color-info-border: #666;
+    --color-warn-bg: #fff;
+    --color-warn-fg: #000;
+    --color-warn-border: #666;
+    --color-danger-bg: #fff;
+    --color-danger-fg: #000;
+    --color-danger-border: #666;
+    --color-success-bg: #fff;
+    --color-success-fg: #000;
+    --color-success-border: #666;
+    --color-ai-bg: #fff;
+    --color-ai-fg: #000;
+    --color-ai-border: #666;
+    --color-sponsor-bg: #fff;
+    --color-sponsor-fg: #000;
+    --color-sponsor-border: #666;
+    --color-demo-bg: #fff;
+    --color-demo-fg: #000;
+    --color-demo-border: #666;
+    --shadow-sm: none;
+    --shadow: none;
+    --shadow-lg: none;
+    --shadow-scroll-edge: none;
+  }
+
   body {
     background: #fff;
     color: #000;
+  }
+
+  /* Filled buttons print as outlined buttons, so the label stays readable without background printing. */
+  .button,
+  .button--secondary {
+    background: #fff;
+    color: #000;
+    border: 1px solid #000;
   }
 
   .card,

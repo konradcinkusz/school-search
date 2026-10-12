@@ -245,17 +245,17 @@ public sealed class ExplainEndpointTests
         using var factory = new AiApiFactory(client);
         await factory.SeedAsync(PublicSeed.ApplyAsync);
 
-        // School E has 5 pupils who sat the exam, below the publication threshold: its score is suppressed.
+        // School E has 5 pupils who sat the exam: inside the limited band, below the publication threshold, so no score.
         var response = await factory.CreateClient().PostAsync(Url(PublicSeed.SchoolE), null);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var root = await JsonTestHelpers.ReadJsonAsync(response);
-        Assert.Equal("insufficient_cohort", root.GetProperty("facts").GetProperty("scoreStatus").GetString());
+        Assert.Equal("limited", root.GetProperty("facts").GetProperty("scoreStatus").GetString());
         Assert.Equal(JsonValueKind.Null, root.GetProperty("facts").GetProperty("score").GetProperty("score").ValueKind);
         Assert.Equal(JsonValueKind.Null, root.GetProperty("facts").GetProperty("score").GetProperty("intervalLow").ValueKind);
 
         var user = Assert.Single(client.Prompts).User;
-        Assert.Contains("\"scoreStatus\":\"insufficient_cohort\"", user);
+        Assert.Contains("\"scoreStatus\":\"limited\"", user);
         Assert.Contains("\"score\":null", user);
         Assert.DoesNotMatch("\"score\":-?[0-9]", user);
         Assert.DoesNotMatch("\"intervalLow\":-?[0-9]", user);

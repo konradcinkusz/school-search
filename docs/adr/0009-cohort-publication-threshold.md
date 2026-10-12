@@ -1,6 +1,6 @@
 # ADR-0009: Cohort publication threshold
 
-- **Status:** Accepted (9 for a score, 5 as the floor for any exam figure; the 5 to 8 profile is deferred to Phase C)
+- **Status:** Accepted (9 for a score, 5 as the floor for any exam figure). The 5 to 8 limited profile is built (`scoreStatus` `limited`, no score, no rank; backlog A-11, not yet compiled in this environment); below 5 stays `insufficient_cohort`
 - **Date:** 2026-10-11
 - **Deciders:** owner (Konrad Cinkusz), to confirm at Phase B review. The one wording point under "Open points"
   must be confirmed before the first public score.
@@ -24,13 +24,16 @@ its only source, and it is not a statistical result.
 ## Decision
 
 1. **Publish a score only at a cohort of at least 9 pupils who sat the exam.** The constant is
-   `ScoringPolicy.PublicationThreshold = 9`, in one place in `SchoolSearch.Api/Scoring`. Below 9 the engine returns
-   `insufficient_cohort` with the cohort size and no value.
-2. **Between 5 and 8 pupils**, the intended output is a `limited-confidence profile`: the descriptive facts
-   (coverage, the raw exam averages marked as low-cohort, the sample size) but **no composite score and no rank
-   position**. **This profile is not produced by the v1.0.0 engine.** It is a Phase C presentation item.
-   Until then a school with 5 to 8 pupils returns `insufficient_cohort`, the same as one with fewer than 5.
-3. **Below 5**, show `insufficient_cohort` with the cohort size and no value.
+   `ScoringPolicy.PublicationThreshold = 9`, in one place in `SchoolSearch.Api/Scoring`. At 9 and above the engine
+   publishes the score, interval and rank.
+2. **Between 5 and 8 pupils**, the output is the `limited-confidence profile` (`scoreStatus` `limited`): the
+   descriptive data (the raw exam averages per subject, each with its pupil count, marked as low-cohort) and the
+   cohort size, but **no composite score, no interval and no rank position**. The engine produces it; the web shows
+   it with the line "Dla tej grupy nie publikujemy wyniku ani miejsca w zestawieniu." The floor is
+   `ScoringPolicy.LimitedBandFloor = 5`. *Status: wording updated to match the implementation; version bump / ADR
+   amendment pending owner decision.*
+3. **Below 5**, or with a class VIII headcount of 0 or less, show `insufficient_cohort` with the cohort size and no
+   value.
 
 The CKE floor of 5 is the minimum at which anything about exam results is intended to be shown; 9 is the minimum
 at which a score is computed.
@@ -49,7 +52,7 @@ at which a score is computed.
 | Option | For | Against |
 |---|---|---|
 | Score at 5 (CKE floor) | Shows the most schools (about 12 564 with a profile) | A single pupil moves a small cohort's average by a large amount; the score would mostly measure chance |
-| **Score at 9, profile at 5 (chosen)** | Scores are stable enough to rank; a middle band keeps information without a rank | About 1 550 schools have no score or rank; more schools show the limited profile, which is not yet built |
+| **Score at 9, profile at 5 (chosen)** | Scores are stable enough to rank; a middle band keeps information without a rank | About 1 550 schools have no score or rank; they show the limited profile, which is built but whose tests have not yet run in CI |
 | Score at 9 and no profile between 5 and 8 | Simplest rule | Hides real data from 1 550 schools, the least defensible outcome for a public portal |
 | Higher threshold, e.g. 15 or 20 | Stronger statistics | Removes many more schools; no principled basis in the brief for a higher number |
 
@@ -66,19 +69,37 @@ is intended. It costs visibility for those schools and is the price of not prese
    counts (14 224 primary rows, or 13 885 real schools), so no single subtraction gives it. Arithmetic on the brief's
    figures alone gives 3 210 (14 224 − 11 014) or 2 871 (13 885 − 11 014) below 9, depending on the base. These
    are not verified counts. **No count is claimed here.** The row-level count from the idempotent import replaces
-   all of them. Until then, 2 100 is an expectation, not a fact.
+   all of them. Until then, 2 100 is an expectation, not a fact. The brief's figures count schools below 9. Under the
+   current bands, `insufficient_cohort` means below 5 and `limited` means 5 to 8, so the row-level count must be
+   split the same way before it is compared with 2 100.
 2. **Basis of the threshold: pupils who sat, not the class VIII headcount.** The first draft of this decision said
    "in the class VIII cohort". The Phase B contract applies the threshold to the **pupils who sat the exam**
    (`max PupilsSat`), because a score is computed from them. The two differ whenever coverage is below 1. The
    engine follows the contract; the owner should confirm this basis. If the owner prefers the headcount, the
    threshold basis changes and that is a methodology version change.
-3. **The 5 to 8 profile** is not in the v1.0.0 engine (see Decision 2).
+3. **The 5 to 8 profile is built, under the unchanged methodology version `1.0.0`.** The engine returns `limited` and
+   the web renders it (Decision 2). Whether this needs a version bump to `1.1.0` or an amendment of this ADR is the
+   owner decision at the end of this record. Until it is decided, the methodology text is worded to the
+   implementation, with a visible status note.
+4. **The explain endpoint still answers 200 for limited and insufficient schools (the web hides the panel); a
+   backend refusal is an owner decision.** `POST /api/v1/schools/{slug}/explain` (`ExplainService`) has no
+   `scoreStatus` gate, so it does not refuse a school with no score. The web does not show the panel for those
+   schools. Whether the API should refuse them is open.
 
 ## Consequences
 
 - Threshold changes are a methodology version change (`docs/methodology/RANKING-METHODOLOGY.md` §9). The API
   returns `methodologyVersion` with every score, and the methodology page states the threshold.
-- Tests assert the boundary values (4, 5, 8, 9): 9 is published, 8 and below are `insufficient_cohort`, and no
-  score or rank appears for a suppressed school.
-- The ranking builder ranks only non-null scores, so a suppressed school is never ranked (`RankingBuilder`).
-- The profile for 5 to 8 pupils needs its own ADR amendment or Phase C record when it is built.
+- Tests assert the boundary values (4, 5, 8, 9): 9 is published, 5 to 8 is `limited` with no score, no interval and
+  no rank, and 4 and below are `insufficient_cohort`. No score or rank appears for a suppressed school.
+- The ranking builder ranks only non-null scores, so a suppressed school, limited or insufficient, is never ranked
+  (`RankingBuilder`).
+- The 5 to 8 profile is built. Whether it needs a methodology version bump or an ADR amendment is the open decision
+  below.
+
+## Open decision for the owner (pending)
+
+- **Does the 5 to 8 `limited` band need a methodology version bump (`1.0.0` to `1.1.0`) or an amendment of this
+  ADR?** The band is implemented in the engine and the web while `MethodologyVersion` is still `1.0.0`. The
+  methodology wording has been changed to match the code, with a status note. **Not decided. No version has been
+  bumped by this change.**

@@ -1,0 +1,29 @@
+/*
+ * Form states for the AI, review, correction, notice, account, enquiry and moderation forms.
+ * Every selector is scoped to .site-main so nothing leaks into other pages.
+ */
+
+/* A field error sits directly under its field and names what to change. */
+.site-main .field-error {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-danger-fg);
+}
+
+/* Invalid inputs get a second visual cue beyond colour: a thicker outline. */
+.site-main [aria-invalid="true"] {
+  border-color: var(--color-danger-fg);
+  box-shadow: 0 0 0 1px var(--color-danger-fg);
+}
+
+/* Result regions take focus after a request ends. The ring is drawn only for keyboard focus. */
+.site-main .focus-region:focus {
+  outline: none;
+}
+
+.site-main .focus-region:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}

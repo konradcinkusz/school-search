@@ -1,0 +1,36 @@
+{
+  "caseId": "explain-020",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "slug": "demo-sp-3",
+      "text": "Szkoła ma 8 uczniów w klasie VIII, a pokrycie wynosi 100 procent. Wynik nie jest oficjalnym rankingiem i nie ocenia nauczycieli ani uczniów.",
+      "label": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "methodologyVersion": "1.0.0",
+      "examYear": 2025,
+      "facts": {
+        "score": {
+          "score": null,
+          "reason": "limited",
+          "cohortSize": 8,
+          "intervalLow": null,
+          "intervalHigh": null,
+          "methodologyVersion": "1.0.0",
+          "examYear": 2025,
+          "asOf": "2026-01-01",
+          "source": "DEMO SEED (synthetic)"
+        },
+        "scoreStatus": "limited",
+        "coveragePercent": 100,
+        "cohortSize": 8,
+        "publicationThreshold": 9,
+        "coverageFloorPercent": 80
+      },
+      "generatedAt": "2026-10-11T10:00:00Z",
+      "cached": false
+    }
+  },
+  "note": "Limited profile whose text never says that no score is published or that the group is small: must fail (explains-missing-state and limited-small-group-said)."
+}

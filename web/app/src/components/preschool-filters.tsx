@@ -63,6 +63,9 @@ export function PreschoolFilters({ gminas, values }: { gminas: readonly GminaIte
         <button type="submit" className="button">
           Szukaj przedszkoli
         </button>
+        <a href="/przedszkola" className="link-button">
+          Wyczyść filtry
+        </a>
       </div>
     </form>
   );

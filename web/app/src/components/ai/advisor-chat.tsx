@@ -1,5 +1,6 @@
 "use client";
 
+import "@/app/styles/forms.css";
 import Link from "next/link";
 import { useId, useState, type FormEvent } from "react";
 import { AI_LABEL, isRecord, parseAgentReply, type AgentReply } from "@/lib/ai-contract";
@@ -22,27 +23,24 @@ interface Turn {
 }
 
 export function AdvisorChat() {
-  const ids = { input: useId(), heading: useId() };
+  const ids = { input: useId(), heading: useId(), error: useId() };
   const [turns, setTurns] = useState<Turn[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** True only when the message box itself is wrong (empty or too long); the box then points at the alert. */
+  const [draftInvalid, setDraftInvalid] = useState(false);
 
   const full = turns.length >= MAX_TURNS;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (sending || full) return;
     const text = draft.trim();
-    if (text === "") {
-      setError("Napisz, czego szukasz, zanim wyślesz wiadomość.");
-      return;
-    }
-    if (text.length > TURN_MAX) {
-      setError(`Wiadomość może mieć najwyżej ${TURN_MAX} znaków.`);
-      return;
-    }
-    if (full) {
-      setError("Ta rozmowa osiągnęła limit wiadomości. Zacznij nową rozmowę.");
+    if (text === "" || text.length > TURN_MAX) {
+      setError(text === "" ? "Napisz, czego szukasz, zanim wyślesz wiadomość." : `Wiadomość może mieć najwyżej ${TURN_MAX} znaków.`);
+      setDraftInvalid(true);
+      document.getElementById(ids.input)?.focus();
       return;
     }
 
@@ -50,6 +48,7 @@ export function AdvisorChat() {
     const next: Turn[] = [...turns, { role: "user", content: text }];
     setDraft("");
     setError(null);
+    setDraftInvalid(false);
     setSending(true);
 
     const messages = next.map((turn) => ({ role: turn.role, content: turn.content }));
@@ -121,20 +120,26 @@ export function AdvisorChat() {
 
       {sending ? <p className="muted" role="status">Doradca sprawdza dane…</p> : null}
       {error !== null ? (
-        <p role="alert" className="notice">
+        <p role="alert" id={ids.error} className="notice">
           {error}
         </p>
       ) : null}
 
       <form onSubmit={onSubmit} noValidate className="ai-chat__form">
+        <p className="field-hint">Pola oznaczone * są wymagane.</p>
         <div className="field">
-          <label htmlFor={ids.input}>Twoja wiadomość</label>
+          <label htmlFor={ids.input}>
+            Twoja wiadomość<span aria-hidden="true"> *</span>
+          </label>
           <textarea
             id={ids.input}
             rows={3}
             maxLength={TURN_MAX}
             value={draft}
             disabled={full}
+            required
+            aria-invalid={draftInvalid ? true : undefined}
+            aria-describedby={draftInvalid ? ids.error : undefined}
             onChange={(event) => setDraft(event.target.value)}
           />
           {draft.length >= TURN_MAX * 0.8 ? (
@@ -144,7 +149,7 @@ export function AdvisorChat() {
           ) : null}
         </div>
         <div className="ai-chat__actions">
-          <button type="submit" className="button" disabled={sending || full}>
+          <button type="submit" className="button" aria-disabled={sending || full ? true : undefined}>
             {sending ? "Wysyłanie…" : "Wyślij"}
           </button>
           <button type="button" className="link-button" onClick={startOver}>

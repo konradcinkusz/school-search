@@ -15,7 +15,8 @@ const RETRYABLE_STATUS = new Set([502, 503, 504]);
 // Contract types (camelCase JSON). Mirror SPEC-C; nullable fields stay nullable.
 // ---------------------------------------------------------------------------
 
-export type ScoreStatus = "published" | "insufficient_cohort" | "no_exam_data" | "no_baseline";
+/** "limited": 5 to 8 pupils, descriptive data and cohort size only; no score, no interval, no rank (ADR-0009). */
+export type ScoreStatus = "published" | "limited" | "insufficient_cohort" | "no_exam_data" | "no_baseline";
 
 export interface ScoreBlock {
   /** Null when suppressed. Never zero for a suppressed score. */

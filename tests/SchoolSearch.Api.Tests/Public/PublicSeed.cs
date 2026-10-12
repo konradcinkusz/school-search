@@ -14,7 +14,7 @@ namespace SchoolSearch.Api.Tests.Public;
 ///   B szkola-b-pelne-pokrycie: mean 62, sat 10, headcount 10 -> coverage 1.0, factor 1,     score +2
 ///   C szkola-c-remis:          mean 70, sat 12, headcount 12 -> score +10
 ///   D szkola-d-remis:          mean 70, sat 12, headcount 12 -> score +10 (ties with C)
-///   E szkola-e-maly-kohorta:   mean 95, sat 5,  headcount 5  -> suppressed (cohort 5 &lt; 9)
+///   E szkola-e-maly-kohorta:   mean 95, sat 5,  headcount 5  -> limited (cohort 5 to 8, no score, no rank)
 ///   F szkola-f-niskie:         mean 40, sat 10, headcount 10 -> score -20
 ///   G szkola-g-bez-wynikow:    no exam result -> no_exam_data
 /// A has the highest mean and the lowest coverage, so it ranks below B (the counter-metric, end to end).

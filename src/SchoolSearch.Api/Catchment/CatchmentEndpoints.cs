@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using SchoolSearch.Api.Errors;
+using SchoolSearch.Api.Services;
 using SchoolSearch.Catalog.Data;
 using SchoolSearch.Catalog.Data.Entities;
+using SchoolSearch.Contracts.Public;
 
 namespace SchoolSearch.Api.Catchment;
 
@@ -26,9 +28,6 @@ public static class CatchmentEndpoints
     internal const string MatchNoMatch = "no_match";
     internal const string MatchNoData = "no_data";
 
-    /// <summary>Placeholder until the scoring glue is wired into this endpoint (see TODO below).</summary>
-    internal const string NoExamDataStatus = "no_exam_data";
-
     private const int MaxStreetLength = 200;
 
     public static IEndpointRouteBuilder MapCatchmentEndpoints(this IEndpointRouteBuilder app)
@@ -42,6 +41,7 @@ public static class CatchmentEndpoints
         string? street,
         string? number,
         CatalogDbContext db,
+        SchoolScoreService scores,
         CancellationToken ct)
     {
         var gminaTeryt = gmina?.Trim() ?? string.Empty;
@@ -123,10 +123,50 @@ public static class CatchmentEndpoints
                 .ToListAsync(ct);
         }
 
-        var items = schools.Select(CatchmentSchoolItem.From).ToList();
+        var items = await ToItemsAsync(schools, scores, ct);
         var match = items.Count > 0 ? MatchStreetListMatch : MatchNoMatch;
 
         return TypedResults.Ok(new CatchmentResponse(gminaTeryt, coverageDto, match, items, Disclaimer));
+    }
+
+    /// <summary>
+    /// Scores the catchment schools the way GET /schools does: the current exam year (the newest with a national
+    /// baseline), one batched scoring call, and the shared public mapping in <see cref="SchoolScoreService.ToBlock"/>.
+    /// Without a baseline every school is no_baseline, exactly as on /schools.
+    /// </summary>
+    internal static async Task<List<CatchmentSchoolItem>> ToItemsAsync(
+        IReadOnlyList<School> schools,
+        SchoolScoreService scores,
+        CancellationToken ct)
+    {
+        var items = new List<CatchmentSchoolItem>(schools.Count);
+        if (schools.Count == 0)
+        {
+            return items;
+        }
+
+        var year = await scores.ResolveCurrentYearAsync(ct);
+        if (year is not int examYear)
+        {
+            var noBaseline = SchoolScore.Missing(ScoreStatuses.NoBaseline, null);
+            foreach (var school in schools)
+            {
+                items.Add(CatchmentSchoolItem.From(school, noBaseline));
+            }
+
+            return items;
+        }
+
+        var ids = schools.Select(school => school.IdPodmiot).ToArray();
+        var scoreMap = await scores.ScoreAsync(examYear, ids, ct);
+        foreach (var school in schools)
+        {
+            // A school absent from the map has no exam data for the year: CatchmentSchoolItem.From gives no_exam_data.
+            SchoolScore? score = scoreMap.TryGetValue(school.IdPodmiot, out var found) ? found : null;
+            items.Add(CatchmentSchoolItem.From(school, score));
+        }
+
+        return items;
     }
 
     /// <summary>
@@ -212,10 +252,9 @@ public sealed record CatchmentResponse(
     string Disclaimer);
 
 /// <summary>
-/// Catchment result item, shaped like the public SchoolListItem. Score fields are placeholders:
-/// TODO(C5): once the scoring glue (SchoolScoreService) is called here, fill scoreStatus and score the same way
-/// /schools does. Until then every item says "no_exam_data" with a null score, and the web client fetches
-/// /schools/{slug} for the score.
+/// Catchment result item, shaped like the public SchoolListItem. scoreStatus and score are produced by the same
+/// scoring path as /schools: a published, insufficient_cohort, no_exam_data or no_baseline status, with a complete
+/// score block (cohort, interval, methodology version, exam year, source, as-of) whenever the engine ran.
 /// </summary>
 public sealed record CatchmentSchoolItem(
     string Slug,
@@ -228,9 +267,13 @@ public sealed record CatchmentSchoolItem(
     double? Longitude,
     double? DistanceKm,
     string ScoreStatus,
-    object? Score)
+    ScoreBlock? Score)
 {
-    public static CatchmentSchoolItem From(School school) => new(
+    /// <summary>
+    /// <paramref name="score"/> is null when the school has no exam data for the year. The status and block are
+    /// read from the score, so this item and /schools cannot disagree.
+    /// </summary>
+    public static CatchmentSchoolItem From(School school, SchoolScore? score) => new(
         school.Slug,
         school.Name,
         school.GminaTeryt,
@@ -240,6 +283,6 @@ public sealed record CatchmentSchoolItem(
         school.Latitude,
         school.Longitude,
         DistanceKm: null,
-        ScoreStatus: CatchmentEndpoints.NoExamDataStatus,
-        Score: null);
+        ScoreStatus: score?.ScoreStatus ?? ScoreStatuses.NoExamData,
+        Score: SchoolScoreService.ToBlock(score));
 }

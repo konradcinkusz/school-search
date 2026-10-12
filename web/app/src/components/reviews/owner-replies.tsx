@@ -1,5 +1,6 @@
 "use client";
 
+import "@/app/styles/forms.css";
 import Link from "next/link";
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { SessionGate } from "@/components/billing/session-gate";
@@ -99,26 +100,42 @@ function OwnerReviews({ slug }: { readonly slug: string }) {
   );
 }
 
+type FieldKey = "label" | "body";
+type FieldErrors = Partial<Record<FieldKey, string>>;
+
 function ReplyForm({ reviewId, onSent }: { readonly reviewId: string; readonly onSent: () => void }) {
-  const ids = { label: useId(), body: useId() };
+  const ids = {
+    label: useId(),
+    labelError: useId(),
+    body: useId(),
+    bodyError: useId(),
+  };
   const [sending, setSending] = useState(false);
+  const [fields, setFields] = useState<FieldErrors>({});
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (sending) return;
     const data = new FormData(event.currentTarget);
     const representativeLabel = String(data.get("label") ?? "").trim();
     const body = String(data.get("body") ?? "").trim();
+    const invalid: FieldErrors = {};
     if (representativeLabel === "" || representativeLabel.length > LABEL_MAX) {
-      setError(`Podaj, w jakiej roli odpowiadasz (do ${LABEL_MAX} znaków).`);
-      return;
+      invalid.label = `Podaj, w jakiej roli odpowiadasz (do ${LABEL_MAX} znaków).`;
     }
     if (body.length < BODY_MIN || body.length > BODY_MAX) {
-      setError(`Odpowiedź ma mieć od ${BODY_MIN} do ${BODY_MAX} znaków.`);
+      invalid.body = `Odpowiedź ma mieć od ${BODY_MIN} do ${BODY_MAX} znaków.`;
+    }
+    if (invalid.label !== undefined || invalid.body !== undefined) {
+      setFields(invalid);
+      setError(null);
+      document.getElementById(invalid.label !== undefined ? ids.label : ids.body)?.focus();
       return;
     }
     setSending(true);
+    setFields({});
     setError(null);
     const response = await bffRequest(`/api/proxy/api/v1/reviews/${encodeURIComponent(reviewId)}/reply`, {
       method: "POST",
@@ -143,15 +160,46 @@ function ReplyForm({ reviewId, onSent }: { readonly reviewId: string; readonly o
 
   return (
     <form onSubmit={onSubmit} noValidate className="review-form">
+      <p className="field-hint">Pola oznaczone * są wymagane.</p>
       <div className="field">
-        <label htmlFor={ids.label}>Twoja rola w szkole (na przykład „dyrektor”)</label>
-        <input id={ids.label} name="label" type="text" maxLength={LABEL_MAX} required />
+        <label htmlFor={ids.label}>
+          Twoja rola w szkole (na przykład „dyrektor”)<span aria-hidden="true"> *</span>
+        </label>
+        <input
+          id={ids.label}
+          name="label"
+          type="text"
+          maxLength={LABEL_MAX}
+          required
+          aria-invalid={fields.label ? true : undefined}
+          aria-describedby={fields.label ? ids.labelError : undefined}
+        />
+        {fields.label ? (
+          <p id={ids.labelError} className="field-error">
+            {fields.label}
+          </p>
+        ) : null}
       </div>
       <div className="field">
-        <label htmlFor={ids.body}>Treść odpowiedzi</label>
-        <textarea id={ids.body} name="body" rows={4} maxLength={BODY_MAX} required />
+        <label htmlFor={ids.body}>
+          Treść odpowiedzi<span aria-hidden="true"> *</span>
+        </label>
+        <textarea
+          id={ids.body}
+          name="body"
+          rows={4}
+          maxLength={BODY_MAX}
+          required
+          aria-invalid={fields.body ? true : undefined}
+          aria-describedby={fields.body ? ids.bodyError : undefined}
+        />
+        {fields.body ? (
+          <p id={ids.bodyError} className="field-error">
+            {fields.body}
+          </p>
+        ) : null}
       </div>
-      <button type="submit" className="button" disabled={sending}>
+      <button type="submit" className="button" aria-disabled={sending ? true : undefined}>
         {sending ? "Wysyłanie…" : "Wyślij odpowiedź"}
       </button>
       {error !== null ? (

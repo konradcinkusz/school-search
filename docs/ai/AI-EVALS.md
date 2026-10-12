@@ -16,7 +16,7 @@ The source guide `docs/guides/AI-EVALS.md` lives in the architecture-standards r
 | Offline selftest (datasets, fixtures, graders, request builders) | `node evals/run.mjs --selftest`, CI job `evals selftest` | Built. Runs in CI with no network and no key. |
 | Live Tier A run | `node evals/run.mjs --live`, workflow `.github/workflows/evals.yml` (manual) | Built. **Not run against any deployed service.** |
 | Tier A datasets, fixtures and graders: explain, search intent, methodology, agent | `evals/datasets/<feature>/`, `evals/fixtures/<feature>/`, `evals/features/<feature>.mjs` | Owned by the feature authors. Each dataset has its own README. |
-| Tier B in-process evals (review triage, correction triage, profile copy, catchment and preschool extractors) | `tests/SchoolSearch.Evals.Tests` | Specified in section 3; the project is built by its own changes. Live tests are `[LiveEvalFact]`, skipped unless `EVALS_LIVE=1` and `ANTHROPIC_API_KEY`. |
+| Tier B in-process evals (review triage, correction triage, profile copy, catchment and preschool extractors) | `tests/SchoolSearch.Evals.Tests` | In `SchoolSearch.sln`. Offline tests run in CI (`dotnet test`, job `dotnet build and test`). Live tests are `[LiveEvalFact]`, skipped unless `EVALS_LIVE=1` and `ANTHROPIC_API_KEY`, so CI never calls the model. Dataset-to-runner map: `evals/README.md`. |
 
 Commands (offline, what CI runs):
 
@@ -167,3 +167,15 @@ scenario, and the scenario is added before the feature is enabled.
 - Prompt injection against the live model. The fake-client tests prove the parsers and guards, not the model's behaviour.
 - Cost per feature in tokens on real inputs. The budgets are set from the proposals in `AI-FEATURES.md` section 4.
 - Calibration of the Layer 2 judge. Until it exists, Layer 2 numbers are rehearsal numbers and gate nothing.
+
+## 6. Product gaps the evals found
+
+Status is as at time of writing. A fix is listed as fixed only when its code has been checked. Commit `2cf3902` is a
+Phase J work-in-progress snapshot with its workers still running, so none of the fixes below is verified yet.
+
+| Gap | Where | Found by | Status at time of writing |
+|---|---|---|---|
+| The correction draft was allowed 1500 characters, and the parser had no banned-claim check (guarantees, superlatives, "pewnie", "zweryfikowane") | `src/SchoolSearch.Api/Ai/CorrectionTriageParser.cs` (Phase I: limit 1500, no check) | Feature 5 (`correction-triage`) | Open at time of writing. A WIP change in `2cf3902` sets the limit to 900 characters and adds the banned-claim check. Not verified. |
+| A catchment rule's house-number bounds were not checked against the source quote, so a number could be invented | `src/SchoolSearch.Import/Catchment/Extract/CatchmentExtractor.cs` | Feature 3 (`catchment-extract`) | Open at time of writing. A WIP change in `2cf3902` requires each house number to appear in the quote as a whole digit run. Not verified. |
+| A list of bare two-word capitalised names (a possible pupil list) passed the PII precheck, which caught only pupil-level patterns | `src/SchoolSearch.Import/Ai/ImportPiiPrecheck.cs` | Feature 3 and 6 input guards | Open at time of writing. A WIP change in `2cf3902` refuses a file with five or more such lines. Not verified. |
+| An amount with a thousands space ("1 250,50") was refused, not read as 1250.50, so the section 3 rule did not hold | `src/SchoolSearch.Import/Preschools/Extract/PreschoolExtractParser.cs` (`PreschoolMoney.TryParseAmount`) | Feature 6 (`preschool-extract`) | Open at time of writing. A WIP change in `2cf3902` accepts spaces only as groups of three. Not verified. The Phase I code refused the value, so no wrong amount was stored. |

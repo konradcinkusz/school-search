@@ -7,8 +7,9 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.56.1",
-    "typescript": "5.9.3",
-    "@types/node": "22.18.1"
+    "@types/node": "22.18.1",
+    "typescript": "5.9.3"
   }
 }

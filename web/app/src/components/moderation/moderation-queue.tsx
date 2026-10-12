@@ -1,8 +1,9 @@
 "use client";
 
+import "@/app/styles/forms.css";
 import Link from "next/link";
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { bffRequest, errorMessageOf, isUnavailable } from "@/lib/bff-client";
+import { bffRequest, isUnavailable, type BffResponse } from "@/lib/bff-client";
 import { formatDatePl } from "@/lib/format";
 import type { ModerationQueue, ModerationQueueItem } from "@/lib/reviews-types";
 
@@ -165,25 +166,56 @@ function QueueRow({ item, onDone }: { readonly item: ModerationQueueItem; readon
   );
 }
 
+const DECISION_COPY = {
+  ground: "Podaj podstawę decyzji (do 300 znaków).",
+  facts: "Podaj okoliczności (do 2000 znaków).",
+  forbidden: "Nie masz uprawnień do tej decyzji. Sprawdź rolę konta.",
+  notFound: "Nie znaleziono tej pozycji. Odśwież kolejkę i spróbuj ponownie.",
+  invalid: "Sprawdź podstawę i okoliczności decyzji, a potem zapisz ją ponownie.",
+  unavailable: "Usługa moderacji jest chwilowo niedostępna. Decyzja nie została zapisana.",
+  generic: "Nie udało się zapisać decyzji. Spróbuj ponownie.",
+};
+
+function decisionFailureText(response: BffResponse | null): string {
+  if (response === null || isUnavailable(response)) return DECISION_COPY.unavailable;
+  if (response.status === 401 || response.status === 403) return DECISION_COPY.forbidden;
+  if (response.status === 404) return DECISION_COPY.notFound;
+  if (response.status === 400) return DECISION_COPY.invalid;
+  return DECISION_COPY.generic;
+}
+
 function DecisionForm({ item, onDone }: { readonly item: ModerationQueueItem; readonly onDone: () => void }) {
-  const ids = { action: useId(), ground: useId(), facts: useId() };
+  const ids = {
+    action: useId(),
+    ground: useId(),
+    groundError: useId(),
+    facts: useId(),
+    factsError: useId(),
+  };
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fields, setFields] = useState<{ ground?: string; facts?: string }>({});
   const actions = ACTIONS[item.kind] ?? [];
   const path = KIND_PATH[item.kind];
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (path === undefined) return;
+    if (sending || path === undefined) return;
     const data = new FormData(event.currentTarget);
     const action = String(data.get("action") ?? "");
     const ground = String(data.get("ground") ?? "").trim();
     const facts = String(data.get("facts") ?? "").trim();
-    if (ground === "" || ground.length > 300 || facts === "" || facts.length > 2000) {
-      setError("Podaj podstawę decyzji (do 300 znaków) i okoliczności (do 2000 znaków).");
+    const invalid: { ground?: string; facts?: string } = {};
+    if (ground === "" || ground.length > 300) invalid.ground = DECISION_COPY.ground;
+    if (facts === "" || facts.length > 2000) invalid.facts = DECISION_COPY.facts;
+    if (invalid.ground !== undefined || invalid.facts !== undefined) {
+      setFields(invalid);
+      setError(null);
+      document.getElementById(invalid.ground !== undefined ? ids.ground : ids.facts)?.focus();
       return;
     }
     setSending(true);
+    setFields({});
     setError(null);
     // Every decision is recorded with its statement of reasons; the service never decides automatically.
     const response = await bffRequest(`/api/proxy/api/v1/moderation/${path}/${encodeURIComponent(item.id)}/decision`, {
@@ -195,13 +227,14 @@ function DecisionForm({ item, onDone }: { readonly item: ModerationQueueItem; re
       onDone();
       return;
     }
-    setError(errorMessageOf(response?.body) ?? "Nie udało się zapisać decyzji.");
+    setError(decisionFailureText(response));
   }
 
   return (
     <details>
       <summary>Podejmij decyzję</summary>
       <form onSubmit={onSubmit} noValidate>
+        <p className="field-hint">Pola oznaczone * są wymagane.</p>
         <div className="field">
           <label htmlFor={ids.action}>Decyzja</label>
           <select id={ids.action} name="action" defaultValue={actions[0]?.value}>
@@ -213,14 +246,44 @@ function DecisionForm({ item, onDone }: { readonly item: ModerationQueueItem; re
           </select>
         </div>
         <div className="field">
-          <label htmlFor={ids.ground}>Podstawa prawna lub regulaminowa</label>
-          <input id={ids.ground} name="ground" type="text" maxLength={300} required />
+          <label htmlFor={ids.ground}>
+            Podstawa prawna lub regulaminowa<span aria-hidden="true"> *</span>
+          </label>
+          <input
+            id={ids.ground}
+            name="ground"
+            type="text"
+            maxLength={300}
+            required
+            aria-invalid={fields.ground ? true : undefined}
+            aria-describedby={fields.ground ? ids.groundError : undefined}
+          />
+          {fields.ground ? (
+            <p id={ids.groundError} className="field-error">
+              {fields.ground}
+            </p>
+          ) : null}
         </div>
         <div className="field">
-          <label htmlFor={ids.facts}>Okoliczności faktyczne (trafią do uzasadnienia dla zgłaszającego i autora)</label>
-          <textarea id={ids.facts} name="facts" rows={4} maxLength={2000} required />
+          <label htmlFor={ids.facts}>
+            Okoliczności faktyczne (trafią do uzasadnienia dla zgłaszającego i autora)<span aria-hidden="true"> *</span>
+          </label>
+          <textarea
+            id={ids.facts}
+            name="facts"
+            rows={4}
+            maxLength={2000}
+            required
+            aria-invalid={fields.facts ? true : undefined}
+            aria-describedby={fields.facts ? ids.factsError : undefined}
+          />
+          {fields.facts ? (
+            <p id={ids.factsError} className="field-error">
+              {fields.facts}
+            </p>
+          ) : null}
         </div>
-        <button type="submit" className="button" disabled={sending || path === undefined}>
+        <button type="submit" className="button" aria-disabled={sending || path === undefined ? true : undefined}>
           {sending ? "Zapisywanie…" : "Zapisz decyzję"}
         </button>
         {error !== null ? (

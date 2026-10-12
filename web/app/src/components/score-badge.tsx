@@ -30,6 +30,7 @@ export interface ScoreBadgeProps {
 export function scoreStatusOf(block: ScoreBlock | null): ScoreStatus {
   if (block === null) return "no_exam_data";
   if (block.score !== null) return "published";
+  if (block.reason === "limited") return "limited";
   return block.reason === "insufficient_cohort" ? "insufficient_cohort" : "no_exam_data";
 }
 
@@ -108,6 +109,24 @@ export function ScoreBadge({
             </p>
           </>
         )}
+        <SourceLine info={sourceOf(block, provenance)} />
+      </div>
+    );
+  }
+
+  // 5 to 8 pupils (ADR-0009): descriptive data and cohort size only. No value, no interval, no rank.
+  // The dashed box is its own variant, not the grey suppressed state, so the two read differently.
+  if (status === "limited") {
+    const version = block?.methodologyVersion ?? fallbackMethodologyVersion ?? null;
+    return (
+      <div className={`${classes(variant, false)} score--limited`} data-status="limited">
+        <p className="score__value">Profil ograniczony: mała grupa uczniów</p>
+        {block ? <p className="score__meta">Kohorta: {formatStudents(block.cohortSize)}</p> : null}
+        <p className="score__meta">Dla tej grupy nie publikujemy wyniku ani miejsca w zestawieniu.</p>
+        {variant !== "compact" ? (
+          <p className="score__meta">Średnie wyniki z przedmiotów i liczba uczniów przy każdym przedmiocie są w tabeli poniżej.</p>
+        ) : null}
+        {version ? <p className="score__meta">metodologia {version}</p> : null}
         <SourceLine info={sourceOf(block, provenance)} />
       </div>
     );

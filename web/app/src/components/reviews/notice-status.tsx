@@ -1,7 +1,8 @@
 "use client";
 
+import "@/app/styles/forms.css";
 import { useId, useState, type FormEvent } from "react";
-import { bffRequest, errorCodeOf, errorMessageOf, isUnavailable } from "@/lib/bff-client";
+import { bffRequest, errorCodeOf, isUnavailable, type BffResponse } from "@/lib/bff-client";
 import type { NoticeStatusView, StatementOfReasons } from "@/lib/reviews-types";
 
 /**
@@ -21,23 +22,52 @@ const STATUS_TEXT: Record<string, string> = {
   decided: "rozpatrzone",
 };
 
+const LOOKUP_COPY = {
+  id: "Podaj numer zgłoszenia z potwierdzenia, w pełnym formacie.",
+  token: "Podaj token potwierdzenia z potwierdzenia zgłoszenia.",
+  unavailable: "Usługa zgłoszeń jest chwilowo niedostępna.",
+  notFound: "Nie znaleziono zgłoszenia o podanym numerze i tokenie.",
+  generic: "Nie udało się sprawdzić statusu zgłoszenia. Spróbuj ponownie.",
+};
+
+const APPEAL_COPY = {
+  explanation: "Uzasadnij odwołanie (od 20 do 3000 znaków).",
+  unavailable: "Usługa odwołań jest chwilowo niedostępna. Odwołanie nie zostało złożone.",
+  rateLimited: "Zbyt wiele prób. Spróbuj ponownie później.",
+  generic: "Nie udało się złożyć odwołania. Sprawdź treść i spróbuj ponownie.",
+};
+
 export function NoticeStatus() {
-  const ids = { id: useId(), token: useId(), appeal: useId() };
+  const ids = {
+    id: useId(),
+    idError: useId(),
+    token: useId(),
+    tokenError: useId(),
+    appeal: useId(),
+  };
   const [sending, setSending] = useState(false);
   const [view, setView] = useState<NoticeStatusView | null>(null);
   const [token, setToken] = useState("");
+  const [lookupErrors, setLookupErrors] = useState<{ id?: string; token?: string }>({});
   const [error, setError] = useState<string | null>(null);
   const [appealDone, setAppealDone] = useState<string | null>(null);
 
   async function onLookup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (sending) return;
     const data = new FormData(event.currentTarget);
     const id = String(data.get("id") ?? "").trim();
     const ackToken = String(data.get("token") ?? "").trim();
-    if (!/^[0-9a-fA-F-]{36}$/.test(id) || ackToken === "" || ackToken.length > 200) {
-      setError("Podaj numer zgłoszenia i token potwierdzenia.");
+    const invalid: { id?: string; token?: string } = {};
+    if (!/^[0-9a-fA-F-]{36}$/.test(id)) invalid.id = LOOKUP_COPY.id;
+    if (ackToken === "" || ackToken.length > 200) invalid.token = LOOKUP_COPY.token;
+    if (invalid.id !== undefined || invalid.token !== undefined) {
+      setLookupErrors(invalid);
+      setError(null);
+      document.getElementById(invalid.id !== undefined ? ids.id : ids.token)?.focus();
       return;
     }
+    setLookupErrors({});
     setSending(true);
     setError(null);
     setAppealDone(null);
@@ -46,7 +76,7 @@ export function NoticeStatus() {
     );
     setSending(false);
     if (response === null || isUnavailable(response)) {
-      setError("Usługa zgłoszeń jest chwilowo niedostępna.");
+      setError(LOOKUP_COPY.unavailable);
       return;
     }
     if (response.status === 200 && isStatusView(response.body)) {
@@ -55,25 +85,54 @@ export function NoticeStatus() {
       return;
     }
     setView(null);
-    setError(
-      response.status === 404 || errorCodeOf(response.body) === "not_found"
-        ? "Nie znaleziono zgłoszenia o podanym numerze i tokenie."
-        : (errorMessageOf(response.body) ?? "Nie udało się sprawdzić statusu zgłoszenia."),
-    );
+    setError(response.status === 404 || errorCodeOf(response.body) === "not_found" ? LOOKUP_COPY.notFound : LOOKUP_COPY.generic);
   }
 
   return (
     <div>
       <form onSubmit={onLookup} noValidate>
+        <p className="field-hint">Pola oznaczone * są wymagane.</p>
         <div className="field">
-          <label htmlFor={ids.id}>Numer zgłoszenia</label>
-          <input id={ids.id} name="id" type="text" maxLength={36} autoComplete="off" required />
+          <label htmlFor={ids.id}>
+            Numer zgłoszenia<span aria-hidden="true"> *</span>
+          </label>
+          <input
+            id={ids.id}
+            name="id"
+            type="text"
+            maxLength={36}
+            autoComplete="off"
+            required
+            aria-invalid={lookupErrors.id ? true : undefined}
+            aria-describedby={lookupErrors.id ? ids.idError : undefined}
+          />
+          {lookupErrors.id ? (
+            <p id={ids.idError} className="field-error">
+              {lookupErrors.id}
+            </p>
+          ) : null}
         </div>
         <div className="field">
-          <label htmlFor={ids.token}>Token potwierdzenia</label>
-          <input id={ids.token} name="token" type="text" maxLength={200} autoComplete="off" required />
+          <label htmlFor={ids.token}>
+            Token potwierdzenia<span aria-hidden="true"> *</span>
+          </label>
+          <input
+            id={ids.token}
+            name="token"
+            type="text"
+            maxLength={200}
+            autoComplete="off"
+            required
+            aria-invalid={lookupErrors.token ? true : undefined}
+            aria-describedby={lookupErrors.token ? ids.tokenError : undefined}
+          />
+          {lookupErrors.token ? (
+            <p id={ids.tokenError} className="field-error">
+              {lookupErrors.token}
+            </p>
+          ) : null}
         </div>
-        <button type="submit" className="button" disabled={sending}>
+        <button type="submit" className="button" aria-disabled={sending ? true : undefined}>
           {sending ? "Sprawdzanie…" : "Sprawdź status"}
         </button>
       </form>
@@ -124,6 +183,14 @@ function DecisionDetails({ decision }: { readonly decision: StatementOfReasons }
   );
 }
 
+function appealFailureText(response: BffResponse | null): string {
+  if (response === null || response.status === 503 || response.status === 504 || response.status === 502) {
+    return APPEAL_COPY.unavailable;
+  }
+  if (response.status === 429) return APPEAL_COPY.rateLimited;
+  return APPEAL_COPY.generic;
+}
+
 function AppealForm({
   decisionId,
   token,
@@ -133,18 +200,23 @@ function AppealForm({
   readonly token: string;
   readonly onDone: (text: string) => void;
 }) {
-  const id = useId();
+  const ids = { explanation: useId(), explanationError: useId() };
   const [sending, setSending] = useState(false);
+  const [fieldError, setFieldError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (sending) return;
     const data = new FormData(event.currentTarget);
     const explanation = String(data.get("explanation") ?? "").trim();
     if (explanation.length < 20 || explanation.length > 3000) {
-      setError("Uzasadnij odwołanie (od 20 do 3000 znaków).");
+      setFieldError(APPEAL_COPY.explanation);
+      setError(null);
+      document.getElementById(ids.explanation)?.focus();
       return;
     }
+    setFieldError(null);
     setSending(true);
     setError(null);
     const response = await bffRequest(`/api/proxy/api/v1/decisions/${encodeURIComponent(decisionId)}/complaints`, {
@@ -161,19 +233,39 @@ function AppealForm({
       );
       return;
     }
-    setError(errorMessageOf(response?.body) ?? "Nie udało się złożyć odwołania. Spróbuj ponownie.");
+    setError(appealFailureText(response));
   }
 
   return (
     <form onSubmit={onSubmit} noValidate>
       <div className="field">
-        <label htmlFor={id}>Odwołanie od decyzji (art. 20 DSA): uzasadnij, dlaczego decyzja jest błędna</label>
-        <textarea id={id} name="explanation" rows={4} minLength={20} maxLength={3000} required />
+        <label htmlFor={ids.explanation}>
+          Odwołanie od decyzji (art. 20 DSA): uzasadnij, dlaczego decyzja jest błędna<span aria-hidden="true"> *</span>
+        </label>
+        <textarea
+          id={ids.explanation}
+          name="explanation"
+          rows={4}
+          minLength={20}
+          maxLength={3000}
+          required
+          aria-invalid={fieldError ? true : undefined}
+          aria-describedby={fieldError ? ids.explanationError : undefined}
+        />
+        {fieldError ? (
+          <p id={ids.explanationError} className="field-error">
+            {fieldError}
+          </p>
+        ) : null}
       </div>
-      <button type="submit" className="button" disabled={sending}>
+      <button type="submit" className="button" aria-disabled={sending ? true : undefined}>
         {sending ? "Wysyłanie…" : "Złóż odwołanie"}
       </button>
-      {error !== null ? <p role="alert" className="notice">{error}</p> : null}
+      {error !== null ? (
+        <p role="alert" className="notice">
+          {error}
+        </p>
+      ) : null}
     </form>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "@/app/styles/lists.css";
 import { PreschoolFilters } from "@/components/preschool-filters";
 import { PreschoolList } from "@/components/preschool-list";
+import { FocusOnResults } from "@/components/focus-on-results";
 import { Pagination } from "@/components/pagination";
 import { ServiceUnavailable } from "@/components/service-unavailable";
 import { catalog, type GminaItem } from "@/lib/api";
@@ -47,6 +48,12 @@ export default async function PreschoolsPage({ searchParams }: { searchParams: S
   ]);
   const gminaList: readonly GminaItem[] = gminas.ok ? gminas.data : [];
 
+  /** Any submitted filter field (the GET form sends them all) or a page number means a search ran. */
+  const submitted = [sp.gmina, sp.q, sp.maxTuition, sp.publicOnly, sp.hasFreePlaces, sp.page].some(
+    (value) => value !== undefined,
+  );
+  const searchKey = JSON.stringify(sp);
+
   const paginationParams = {
     gmina,
     q,
@@ -88,7 +95,11 @@ export default async function PreschoolsPage({ searchParams }: { searchParams: S
         )
       ) : (
         <>
-          <p className="result-count">Znaleziono: {formatInteger(result.data.total)}</p>
+          <p className="result-count" id="wyniki-liczba" tabIndex={-1}>
+            Znaleziono: {formatInteger(result.data.total)}
+          </p>
+          {submitted ? <FocusOnResults key={searchKey} targetId="wyniki-liczba" /> : null}
+          <h2 className="visually-hidden">Wyniki wyszukiwania</h2>
           <PreschoolList items={result.data.items} emptyText="Brak przedszkoli spełniających te kryteria." />
           <Pagination
             page={result.data.page}

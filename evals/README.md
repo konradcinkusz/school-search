@@ -129,6 +129,26 @@ One JSON object per line, UTF-8, no BOM, no blank lines:
   Error messages give the path and the kind, never the value.
 - Each dataset folder has a `README.md` (what is covered, how the cases were derived, how to extend).
 
+## Datasets and runners
+
+The nine dataset folders under `evals/datasets/` are run by two tiers. Tier A is this Node harness. Tier B is the
+.NET project `tests/SchoolSearch.Evals.Tests`, which reads the same `cases.jsonl` files.
+
+| Dataset folder | Tier | Runner | Live run | Threshold |
+|---|---|---|---|---|
+| `agent` | A | `features/agent.mjs` (target `agent`) | `--live --feature agent`, needs `EVAL_AGENT_BASE` | `thresholds.json`, `agent` |
+| `explain` | A | `features/explain.mjs` (target `api`) | `--live --feature explain`, needs `EVAL_API_BASE` | `thresholds.json`, `explain` (`overall` only) |
+| `methodology` | A | `features/methodology.mjs` (target `api`) | `--live --feature methodology`, needs `EVAL_API_BASE` | `thresholds.json`, `methodology` |
+| `search-intent` | A | `features/search-intent.mjs` (target `api`) | `--live --feature search-intent`, needs `EVAL_API_BASE` | `thresholds.json`, `search-intent` |
+| `catchment-extract` | B | `ExtractorCatchmentEvalTests.cs` (offline), `ExtractorCatchmentLiveTests.cs` (live) | `EVALS_LIVE=1` and `ANTHROPIC_API_KEY` | not in `thresholds.json`; proposal in `docs/ai/AI-EVALS.md` section 3; the live test asserts hard failures only |
+| `correction-triage` | B | `CorrectionTriageEval.cs`, `CorrectionTriageGraderTests.cs` (offline), `CorrectionTriageLiveEvalTests.cs` (live) | same as above | not in `thresholds.json`; category agreement 0.80, a constant in `CorrectionTriageLiveEvalTests.cs` |
+| `preschool-extract` | B | `ExtractorPreschoolEvalTests.cs` (offline), `ExtractorPreschoolLiveTests.cs` (live) | same as above | not in `thresholds.json`; proposal in `docs/ai/AI-EVALS.md` section 3; the live test asserts hard failures only |
+| `profile-copy` | B | `ProfileCopyEvalTests.cs` (offline), `ProfileCopyLiveTests.cs` (live) | same as above | not in `thresholds.json`; proposal in `docs/ai/AI-EVALS.md` section 3; the live test asserts hard failures only |
+| `review-triage` | B | `ReviewTriageEval.cs`, `ReviewTriageGraderTests.cs` (offline), `ReviewTriageLiveEvalTests.cs` (live) | same as above | not in `thresholds.json`; label agreement 0.85, a constant in `ReviewTriageLiveEvalTests.cs` |
+
+Tier B offline tests run in CI (`dotnet test`). Tier B live tests skip unless `EVALS_LIVE=1` and `ANTHROPIC_API_KEY` are
+set, so CI never calls the model. Tier A offline checks run in CI as the `evals selftest` job.
+
 ## Thresholds (`evals/thresholds.json`)
 
 ```json
@@ -136,6 +156,8 @@ One JSON object per line, UTF-8, no BOM, no blank lines:
              "perClass": { "Happy path": 0.95 } }
 ```
 
+`evals/thresholds.json` holds the Tier A thresholds only: four entries (`explain`, `search-intent`, `methodology`,
+`agent`), each with `"decided_by_owner": false`. The Tier B thresholds are not in that file (see the table above).
 `overall` and `perClass` are pass rates in 0..1 over evaluated cases. A class with no evaluated case fails a full run and
 is skipped in a partial one. Every entry is a proposal until the owner sets `decided_by_owner: true`, with the date, in
 `docs/ai/AI-EVALS.md`.

@@ -1,10 +1,10 @@
 {
   "caseId": "agent-053",
-  "shouldPass": true,
+  "shouldPass": false,
   "response": {
     "status": 200,
     "body": {
-      "reply": "Szkoła demo-sp-3 nie ma wyniku, bo w ostatnim roku przystąpiło do egzaminu za mało uczniów (8). Liczba uczniów w klasie VIII: 8.",
+      "reply": "Szkoła demo-sp-3 ma wynik 52,4 pkt (slug: demo-sp-3).",
       "steps": [
         {
           "tool": "get_school",
@@ -22,5 +22,5 @@
       "stopReason": "end_turn"
     }
   },
-  "note": "insufficient_cohort: no decimal score on the school's line."
+  "note": "A decimal score shown for a limited cohort (demo-sp-3, 8 pupils, ADR-0009): must fail. Replaces bad-16-insufficient-cohort-score-shown.json."
 }

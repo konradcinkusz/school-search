@@ -41,7 +41,8 @@ export async function CatchmentPanel({ gmina, street, number }: CatchmentPanelPr
       <p className="eyebrow">Sprawdzony adres</p>
       <h2 id="catchment-heading">Obwód szkolny</h2>
       <p className="catchment__address">
-        Adres: <strong>{addressLine(street, number)}</strong>, {gmina.name ?? `TERYT ${gmina.teryt}`}
+        Adres: <strong>{addressLine(street, number)}</strong>, {gmina.name ?? "Nieznana gmina"}
+        {gmina.name === null ? <span className="muted"> (kod {gmina.teryt})</span> : null}
       </p>
 
       <CoverageBadge

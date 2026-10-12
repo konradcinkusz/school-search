@@ -65,7 +65,7 @@ public static class DemoSeed
         new(900002, "demo-sp-2", "Szkoła Podstawowa nr 2 w Przykładowie (dane demonstracyjne)", GminaTeryt, GminaName, true, false, 9, 52.0020, 19.0020,
             new Exam(9, 64.0, 58.0, 70.0), new Exam(9, 66.0, 60.0, 72.0)),
 
-        // 8 sat: below the threshold, must read insufficient_cohort with no numeric score.
+        // 8 sat: inside the limited band (5 to 8, ADR-0009), must read limited with no numeric score and no rank.
         new(900003, "demo-sp-3", "Szkoła Podstawowa nr 3 w Przykładowie (dane demonstracyjne)", GminaTeryt, GminaName, true, false, 8, 52.0030, 19.0030,
             new Exam(8, 50.0, 48.0, 55.0), new Exam(8, 52.0, 49.0, 56.0)),
 

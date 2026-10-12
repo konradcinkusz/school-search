@@ -13,7 +13,7 @@
       "facts": {
         "score": {
           "score": null,
-          "reason": "insufficient_cohort",
+          "reason": "limited",
           "cohortSize": 8,
           "intervalLow": null,
           "intervalHigh": null,
@@ -22,7 +22,7 @@
           "asOf": "2026-01-01",
           "source": "DEMO SEED (synthetic)"
         },
-        "scoreStatus": "insufficient_cohort",
+        "scoreStatus": "limited",
         "coveragePercent": 100,
         "cohortSize": 8,
         "publicationThreshold": 9,
@@ -32,5 +32,5 @@
       "cached": false
     }
   },
-  "note": "A score shown where the cohort is below the threshold."
+  "note": "A decimal score shown for a limited cohort (8 pupils, ADR-0009): must fail. Facts updated from insufficient_cohort to limited; the score value is still shown, so the case stays a fail."
 }

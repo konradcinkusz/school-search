@@ -32,7 +32,8 @@ It is **not**:
   *Enforced by absence:* no teacher or pupil entity exists in the model.
 - **No ascending sort on a composite score.** The ranking API only ranks descending (§4.5).
   *Enforced by absence:* there is no ascending or "bottom" ranking method.
-- **No score below the threshold.** Suppression is `insufficient_cohort`, never null or 0 (§5).
+- **No score below the threshold.** Suppression is `limited` (5 to 8 pupils who sat) or `insufficient_cohort` (below 5),
+  never null or 0 (§5). *Status: wording updated to match the implementation; version bump / ADR amendment pending owner decision.*
 - **Scoring does not reference billing, entitlement or user types.** *Enforced by an architecture test.*
 - **No nationality or foreign-pupil data** is read or produced.
 - **No inferred heuristics about people** in any input or component.
@@ -62,14 +63,24 @@ Subjects: Polish, Mathematics, Foreign language, each with equal weight. Notatio
 cohort = max(PupilsSat over the subjects in the input)     (0 if there are none)
 ```
 
-If `headcount <= 0` or `cohort < 9` (`ScoringPolicy.PublicationThreshold`), the result is suppressed:
+The band is then decided (`ScoringPolicy.LimitedBandFloor = 5`, `ScoringPolicy.PublicationThreshold = 9`):
 
-```
-ScoreDto(score: null, reason: "insufficient_cohort", cohortSize: cohort, interval: null, methodologyVersion: "1.0.0")
-```
+- `headcount <= 0` or `cohort < 5`: `insufficient_cohort`, no value.
+  ```
+  ScoreDto(score: null, reason: "insufficient_cohort", cohortSize: cohort, interval: null, methodologyVersion: "1.0.0")
+  ```
+- `5 <= cohort <= 8` (and `headcount > 0`): `limited`, no value. Cohort size and subject averages only; no score,
+  no interval, no rank. The score is not computed, so no number can leak from this branch.
+  ```
+  ScoreDto(score: null, reason: "limited", cohortSize: cohort, interval: null, methodologyVersion: "1.0.0")
+  ```
+- `cohort >= 9`: the score is computed (§4.2 to §4.4).
 
-The check runs before the subject match in §4.6. The cohort is the number of pupils who **sat** the exam, not
+The subject checks in §4.6 run first: a subject set with no overlap throws, and so does a subject with zero pupils
+who sat. Only then is the band decided. The cohort is the number of pupils who **sat** the exam, not
 the class VIII headcount (see ADR-0009 for why, and for the open wording point).
+
+*Status: wording updated to match the implementation; version bump / ADR amendment pending owner decision.*
 
 ### 4.2 Coverage and the blend
 
@@ -125,17 +136,20 @@ No ascending or bottom-of-list ordering exists (§2).
 
 ## 5. Threshold, suppression and the 5 to 8 band
 
-| Cohort (pupils who sat) | Output in v1.0.0 |
-|---|---|
-| 9 or more | Score, interval, cohort size, `methodologyVersion`, provenance |
-| 0 to 8, or headcount 0 or less | `insufficient_cohort`, cohort size, no value, no rank |
+| Cohort (pupils who sat) | `scoreStatus` | Output |
+|---|---|---|
+| 9 or more (and headcount above 0) | `published` | Score, interval, cohort size, `methodologyVersion`, provenance |
+| 5 to 8 (and headcount above 0) | `limited` | Cohort size and subject averages (descriptive data), no score, no interval, no rank |
+| 0 to 4, or headcount 0 or less | `insufficient_cohort` | Cohort size, no value, no rank |
 
-The threshold `9` is in one place: `ScoringPolicy.PublicationThreshold`.
+The threshold `9` is in one place: `ScoringPolicy.PublicationThreshold`. The floor `5` is `ScoringPolicy.LimitedBandFloor`.
 
-ADR-0009 also specifies a **limited-confidence profile for 5 to 8 pupils** (descriptive facts and sample size,
-no score, no rank). **The v1.0.0 engine does not produce that profile.** `ScoreDto` carries either a score or
-`insufficient_cohort`. The profile is a presentation item for Phase C, and until it exists a school with 5 to 8
-pupils shows only `insufficient_cohort`. Tests assert the boundary values 4, 5, 8 and 9.
+The **limited-confidence profile for 5 to 8 pupils** (ADR-0009) is produced by the engine (`ScoreDto.Reason`
+`limited`) and shown by the web as a profile with the line "Dla tej grupy nie publikujemy wyniku ani miejsca w
+zestawieniu." It is excluded from the ranking. Tests assert the boundary values 4, 5, 8 and 9. Whether this change
+needs a methodology version bump or an ADR-0009 amendment is an owner decision, still open.
+
+*Status: wording updated to match the implementation; version bump / ADR amendment pending owner decision.*
 
 Suppression is an explicit state: a null score with reason `insufficient_cohort` and the cohort size. A null or
 zero value is never used to mean "no data".
@@ -176,8 +190,11 @@ national average, because only half the cohort sat. The blend does what it is fo
 raise the score. The interval also widened, because fewer pupils sit and the factor shrinks the effective mean.
 
 **Suppression example.** Ten pupils sat in each subject, so the score is published (cohort 10 is at least 9).
-Had 8 pupils sat, the same school would return `insufficient_cohort` with `cohortSize: 8` and no score, and it
-would not appear in the ranking.
+Had 8 pupils sat, the same school would return `limited` with `cohortSize: 8`, the subject averages and no score,
+no interval and no rank, and it would not appear in the ranking. Had 4 pupils sat, it would return
+`insufficient_cohort` with `cohortSize: 4` and no value.
+
+*Status: wording updated to match the implementation; version bump / ADR amendment pending owner decision.*
 
 Display rounding (here one decimal) is a presentation rule for Phase C. The engine does not round.
 
@@ -187,7 +204,10 @@ Every published score is one object containing:
 
 - `score`, `interval` (low, high), `cohortSize` (pupils who sat), `methodologyVersion`;
 - `source`, `sourceUrl`, `asOf` and `method` (the provenance rule);
-- for a suppressed result: `score: null`, `reason: "insufficient_cohort"`, `cohortSize`, `methodologyVersion`.
+- for a suppressed result: `score: null`, `reason: "limited"` (5 to 8 pupils) or `reason: "insufficient_cohort"` (below 5),
+  `cohortSize`, `methodologyVersion`.
+
+*Status: wording updated to match the implementation; version bump / ADR amendment pending owner decision.*
 
 A value is never returned without these. In MCP responses the same fields are returned, and user-generated
 content is labelled `userGenerated` and kept separate (Phase E).
@@ -231,7 +251,11 @@ content is labelled `userGenerated` and kept separate (Phase E).
 3. **National mean per subject per year**: publisher, licence and exact values. OPEN.
 4. **Sat counts per school** from CKE (`SOURCES.md` §3.6). OPEN.
 5. **Row-level reconciliation of the cohort counts** with the Phase B gate (ADR-0009). OPEN.
-6. **The 5 to 8 limited-confidence profile**: presentation rule and its tests, Phase C. Not in v1.0.0.
+6. **The 5 to 8 limited-confidence profile**: built (engine `limited`, web profile). Its boundary tests and the
+   limited-band e2e spec need a first CI run. Whether it needs a version bump or an ADR-0009 amendment is an owner
+   decision, still open.
+
+*Status: wording updated to match the implementation; version bump / ADR amendment pending owner decision.*
 7. **Display rounding and the confidence wording** on the public page. Phase C.
 
 ## 11. How to read a score and its confidence together
@@ -250,8 +274,13 @@ A score is never shown alone. It always comes with its interval and the number o
   purpose.
 - **Compare with care.** Two schools are only comparable if their intakes and their coverage are similar. Use the
   intervals: if two intervals overlap, the data do not show a clear difference.
-- **"Insufficient cohort"** means there are not enough pupils for a score to be meaningful. It is not a zero and
-  it says nothing bad about the school.
+- **"Limited profile"** (5 to 8 pupils who sat) means the cohort is too small for a score, an interval or a rank. The
+  page shows the cohort size and the subject averages, marked as coming from a small group. It is not a zero and it
+  says nothing bad about the school.
+- **"Insufficient cohort"** (fewer than 5 pupils who sat) means there are not enough pupils for any exam figure to be
+  shown. It is not a zero and it says nothing bad about the school.
+
+*Status: wording updated to match the implementation; version bump / ADR amendment pending owner decision.*
 
 ## 12. Podsumowanie dla czytelnika (po polsku)
 
@@ -265,8 +294,12 @@ przy innym zestawie uczniów. Wąski przedział oznacza wynik stabilny. Szeroki 
 mało pewny.
 
 **Liczba uczniów.** Podajemy liczbę uczniów, którzy przystąpili do egzaminu. Wynik publikujemy tylko wtedy, gdy
-było ich co najmniej dziewięciu. Przy mniejszej liczbie pokazujemy informację: „za mało uczniów, aby podać
-wynik". To nie jest zero i nie jest oceną szkoły.
+było ich co najmniej dziewięciu. Przy 5–8 uczniach pokazujemy profil ograniczony: liczbę uczniów i średnie wyniki
+z przedmiotów, bez wyniku, bez przedziału i bez miejsca w zestawieniu („Dla tej grupy nie publikujemy wyniku ani
+miejsca w zestawieniu"). Przy mniej niż 5 uczniach pokazujemy informację: „za mało uczniów, aby podać wynik".
+To nie jest zero i nie jest oceną szkoły.
+
+*Status: wording updated to match the implementation; version bump / ADR amendment pending owner decision.*
 
 **Udział w egzaminie.** Jeśli mało uczniów z rocznika przystąpiło do egzaminu, wynik jest obniżany celowo.
 Szkoła nie może poprawić wyniku przez to, że pominie słabszych uczniów.

@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using SchoolSearch.Api.Hosting;
 using SchoolSearch.ServiceDefaults;
 using Xunit;
 
@@ -33,6 +34,22 @@ public sealed class HealthEndpointTests : IDisposable
         AssertIntegrationState(root, "test-disabled-integration", "disabled");
         Assert.True(JsonTestHelpers.ContainsString(root, "API key missing - AI features off"),
             "The degraded integration's detail must be reported, not only its state.");
+    }
+
+    [Fact]
+    public async Task Health_reports_scoring_as_ok_because_the_scoring_engine_is_served()
+    {
+        var response = await _factory.CreateClient().GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var root = await JsonTestHelpers.ReadJsonAsync(response);
+
+        AssertIntegrationState(root, IntegrationNames.Scoring, "ok");
+        var entry = JsonTestHelpers.FindObjectContainingString(root, IntegrationNames.Scoring);
+        Assert.True(entry.HasValue, $"/health does not list integration '{IntegrationNames.Scoring}'. Body: {root.GetRawText()}");
+        Assert.False(JsonTestHelpers.ContainsString(entry.Value, "disabled"),
+            $"Scoring is served, so it must not be reported as disabled. Entry: {entry.Value.GetRawText()}");
     }
 
     [Fact]

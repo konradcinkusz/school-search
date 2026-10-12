@@ -31,20 +31,51 @@ public sealed class ScoringEngineTests
     }
 
     [Fact]
-    public void Cohort_of_eight_is_suppressed_with_reason_and_no_interval()
+    public void Cohort_of_eight_is_limited_with_reason_and_no_score_or_interval()
     {
         var input = new SchoolExamInput(Year, new[] { new SubjectResult(Subject.Polish, 70.0, 8) }, 8);
 
         var result = ScoringEngine.Score(input, ScoringFixtures.PolishOnlyBaseline());
 
         Assert.Null(result.Score);
-        Assert.Equal("insufficient_cohort", result.Reason);
-        Assert.Equal(ScoreDto.InsufficientCohortReason, result.Reason);
+        Assert.Equal("limited", result.Reason);
+        Assert.Equal(ScoreDto.LimitedReason, result.Reason);
         Assert.Equal(8, result.CohortSize);
         Assert.Null(result.IntervalLow);
         Assert.Null(result.IntervalHigh);
         Assert.Equal("1.0.0", result.MethodologyVersion);
         Assert.Equal(ScoringPolicy.MethodologyVersion, result.MethodologyVersion);
+    }
+
+    [Theory]
+    [InlineData(4, "insufficient_cohort")]
+    [InlineData(5, "limited")]
+    [InlineData(8, "limited")]
+    [InlineData(9, null)]
+    public void Cohort_boundaries_4_5_8_and_9_give_the_expected_band(int pupilsSat, string? expectedReason)
+    {
+        var input = new SchoolExamInput(Year, new[] { new SubjectResult(Subject.Polish, 70.0, pupilsSat) }, pupilsSat);
+
+        var result = ScoringEngine.Score(input, ScoringFixtures.PolishOnlyBaseline());
+
+        Assert.Equal(pupilsSat, result.CohortSize);
+        Assert.Equal(expectedReason, result.Reason);
+        Assert.Equal(expectedReason is null, result.Score is not null);
+
+        if (expectedReason is null)
+        {
+            // Published: 70 - 60 = +10 at full coverage, with an interval.
+            Assert.Equal(10.0, result.Score!.Value, 9);
+            Assert.NotNull(result.IntervalLow);
+            Assert.NotNull(result.IntervalHigh);
+        }
+        else
+        {
+            // Suppressed: no value, no interval, and never 0.
+            Assert.Null(result.Score);
+            Assert.Null(result.IntervalLow);
+            Assert.Null(result.IntervalHigh);
+        }
     }
 
     [Fact]
@@ -232,7 +263,7 @@ public sealed class ScoringEngineTests
     [InlineData(18)]
     [InlineData(19)]
     [InlineData(20)]
-    public void Engine_never_produces_a_null_score_without_the_insufficient_cohort_reason(int seed)
+    public void Engine_never_produces_a_null_score_without_a_suppression_reason(int seed)
     {
         var random = new Random(seed);
         var baseline = ScoringFixtures.ThreeSubjectBaseline();
@@ -253,17 +284,22 @@ public sealed class ScoringEngineTests
 
         var headcount = random.Next(0, 201);
         var expectedCohort = subjects.Max(s => s.PupilsSat);
-        var expectedSuppressed = headcount <= 0 || expectedCohort < ScoringPolicy.PublicationThreshold;
+        // Band: no headcount or below 5 is insufficient_cohort; 5 to 8 is limited; 9 and above is published.
+        string? expectedReason = headcount <= 0 || expectedCohort < ScoringPolicy.LimitedBandFloor
+            ? ScoreDto.InsufficientCohortReason
+            : expectedCohort < ScoringPolicy.PublicationThreshold
+                ? ScoreDto.LimitedReason
+                : null;
 
         var result = ScoringEngine.Score(new SchoolExamInput(Year, subjects, headcount), baseline);
 
         Assert.Equal(expectedCohort, result.CohortSize);
         Assert.Equal(ScoringPolicy.MethodologyVersion, result.MethodologyVersion);
-        Assert.Equal(expectedSuppressed, result.Score is null);
+        Assert.Equal(expectedReason is null, result.Score is not null);
 
         if (result.Score is null)
         {
-            Assert.Equal("insufficient_cohort", result.Reason);
+            Assert.Equal(expectedReason, result.Reason);
             Assert.Null(result.IntervalLow);
             Assert.Null(result.IntervalHigh);
         }

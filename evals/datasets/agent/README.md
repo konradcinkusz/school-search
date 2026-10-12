@@ -1,6 +1,6 @@
 # Dataset: "Doradca wyboru szkoły" agent (`agent`)
 
-Source of truth: `cases.jsonl` (119 cases). The grader is `evals/features/agent.mjs`; recorded fixtures are in
+Source of truth: `cases.jsonl` (120 cases). The grader is `evals/features/agent.mjs`; recorded fixtures are in
 `evals/fixtures/agent/`. The endpoint is `POST /agent/chat` in the MCP service (`src/SchoolSearch.Mcp/Agent/`).
 Scenario classes follow `docs/ai/AI-EVALS.md` section 2 exactly.
 
@@ -9,7 +9,7 @@ Scenario classes follow `docs/ai/AI-EVALS.md` section 2 exactly.
 | Class | Cases | Ids | What is checked |
 |---|---|---|---|
 | Happy path | 44 | agent-001 to agent-044 | Find by gmina, paging, distance, profiles by RSPO, comparisons of 2 to 4 schools, catchment match / no match / form context, methodology, review questions (unverified framing), a 12-turn conversation at the limit |
-| Ambiguity | 19 | agent-045 to agent-063 | No place given (no guessed gmina or coordinates), city names without TERYT codes, catchment without a gmina, missing data (no exam data, insufficient cohort, unknown RSPO, gmina with no rows, gmina with no street list, no preschool rows) |
+| Ambiguity | 20 | agent-045 to agent-063, agent-120 | No place given (no guessed gmina or coordinates), city names without TERYT codes, catchment without a gmina, missing data (no exam data, limited cohort of 5 to 8 pupils, unknown RSPO, gmina with no rows, gmina with no street list, no preschool rows) |
 | Denied path | 26 | agent-064 to agent-089 | Quality and ranking asks (no ordering of schools), averaging user opinions, personal data in the user or earlier turns (`synthetic_pii`, 400 before any model call), malformed bodies (empty, 13 turns, ends with assistant, over 1000 characters, blank, 5-digit gmina, missing `messages`) |
 | Adversarial | 20 | agent-090 to agent-109 | Direct overrides with a canary token, system-prompt extraction, crafted multi-turn history, a pasted review with an instruction, invented numbers (strict mode), links and markup, secrets, a fake tool result pasted into the user turn, a smuggled `system` role, a verification claim |
 | Degradation | 10 | agent-110 to agent-119 | 503 `ai_unavailable` (no key, kill switch), 503 `ai_budget_exhausted`, 429 `rate_limited`, 502 `agent_upstream_error`, loop limits (`max_turns`, `max_tool_calls`, `token_budget`, `deadline`), the `ungrounded` fallback |
@@ -35,7 +35,7 @@ cases are in `Ambiguity` because the data does not decide the answer (AI-EVALS s
 
 - Facts come from `src/SchoolSearch.Api/Demo/DemoSeed.cs` (gmina `9999999` "Przykładowo", `9999998` "Przykładowo-Wschód",
   schools `demo-sp-1` to `demo-sp-14`, RSPO `900001` to `900014`, catchment rows, the one street list). Cases name the demo
-  schools and their facts (for example demo-sp-3 has 8 pupils sat, so no score; demo-sp-6 has no exam data).
+  schools and their facts (for example demo-sp-3 has 8 pupils sat, the limited band of ADR-0009: no score, no interval, no rank; demo-sp-6 has no exam data). No demo school has fewer than 5 pupils, so insufficient_cohort has no live case.
 - The rules in the system prompt (`AgentPrompts.cs`) and the tool descriptions (`AgentToolCatalog.cs`,
   `ToolDescriptions.cs`) define the expected behaviour: no ranking, no quality words, slugs for every school, the
   catchment disclaimer, unverified reviews.

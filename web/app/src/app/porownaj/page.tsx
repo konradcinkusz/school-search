@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import "@/app/styles/lists.css";
 import { ScoreBadge } from "@/components/score-badge";
+import { FocusOnResults } from "@/components/focus-on-results";
 import { ServiceUnavailable } from "@/components/service-unavailable";
 import { catalog, type SchoolProfile } from "@/lib/api";
 import { formatStudents } from "@/lib/format";
@@ -70,6 +71,16 @@ async function CompareResults({ slugs }: { slugs: string[] }) {
   const result = await catalog.compare(slugs);
   if (!result.ok) {
     if (result.reason === "unavailable") return <ServiceUnavailable what="porównanie szkół" />;
+    // Preschools have their own list and are not compared with primary schools: say so instead of "not found".
+    const preschoolLookups = await Promise.all(slugs.map((slug) => catalog.preschool(slug)));
+    if (preschoolLookups.some((lookup) => lookup.ok)) {
+      return (
+        <div className="notice" role="alert">
+          To jest przedszkole. Porównujemy szkoły podstawowe; przedszkola znajdziesz na{" "}
+          <Link href="/przedszkola">liście przedszkoli</Link>.
+        </div>
+      );
+    }
     return (
       <div className="notice" role="alert">
         Nie udało się porównać tych szkół. {result.message ?? ""}
@@ -82,6 +93,10 @@ async function CompareResults({ slugs }: { slugs: string[] }) {
 
   return (
     <>
+      <h2 id="wynik-porownania" className="compare-result-heading" tabIndex={-1}>
+        Wynik porównania
+      </h2>
+      <FocusOnResults targetId="wynik-porownania" />
       {!sameVersion ? (
         <div className="notice notice--caution" role="alert">
           Wybrane szkoły mają wyniki z różnych wersji metodologii. Nie porównujemy takich wyników bezpośrednio.

@@ -21,9 +21,13 @@ const MARKUP = /[<>*#`]|^\s*[-•]\s|\]\(/m;
 const COVERAGE_MENTION = /pokryci|udział|przystąpi|przystęp|zdając|pokrycie/i;
 const NO_SCORE_TEXT_STATUS = {
   insufficient_cohort: /pr[óo]g|za mało|mała liczba|mało uczniów|mało zdając|dziewi/i,
+  // ADR-0009, 5 to 8 pupils: the text must say that no score is published (no number, no interval, no rank).
+  limited: /nie (jest )?(publikuj|podaj|pokazuj)|nie publikujemy|nie podajemy|nie pokazujemy|nie jest (publikowan|podawan|pokazywan)/i,
   no_exam_data: /brak|nie ma|nie posiada|nie podaj|nie publikuj/i,
   no_baseline: /porówn|średni|brak|nie można/i,
 };
+// For the limited band the text must also say why: the group of pupils is small.
+const LIMITED_SMALL_GROUP = /mał\w*\s+(grup|liczb|kohort|zbior)|za mało|mało\s+(uczniów|zdając)|niewielk\w*\s+(grup|liczb)/i;
 
 export function digitRuns(text) {
   return text.match(/[0-9]+/g) ?? [];
@@ -100,6 +104,14 @@ export function grade(evalCase, response) {
     check(checks, 'no-decimal-number-without-score', !/\d[,.]\d/.test(body1), 'a decimal number appears where no score is published');
     const pattern = NO_SCORE_TEXT_STATUS[status];
     if (pattern) check(checks, 'explains-missing-state', pattern.test(body1), `text does not say why there is no score (${status})`);
+  }
+  if (status === 'limited') {
+    // The facts of a limited profile carry no score, interval or rank (ScoreDto: suppressed, reason limited).
+    const score = facts.score ?? {};
+    check(checks, 'limited-facts-carry-no-score',
+      score.score === null && score.intervalLow === null && score.intervalHigh === null && score.reason === 'limited',
+      'a limited profile carries a score, an interval or the wrong reason');
+    check(checks, 'limited-small-group-said', LIMITED_SMALL_GROUP.test(body1), 'a limited profile does not say the group is small');
   }
   if (typeof e.cohortSize === 'number') check(checks, 'cohort-size', facts.cohortSize === e.cohortSize, `cohortSize ${facts.cohortSize}, expected ${e.cohortSize}`);
   if (typeof e.examYear === 'number') check(checks, 'exam-year', facts.score?.examYear === e.examYear || body.examYear === e.examYear, `examYear ${body.examYear}`);

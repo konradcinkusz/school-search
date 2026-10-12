@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useState } from "react";
+import "@/app/styles/forms.css";
+import { useEffect, useId, useRef, useState } from "react";
 import { ScoreBadge } from "@/components/score-badge";
 import type { ExplainErrorCode, ExplainFacts, ExplainResponse, ExplainResult, ScoreBlock, ScoreStatus } from "@/lib/api";
 import { formatDatePl, formatPercent } from "@/lib/format";
@@ -39,6 +40,7 @@ const KNOWN_CODES: ReadonlySet<string> = new Set<ExplainErrorCode>([
 
 const SCORE_STATUSES: ReadonlySet<string> = new Set<ScoreStatus>([
   "published",
+  "limited",
   "insufficient_cohort",
   "no_exam_data",
   "no_baseline",
@@ -148,11 +150,19 @@ export function ExplainPanel({ slug }: { readonly slug: string }) {
   };
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ExplainResult | null>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   const explanation = result !== null && result.ok ? result.data : null;
   const failure = result !== null && !result.ok ? result : null;
+  const blocked = loading || explanation !== null;
+
+  // The button stays focusable (aria-disabled), but moving focus to the outcome keeps keyboard users on the result.
+  useEffect(() => {
+    if (result !== null) resultRef.current?.focus();
+  }, [result]);
 
   async function onExplain() {
+    if (blocked) return;
     setLoading(true);
     setResult(null);
     const outcome = await requestExplanation(slug);
@@ -171,20 +181,29 @@ export function ExplainPanel({ slug }: { readonly slug: string }) {
       <p className="muted">
         Krótki tekst wygenerowany przez AI na podstawie danych z tej strony. Nie zastępuje wyniku ani metodologii.
       </p>
-      <button type="button" className="button button--secondary" onClick={onExplain} disabled={loading || explanation !== null} aria-describedby={ids.status}>
+      <button
+        type="button"
+        className="button button--secondary"
+        onClick={onExplain}
+        aria-disabled={blocked ? true : undefined}
+        aria-describedby={ids.status}
+      >
         Wyjaśnij ten wynik
       </button>
       <div id={ids.status} role="status" aria-live="polite">
         {loading ? <p className="muted">Generowanie wyjaśnienia…</p> : null}
       </div>
 
-      {failure ? (
-        <div className="notice" role="alert">
-          {ERROR_TEXT[failure.code]}
+      {result !== null ? (
+        <div ref={resultRef} tabIndex={-1} className="focus-region">
+          {failure ? (
+            <div className="notice" role="alert">
+              {ERROR_TEXT[failure.code]}
+            </div>
+          ) : null}
+          {explanation ? <ExplanationOutput data={explanation} /> : null}
         </div>
       ) : null}
-
-      {explanation ? <ExplanationOutput data={explanation} /> : null}
     </section>
   );
 }

@@ -12,9 +12,17 @@ public static class ScoringPolicy
     /// <summary>
     /// Minimum number of pupils who sat the exam before a score is published (ADR-0009). Counts pupils
     /// who SAT, not class headcount. THE only place the threshold lives. Below it the engine suppresses
-    /// the score with <c>insufficient_cohort</c> (METRIC-ETHICS §3: no number without its cohort).
+    /// the score: <c>limited</c> from <see cref="LimitedBandFloor"/>, <c>insufficient_cohort</c> below that
+    /// (METRIC-ETHICS §3: no number without its cohort).
     /// </summary>
     public const int PublicationThreshold = 9;
+
+    /// <summary>
+    /// Minimum number of pupils who sat before any exam figure is shown (ADR-0009, the CKE floor). From this
+    /// floor up to <see cref="PublicationThreshold"/> minus one, the engine returns the limited profile: descriptive
+    /// data and cohort size, no score, no interval and no rank. Below it the engine returns <c>insufficient_cohort</c>.
+    /// </summary>
+    public const int LimitedBandFloor = 5;
 
     /// <summary>
     /// Coverage (sat / headcount) at or above which no discount applies. Below it the score is

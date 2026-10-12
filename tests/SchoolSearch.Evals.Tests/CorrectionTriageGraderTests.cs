@@ -137,7 +137,7 @@ public sealed class CorrectionTriageGraderTests
     }
 
     [Fact]
-    public void A_banned_claim_in_the_draft_fails_even_though_the_product_parser_accepts_it()
+    public void A_banned_claim_in_the_draft_fails_the_grader_and_the_product_parser_refuses_it()
     {
         const string guarantee =
             """{"category":"outdated","fieldLooksValid":true,"severity":"low","suggestedAction":"request_source","draftReplyPl":"Gwarantujemy szybką zmianę. Prosimy o źródło."}""";
@@ -145,6 +145,7 @@ public sealed class CorrectionTriageGraderTests
         var grade = Output(OutdatedExpect, guarantee);
 
         Assert.Contains(grade.Checks, check => !check.Pass && check.Name == "no_banned_claims");
+        Assert.Null(CorrectionTriageParser.Parse(guarantee, "{\"note\":\"Nazwa szkoły jest nieaktualna od 2024 roku.\"}"));
     }
 
     [Fact]

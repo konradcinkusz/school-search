@@ -29,8 +29,41 @@ const SUBJECT_LABEL: Record<string, string> = {
 /** Source marker of the synthetic demo seed (never in Production). Rows carrying it are labelled as demo data. */
 const DEMO_MARK = "DEMO SEED";
 
+/** Polish names for the provenance fields the API emits (SchoolReadModel.Provenance). Unknown keys fall back to a neutral label. */
+const PROVENANCE_FIELD_LABEL: Record<string, string> = {
+  score: "Wynik",
+  cohorts: "Roczniki i oddziały",
+  examResults: "Wyniki egzaminów",
+  coordinates: "Współrzędne",
+  name: "Nazwa szkoły",
+  gmina: "Gmina",
+};
+
+/** Method sentences for the provenance methods the importers write. Prefix matches cover methods with a suffix. */
+const PROVENANCE_METHOD_LABEL: readonly { readonly match: string; readonly label: string }[] = [
+  { match: "synthetic", label: "Dane syntetyczne (demonstracyjne), nie z urzędowego źródła" },
+  { match: "csv import", label: "Import z pliku CSV" },
+  { match: "xlsx import", label: "Import z pliku XLSX" },
+  { match: "importer run record", label: "Zapis z przebiegu importu" },
+  { match: "llm-extract", label: "Wyodrębnione automatycznie, bez weryfikacji przez człowieka" },
+  { match: "code seen in SIO file", label: "Kod z pliku SIO, jeszcze niezweryfikowany" },
+  { match: "seed from product brief", label: "Ustalone z opisu produktu, lista kodów niezweryfikowana" },
+];
+const PROVENANCE_METHOD_FALLBACK = "Metoda opisana w metodologii";
+
+function provenanceFieldLabel(field: string): string {
+  return PROVENANCE_FIELD_LABEL[field] ?? "Inne dane";
+}
+
+function provenanceMethodLabel(method: string): string {
+  const normalised = method.trim().toLowerCase();
+  const hit = PROVENANCE_METHOD_LABEL.find((entry) => normalised.startsWith(entry.match));
+  return hit ? hit.label : PROVENANCE_METHOD_FALLBACK;
+}
+
 const STATUS_LABEL: Record<ScoreStatus, string> = {
   published: "wynik opublikowany",
+  limited: "profil ograniczony: mała grupa, bez wyniku i miejsca",
   insufficient_cohort: "brak wyniku: zbyt mała grupa",
   no_exam_data: "brak danych egzaminacyjnych",
   no_baseline: "brak danych porównawczych",
@@ -66,7 +99,7 @@ export default async function SchoolPage({ params, searchParams }: Props) {
     );
   }
   const school = result.data;
-  const gminaLabel = school.gminaName ?? `gmina TERYT ${school.gminaTeryt}`;
+  const gminaLabel = school.gminaName ?? "Nieznana gmina";
   const isDemo = school.provenance.some((row) => row.source.includes(DEMO_MARK));
   const scoreRow = school.provenance.find((row) => row.field === "score");
   const scoreProvenance = scoreRow ? { source: scoreRow.source, asOf: scoreRow.asOf } : null;
@@ -339,11 +372,11 @@ function ProvenanceTable({ rows }: { rows: SchoolProfile["provenance"] }) {
             return (
               <tr key={`${row.field}-${index}`} data-demo={demo ? "true" : undefined}>
                 <td data-label="Pole">
-                  <strong>{row.field}</strong>
+                  <strong>{provenanceFieldLabel(row.field)}</strong>
                 </td>
                 <td data-label="Źródło">{source}</td>
                 <td data-label="Stan">{asOfLabel(row.asOf)}</td>
-                <td data-label="Metoda">{row.method}</td>
+                <td data-label="Metoda">{provenanceMethodLabel(row.method)}</td>
               </tr>
             );
           })}

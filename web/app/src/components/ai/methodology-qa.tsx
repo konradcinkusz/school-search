@@ -1,5 +1,6 @@
 "use client";
 
+import "@/app/styles/forms.css";
 import { useId, useState, type FormEvent } from "react";
 import { AI_LABEL, parseMethodologyAnswer, type MethodologyAnswer } from "@/lib/ai-contract";
 import { aiFailureText } from "@/lib/ai-messages";
@@ -13,7 +14,7 @@ import { bffRequest, type BffResponse } from "@/lib/bff-client";
 const QUESTION_MAX = 300;
 
 export function MethodologyQa() {
-  const ids = { question: useId(), heading: useId() };
+  const ids = { question: useId(), localError: useId(), heading: useId() };
   const [question, setQuestion] = useState("");
   const [sending, setSending] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -22,13 +23,11 @@ export function MethodologyQa() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (sending) return;
     const text = question.trim();
-    if (text === "") {
-      setLocalError("Wpisz pytanie o metodologię.");
-      return;
-    }
-    if (text.length > QUESTION_MAX) {
-      setLocalError(`Pytanie może mieć najwyżej ${QUESTION_MAX} znaków.`);
+    if (text === "" || text.length > QUESTION_MAX) {
+      setLocalError(text === "" ? "Wpisz pytanie o metodologię." : `Pytanie może mieć najwyżej ${QUESTION_MAX} znaków.`);
+      document.getElementById(ids.question)?.focus();
       return;
     }
     setLocalError(null);
@@ -61,11 +60,23 @@ export function MethodologyQa() {
         jest lepsza.
       </p>
       <form onSubmit={onSubmit} noValidate>
+        <p className="field-hint">Pola oznaczone * są wymagane.</p>
         <div className="field">
-          <label htmlFor={ids.question}>Twoje pytanie o metodologię</label>
-          <textarea id={ids.question} rows={2} maxLength={QUESTION_MAX} value={question} onChange={(e) => setQuestion(e.target.value)} />
+          <label htmlFor={ids.question}>
+            Twoje pytanie o metodologię<span aria-hidden="true"> *</span>
+          </label>
+          <textarea
+            id={ids.question}
+            rows={2}
+            maxLength={QUESTION_MAX}
+            value={question}
+            required
+            aria-invalid={localError !== null ? true : undefined}
+            aria-describedby={localError !== null ? ids.localError : undefined}
+            onChange={(e) => setQuestion(e.target.value)}
+          />
         </div>
-        <button type="submit" className="button" disabled={sending}>
+        <button type="submit" className="button" aria-disabled={sending ? true : undefined}>
           {sending ? "Szukanie w metodologii…" : "Zapytaj"}
         </button>
       </form>
@@ -74,7 +85,7 @@ export function MethodologyQa() {
         {sending ? <p className="muted">Szukanie w metodologii…</p> : null}
       </div>
       {localError !== null ? (
-        <p role="alert" className="notice">
+        <p role="alert" id={ids.localError} className="notice">
           {localError}
         </p>
       ) : null}

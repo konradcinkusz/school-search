@@ -41,16 +41,37 @@ All tokens are custom properties on `:root`. Dark mode redefines the colour toke
 | `--color-muted` | `#555a62` | `#aeb2b9` | Secondary text |
 | `--color-border` / `-strong` | `#dcd9d0` / `#c4c0b4` | `#2f343b` / `#424851` | Hairlines |
 | `--color-border-input` | `#847f72` | `#7a818b` | Form control boundary (≥ 3:1) |
+| `--color-state-line` | `#767676` | `#6b7380` | Non-text state line: the dashed outline of a suppressed score (≥ 3:1 on its surface) |
 | `--color-accent` (+ `-hover`, `-fg`, `-soft`) | `#1f4e8c` | `#8fb9f0` | Links, primary buttons, current nav item |
 | `--color-focus` | `#0b63ce` | `#7cb4ff` | Focus ring |
 | `--color-score`, `--color-score-rule` | `#1f3a5f`, `#1f4e8c` | `#dbe7f7`, `#8fb9f0` | Score number and its rule |
 
+Placeholder text has no token of its own: `::placeholder` uses `--color-muted` at full opacity (the browser default
+grey is 3.6:1 on the dark field, so it is overridden). Hints in `.field-hint` use the same muted token.
+
 Semantic tones come as `bg` / `fg` / `border` triples: `info`, `warn`, `danger`, `success`, `ai`, `sponsor`, `demo`.
 
-Measured contrast (WCAG 2.x), light / dark: body text 15.7 / 14.9; muted on background 6.4 / 7.9; accent on surface
-8.3 / 8.2; button text on accent 8.3 / 8.6; every tone's text on its own background ≥ 6.9 / ≥ 9.6; input border on
-surface 4.0 / 4.2 (non-text, needs 3); focus ring on background 5.2 / 8.6. All pass AA; text pairs pass AAA except
-the success tone in light mode (6.9).
+Measured contrast (WCAG 2.x, computed from the token values in `globals.css`), light / dark: body text 15.7 / 14.9;
+muted on background 6.4 / 8.7; accent on surface 8.3 / 8.2; button text on accent 8.3 / 8.6; every tone's text on its
+own background ≥ 6.88 / ≥ 9.6 (lowest: success in light, 6.88; AI in dark, 9.61); input border on surface 4.0 / 4.25
+(non-text, needs 3); focus ring on background 5.2 / 8.6. All pass AA. Text pairs pass AAA except light-mode muted text
+(6.4 on background, 6.9 on surface) and the success tone in light mode (6.88).
+
+Dark-mode audit changes (measured on the same surfaces):
+
+| Pair | Before | After |
+|---|---|---|
+| Placeholder (`--color-muted` on `--color-surface`, dark) | 3.63:1 (browser default `#757575`) | 7.85:1 |
+| Suppressed-score dashed line, dark (`--color-state-line` on surface) | 1.33:1 (`--color-border`) | 3.49:1 |
+| Suppressed-score dashed line, light (`--color-state-line` on surface) | 1.41:1 (`--color-border`) | 4.54:1 |
+| Trend-chart edge shadow, dark (composited at full alpha on surface) | 1.10:1 | 2.27:1 |
+| Print (paper `#fff`): text `#000` / muted `#333` | text was dark token, 1.25:1 to 2.13:1 | 21.00:1 / 12.63:1 |
+| Print: filled `.button` label | `#fff` on `#fff`, 1.00:1 | `.button` prints `#000` on `#fff`, 21.00:1 |
+
+The shadow figure is an upper bound: the inset shadow fades to nothing across its 12px blur, so the edge colour is
+lighter than the full-alpha value.
+
+The placeholder figures use the token values, not the rounded figures from the audit notes (8.2:1 and 7.5:1).
 
 ### Type
 
@@ -78,7 +99,7 @@ Spacing on a 4px base: `--space-1` 4px … `--space-8` 64px. Radii: `--radius-sm
 | `.badge` (+ `--info`, `--demo`, `--ai`, `[data-confidence]`) | Pills for facts and states |
 | `.button` (+ `--secondary`, `--block`), `.link-button` | 44px-high actions |
 | `.field`, `.field--check`, `.check-label`, `.form-grid` (`--2`, `--address`, `--filters`), `.inline-form` | Forms; labels always visible above controls; checkbox rows are 44px targets |
-| `.score` (+ `--suppressed`, `--compact`, `--hero`) | The score block (via `ScoreBadge` only) |
+| `.score` (+ `--suppressed`, `--limited`, `--compact`, `--hero`) | The score block (via `ScoreBadge` only). `--suppressed` (no number): grey surface, dashed outline in `--color-state-line`, solid grey left rule, hollow-circle marker. `--limited` (5 to 8 pupils, ADR-0009): info tones, dashed on every side with a dashed info-fg left rule and a dashed circle marker. The two are distinct: suppressed is neutral and has no number, limited is informational and still shows its number |
 | `.school-list`, `.school-list__item` | Result cards: name and meta on the left, the complete score block on the right from 44rem |
 | `.table-wrap`, `.table--stack`, `.table--sticky`, `.table--compare`, `.num` | Tables (see Responsive) |
 | `.trend`, `.trend__scroll` | SVG trend chart (dot + 95% whisker per year; suppressed years labelled "brak wyniku") |
@@ -106,10 +127,25 @@ Phone first; the reference width is 360px and no page scrolls sideways at that w
 - Skip link "Przejdź do treści" is the first focusable element and becomes visible on focus.
 - Every control has a visible `label`. Status and error messages keep their `role="status"` / `role="alert"`.
 - `:focus-visible` draws a 3px ring in `--color-focus`, offset 2px (inputs: the ring sits on the border, which also takes the focus colour).
+- A ring is drawn outside its element, so it is clipped by any ancestor with `overflow` other than `visible`. Those
+  containers are `.table-wrap`, `.trend__scroll`, the phone `.site-nav ul` and `.tabs`. Table and trend links sit inside
+  cell or box padding (at least 8px), so the 5px ring fits. The nav links and the moderation tabs have no room, so
+  their rings are drawn inset (`outline-offset: -3px`) and stay inside the box.
+- `.visually-hidden` is the screen-reader-only utility (absolute, 1px, clipped). Use it for text a sighted reader does not need
+  (for example extra headings).
 - Decorative SVG icons are `aria-hidden`; the trend chart has `role="img"` with a title and description, and the
   same numbers are in the table below it.
 - `prefers-reduced-motion: reduce` removes transitions and the button press offset. There are no animations.
 - Print hides navigation, AI panels and pagination, and keeps score blocks unbroken.
+
+## Print
+
+Printing is on white paper, whatever the OS colour scheme or `data-theme` says. The `@media print` block in
+`globals.css` redefines every colour token to black, white and `#666` (borders and state lines), and sets all
+shadow tokens to `none`. The dark selectors are repeated in that block (`:root:not([data-theme="light"])` and
+`:root[data-theme="dark"]`) because a bare `:root` would lose to them on specificity. Filled `.button` and
+`.button--secondary` print as a white box with a black label and a black 1px border, because browsers do not print
+background colours by default. Tones keep their meaning through their text and the border, not through colour.
 
 ## Contract with the end-to-end suite
 

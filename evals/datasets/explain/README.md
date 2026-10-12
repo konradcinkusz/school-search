@@ -9,7 +9,7 @@ Grader: `evals/features/explain.mjs`. Fixtures: `evals/fixtures/explain/`.
 |---|---|---|
 | Happy path | 14 | Published schools of the demo seed (`demo-sp-1, 2, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14`, 2025 exam year), low coverage (`demo-sp-4`, 21 of 60), the threshold school (`demo-sp-2`, exactly 9 sat), `lang: pl`. |
 | Ambiguity | 5 | Slug case and prefix (no fuzzy match), a trailing space, `lang` trimmed, a school with no exam data (`demo-sp-6`). |
-| Denied path | 7 | Insufficient cohort (`demo-sp-3`, 8 sat: no number may appear), no exam data, `lang` values other than `pl`, an empty `lang`, a wrong JSON type. |
+| Denied path | 7 | Limited profile (`demo-sp-3`, 8 sat, 5 to 8 band of ADR-0009: no score, no interval, no rank; no number may appear), no exam data, `lang` values other than `pl`, an empty `lang`, a wrong JSON type. |
 | Adversarial | 8 | SQL-like, traversal-like, markup-like and nested slugs; an injected `lang`; an unknown body field carrying an instruction. |
 | Degradation | 6 | 503 `ai_unavailable`, 503 `ai_budget_exhausted`, 429, 502 `ai_output_rejected`, 500, and 503 for an unknown slug without a key (availability is checked first). |
 
@@ -28,8 +28,8 @@ Every digit run of the text occurs in the facts JSON (the server's NumberGuard r
 plain and ends with the mandated disclaimer; no ranking or quality-comparison vocabulary, no certainty words ("pewny",
 "gwarantowany", "na pewno", but "niepewny" is allowed), no causal or people claims about teaching, families or origin;
 no comparison with another school; at most 150 words before the disclaimer; no e-mail, phone or PESEL shape; no decimal
-number when no score is published; the state is explained for `insufficient_cohort`, `no_exam_data` and `no_baseline`;
-a low-coverage school's text says so.
+number when no score is published; the state is explained for `limited`, `insufficient_cohort`, `no_exam_data` and `no_baseline`;
+for `limited` the text must also say the group is small, and the facts must carry no score, interval or rank; a low-coverage school's text says so.
 
 ## Known gaps and deviations
 
@@ -38,6 +38,13 @@ a low-coverage school's text says so.
 - NumberGuard matches whole digit runs. A rounded score such as `10,8` against a facts value `10.833333333333334` is
   rejected (`8` is not a run in the facts). The model must copy the digits exactly, so rounding in the text is expected to
   produce `ai_output_rejected` (502) in live runs. This is a hypothesis from the code, not a measured result.
+
+- No demo school has fewer than 5 pupils (`insufficient_cohort` is below the CKE floor of 5, ADR-0009). So no live case
+  reaches `insufficient_cohort`; its grader pattern is kept, but no fixture exercises it. A case for it needs a demo school
+  with fewer than 5 pupils in DemoSeed.cs first.
+- `explain-020` was `insufficient_cohort` before the limited band (ADR-0009) and was edited in place to `limited`. Its
+  fixtures are `good-limited-sp3.json` (replaces `good-insufficient-sp3.json`), `bad-score-shown-below-threshold.json`
+  (now with limited facts) and `bad-limited-no-reason-given.json`.
 
 ## How to extend
 

@@ -1,5 +1,6 @@
 "use client";
 
+import "@/app/styles/forms.css";
 import Link from "next/link";
 import { useId, useState, type FormEvent } from "react";
 import { AI_LABEL, parseSearchIntent, type SchoolKind, type SearchIntentFilters, type SearchIntentResult } from "@/lib/ai-contract";
@@ -56,7 +57,14 @@ export function resultsHref(draft: Editable): { href: string; unapplied: string[
 }
 
 export function SearchIntentBox() {
-  const ids = { question: useId(), heading: useId(), status: useId(), filters: useId() };
+  const ids = {
+    question: useId(),
+    localError: useId(),
+    heading: useId(),
+    status: useId(),
+    filters: useId(),
+    gminaHint: useId(),
+  };
   const [question, setQuestion] = useState("");
   const [sending, setSending] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -66,13 +74,11 @@ export function SearchIntentBox() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (sending) return;
     const text = question.trim();
-    if (text === "") {
-      setLocalError("Napisz, czego szukasz.");
-      return;
-    }
-    if (text.length > QUESTION_MAX) {
-      setLocalError(`Opis może mieć najwyżej ${QUESTION_MAX} znaków.`);
+    if (text === "" || text.length > QUESTION_MAX) {
+      setLocalError(text === "" ? "Napisz, czego szukasz." : `Opis może mieć najwyżej ${QUESTION_MAX} znaków.`);
+      document.getElementById(ids.question)?.focus();
       return;
     }
     setLocalError(null);
@@ -113,19 +119,29 @@ export function SearchIntentBox() {
         przygotuje filtry, które możesz poprawić. Portal nie ocenia szkół ani nie układa ich według jakości.
       </p>
       <form onSubmit={onSubmit} noValidate>
+        <p className="field-hint">Pola oznaczone * są wymagane.</p>
         <div className="field">
-          <label htmlFor={ids.question}>Opisz czego szukasz</label>
+          <label htmlFor={ids.question}>
+            Opisz czego szukasz<span aria-hidden="true"> *</span>
+          </label>
           <textarea
             id={ids.question}
             name="question"
             rows={3}
             maxLength={QUESTION_MAX}
             value={question}
+            required
             onChange={(event) => setQuestion(event.target.value)}
-            aria-describedby={ids.status}
+            aria-invalid={localError !== null ? true : undefined}
+            aria-describedby={localError !== null ? `${ids.status} ${ids.localError}` : ids.status}
           />
+          {localError !== null ? (
+            <p role="alert" id={ids.localError} className="field-error">
+              {localError}
+            </p>
+          ) : null}
         </div>
-        <button type="submit" className="button" disabled={sending}>
+        <button type="submit" className="button" aria-disabled={sending ? true : undefined}>
           {sending ? "Przygotowywanie filtrów…" : "Przygotuj filtry"}
         </button>
       </form>
@@ -133,11 +149,6 @@ export function SearchIntentBox() {
       <div id={ids.status} role="status" aria-live="polite">
         {sending ? <p className="muted">Przygotowywanie filtrów…</p> : null}
       </div>
-      {localError !== null ? (
-        <p role="alert" className="notice">
-          {localError}
-        </p>
-      ) : null}
       {failure !== null ? (
         <p role="alert" className="notice">
           {failure}
@@ -150,15 +161,19 @@ export function SearchIntentBox() {
           <fieldset className="chips" id={ids.filters}>
             <legend className="muted">Zinterpretowane filtry (możesz je poprawić)</legend>
             <div className="chip">
-              <label htmlFor={`${ids.filters}-gmina`}>Gmina (7 cyfr TERYT)</label>
+              <label htmlFor={`${ids.filters}-gmina`}>Kod gminy (7 cyfr)</label>
               <input
                 id={`${ids.filters}-gmina`}
                 type="text"
                 inputMode="numeric"
                 maxLength={7}
                 value={draft.gmina}
+                aria-describedby={ids.gminaHint}
                 onChange={(event) => patch({ gmina: event.target.value })}
               />
+              <p id={ids.gminaHint} className="field-hint">
+                Siedem cyfr, bez spacji.
+              </p>
             </div>
             <div className="chip">
               <label htmlFor={`${ids.filters}-q`}>Nazwa lub słowo kluczowe</label>
