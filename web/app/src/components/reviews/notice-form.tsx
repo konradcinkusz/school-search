@@ -220,7 +220,7 @@ export function NoticeForm({
       </div>
       <div className="field">
         <label htmlFor={ids.explanation}>
-          Dlaczego treść jest niezgodna z prawem lub regulaminem?<span aria-hidden="true"> *</span>
+          Dlaczego treść jest niezgodna z prawem lub regulaminem?<span aria-hidden="true">&nbsp;*</span>
         </label>
         <textarea
           id={ids.explanation}
@@ -281,8 +281,10 @@ export function NoticeForm({
           aria-describedby={errors.fields.goodFaith ? ids.goodError : undefined}
         />
         <label htmlFor={ids.good}>
-          Potwierdzam, że zgłoszenie składam w dobrej wierze, a podane informacje są zgodne z moją wiedzą.
-          <span aria-hidden="true"> *</span>
+          <span>
+            Potwierdzam, że zgłoszenie składam w dobrej wierze, a podane informacje są zgodne z moją wiedzą.
+            <span aria-hidden="true">&nbsp;*</span>
+          </span>
         </label>
         {errors.fields.goodFaith ? (
           <p id={ids.goodError} className="field-error">

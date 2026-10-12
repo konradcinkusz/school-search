@@ -20,11 +20,21 @@
   scroll-padding-inline: calc(var(--compare-sticky-w) + 0.5rem) 2rem;
 }
 
-/* Inner padding around the header link: the focus ring (3px ring plus 2px offset) sits inside the cell. */
+/* Inner padding around the header link: the focus ring (3px ring plus 2px offset) sits inside the cell. The scroll
+   margin keeps a focused link clear of the sticky first column on the left and of the edge fade on the right. */
 .site-main .table--compare thead th a {
   display: inline-block;
   padding: 0.25rem 0.375rem;
   margin: -0.25rem -0.375rem;
+  scroll-margin-inline: calc(var(--compare-sticky-w) + 0.5rem) calc(1.75rem + 8px);
+}
+
+/* The sticky first column is exactly --compare-sticky-w wide, so the scroll padding and margins above line up with it. */
+.site-main .table--compare thead th:first-child,
+.site-main .table--compare tbody th:first-child {
+  width: var(--compare-sticky-w);
+  min-width: var(--compare-sticky-w);
+  max-width: var(--compare-sticky-w);
 }
 
 /* Fade on the right edge of the visible box, so the cut-off school names read as "more to the right". */
@@ -49,11 +59,46 @@
      is never painted under the fade. */
   .site-main .table-wrap--compare {
     padding-inline-end: calc(1.75rem + 6px);
-    scroll-snap-type: x mandatory;
+    scroll-snap-type: x proximity;
   }
 
-  .site-main .table--compare thead th:not(:first-child) {
-    min-width: 11rem;
+  /* Geometry: a 7.5rem sticky label column and 10.5rem school columns with 12px side padding. The visible window
+     between the sticky column and the edge fade (360px screen: about 180px) then holds a whole header link plus its
+     focus ring, so the ring is never clipped when a link scrolls into view. */
+  .site-main .table-wrap--compare {
+    --compare-sticky-w: 7.5rem;
+  }
+
+  .site-main .table--compare {
+    min-width: 0;
+    width: max-content;
+  }
+
+  .site-main .table--compare th,
+  .site-main .table--compare td {
+    padding-inline: 12px;
+  }
+
+  .site-main .table--compare tbody th {
+    font-size: var(--text-xs);
+    line-height: var(--leading-snug);
+  }
+
+  /* Every value wraps inside its narrow column; nothing may spill into the next school. */
+  .site-main .table--compare .badge--demo,
+  .site-main .table--compare .nowrap {
+    white-space: normal;
+  }
+
+  .site-main .table--compare td {
+    overflow-wrap: anywhere;
+  }
+
+  .site-main .table--compare thead th:not(:first-child),
+  .site-main .table--compare tbody td {
+    width: 10.5rem;
+    min-width: 10.5rem;
+    max-width: 10.5rem;
   }
 
   .site-main .table--compare thead th:not(:first-child),
@@ -84,18 +129,11 @@
   }
 }
 
-/* ---------------------------------------------------------------- Preschool cards: two columns from 44rem */
+/* ---------------------------------------------------------------- Preschool cards: facts in a row from 44rem */
 
 .site-main .school-list {
   max-width: none;
   width: 100%;
-}
-
-@media (min-width: 44rem) {
-  .site-main .school-list__item--facts.card {
-    grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
-    align-items: start;
-  }
 }
 
 /* ---------------------------------------------------------------- Preschool filter form: two columns from 36rem */
@@ -114,18 +152,6 @@
 
 /* ---------------------------------------------------------------- Ranking */
 
-/* Score block on one or two lines instead of four stacked lines, so the rows scan faster. */
-.site-main .ranking-table .score--compact {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-1) var(--space-3);
-}
-
-.site-main .ranking-table .score--compact > p {
-  margin: 0;
-}
-
 .site-main .ranking-lead a {
   display: inline-block;
   padding: 0.5rem 0;
@@ -138,11 +164,12 @@
   display: inline-flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-  margin: var(--space-3) 0 var(--space-4);
+  margin: var(--space-2) 0 0;
   padding: var(--space-1);
-  border: 1px solid var(--color-border-input);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-pill);
-  background: var(--color-surface-sunken);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .site-main .scope-switch__link {
@@ -168,4 +195,277 @@
 .site-main .ranking-code {
   font-size: var(--text-sm);
   font-weight: var(--weight-regular);
+}
+
+/* ---------------------------------------------------------------- Ranking: unranked schools (count and reasons) */
+
+.site-main .unranked {
+  width: 100%;
+  max-width: none;
+  margin: var(--space-6) 0 var(--space-4);
+  border-style: dashed;
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-sunken);
+  box-shadow: none;
+}
+
+.site-main .unranked h2 {
+  font-size: var(--text-xl);
+  margin: 0 0 var(--space-2);
+}
+
+/* Ranking meta badges sit between the caveat and the table, close to the table they describe. */
+.site-main .ranking-table caption {
+  font-weight: var(--weight-semibold);
+}
+
+/* ---------------------------------------------------------------- Preschool list cards: label above value, source below */
+
+.site-main .school-list__facts {
+  margin: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.site-main .school-list__fact {
+  margin: 0;
+}
+
+.site-main .school-list__fact dt {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.site-main .school-list__fact dd {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.site-main .school-list__value {
+  font-weight: var(--weight-semibold);
+}
+
+.site-main .school-list__source {
+  font-size: var(--text-sm);
+}
+
+/* ---------------------------------------------------------------- Preschool profile: at-a-glance summary */
+
+.site-main .fact-summary {
+  list-style: none;
+  margin: var(--space-3) 0 var(--space-4);
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+@media (min-width: 40rem) {
+  .site-main .fact-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.site-main .fact-summary__item {
+  margin: 0;
+  max-width: none;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: inset 0 3px 0 var(--color-accent);
+}
+
+.site-main .fact-summary__label {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.site-main .fact-summary__value {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-main .fact-summary__meta {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+/* The date cell never wraps: "1 stycznia 2026" stays on one line at 768px. */
+.site-main .facts-table .facts-table__date {
+  white-space: nowrap;
+}
+
+/* Phone: one block per fact. The value leads; source, date and confidence follow on one muted line each. */
+@media (max-width: 39.99rem) {
+  .site-main .facts-table tbody tr {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--space-3);
+    row-gap: 0.125rem;
+  }
+
+  .site-main .facts-table tbody th[scope="row"] {
+    width: 100%;
+    font-weight: var(--weight-semibold);
+  }
+
+  .site-main .facts-table td[data-label] {
+    width: auto;
+    padding: 0;
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+  }
+
+  .site-main .facts-table td[data-label="Wartość"] {
+    width: 100%;
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    color: inherit;
+  }
+
+  .site-main .facts-table td[data-label]::before {
+    display: inline;
+    margin: 0;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+    color: inherit;
+    content: attr(data-label) ": ";
+  }
+
+  .site-main .facts-table td[data-label="Wartość"]::before {
+    content: none;
+    display: none;
+  }
+
+  .site-main .facts-table td[data-label="Stan na"],
+  .site-main .facts-table td[data-label="Pewność"] {
+    white-space: nowrap;
+  }
+}
+
+/* ---------------------------------------------------------------- Compare: heading and chips */
+
+/* The result heading is focused by script after submit. It is not a control, so it shows no ring for that focus. */
+.site-main #wynik-porownania:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.site-main .compare-chips {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.site-main .compare-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--tap);
+  margin: 0;
+  padding: var(--space-2) var(--space-1) var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+}
+
+.site-main .compare-chips + p {
+  margin-top: var(--space-4);
+}
+
+.site-main .compare-chip__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  color: var(--color-fg);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+}
+
+.site-main .compare-chip__remove:hover {
+  background: var(--color-accent-soft);
+  border-radius: var(--radius-pill);
+}
+
+/* ---------------------------------------------------------------- Preschool filters: aligned labels, tap-sized checks */
+
+@media (min-width: 36rem) {
+  .site-main .form-grid--filters .field > label {
+    display: flex;
+    align-items: flex-end;
+    min-height: 2.8em;
+  }
+}
+
+.site-main .filters__checks .check-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+}
+
+.site-main .filters__checks .check-label input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  flex: none;
+}
+
+/* ---------------------------------------------------------------- Preschool cards: the facts read like a data strip */
+
+.site-main .school-list__item--facts .school-list__facts {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.site-main .school-list__item--facts .school-list__value {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 44rem) {
+  .site-main .school-list__item--facts .school-list__facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-5);
+  }
+
+  .site-main .school-list__item--facts .school-list__fact + .school-list__fact {
+    padding-left: var(--space-5);
+    box-shadow: inset 1px 0 0 var(--color-border);
+  }
+}
+
+/* Preschool fact table between 40rem and 60rem: tighter cells and wrapping confidence pills keep five columns in view. */
+@media (min-width: 40rem) and (max-width: 59.99rem) {
+  .site-main .facts-table th,
+  .site-main .facts-table td {
+    padding-inline: var(--space-3);
+  }
+
+  .site-main .facts-table .badge {
+    white-space: normal;
+  }
 }

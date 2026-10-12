@@ -3,16 +3,27 @@ import { ServiceUnavailable } from "@/components/service-unavailable";
 import { INTERVAL_LABEL } from "@/components/billing/billing-messages";
 import { listPlans } from "@/lib/billing";
 import { formatDecimal } from "@/lib/format";
+import { NotSoldList } from "@/components/billing/not-sold-list";
 import "../styles/static.css";
 
 // Plans come from the Billing service configuration at request time; nothing about prices is written here.
 export const dynamic = "force-dynamic";
 
+const description =
+  "Cennik profilu rozszerzonego dla szkół. Płatność nie wpływa na wynik, ranking, kolejność ani opinie. Treść sponsorowana jest oznaczona. Nie jest oficjalnym rankingiem.";
+
 export const metadata: Metadata = {
   title: "Cennik",
-  description:
-    "Cennik profilu rozszerzonego dla szkół. Płatność nie wpływa na wynik, ranking, kolejność ani opinie. Treść sponsorowana jest oznaczona. Nie jest oficjalnym rankingiem.",
+  description,
   alternates: { canonical: "/cennik" },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Cennik | Wyszukiwarka szkół",
+    description,
+    url: "/cennik",
+  },
 };
 
 export default async function PricingPage() {
@@ -21,26 +32,24 @@ export default async function PricingPage() {
   return (
     <article className="prose">
       <header className="page-header">
+        <p className="eyebrow">Dla szkół</p>
         <h1>Cennik</h1>
         <p className="lead">
-          Profil rozszerzony to płatna, oznaczona jako sponsorowana treść przygotowana przez przedstawiciela szkoły oraz
-          formularz kontaktu dla rodziców. Wynik szkoły pozostaje taki sam, niezależnie od tego, czy szkoła ma profil.
+          Profil rozszerzony jest płatny. Obejmuje treść przygotowaną przez przedstawiciela szkoły oraz formularz kontaktu
+          dla rodziców. Oznaczamy go jako treść sponsorowaną. Wynik szkoły pozostaje taki sam, niezależnie od tego, czy
+          szkoła ma profil.
         </p>
       </header>
 
-      <div className="notice notice--caution" role="note">
-        <p>
-          <strong>Czego nie sprzedajemy:</strong>
-        </p>
-        <ul>
-          <li>Płatny profil nie wpływa na wynik, ranking, kolejność szkoły ani na opinie użytkowników.</li>
-          <li>Nie sprzedajemy wyniku, pozycji w rankingu, usuwania ani ukrywania opinii i danych.</li>
-          <li>Treść sponsorowana jest zawsze oznaczona i pokazywana osobno.</li>
-          <li>
-            Potwierdzenie przedstawiciela przez redakcję nie jest do kupienia. Następuje po sprawdzeniu poza systemem.
-          </li>
-        </ul>
-      </div>
+      <h2>Czego nie sprzedajemy</h2>
+      <NotSoldList
+        items={[
+          "Płatny profil nie wpływa na wynik, ranking, kolejność szkoły ani na opinie użytkowników.",
+          "Nie sprzedajemy wyniku, pozycji w rankingu, usuwania ani ukrywania opinii i danych.",
+          "Treść sponsorowana jest zawsze oznaczona i pokazywana osobno.",
+          "Potwierdzenie przedstawiciela przez redakcję nie jest do kupienia. Następuje po sprawdzeniu poza systemem.",
+        ]}
+      />
 
       <h2>Plany</h2>
       {!result.ok && result.reason === "unavailable" ? (

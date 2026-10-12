@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ScoreBlock, ScoreStatus } from "@/lib/api";
 import { asOfLabel, formatDecimal, formatScore, formatStudents } from "@/lib/format";
 
@@ -56,20 +57,38 @@ function sourceOf(block: ScoreBlock | null, provenance: ScoreProvenance | null |
   };
 }
 
-/** Source and as-of date of the score. Demo rows are marked so they are never read as real. */
+/**
+ * Source and as-of date of the score. Demo rows are marked so they are never read as real.
+ * The separator sits inside the same no-break span as the date, so a line never ends with a dangling "·".
+ */
 function SourceLine({ info }: { readonly info: SourceInfo }) {
   const asOf = info.asOf ? asOfLabel(info.asOf) : null;
-  if (info.source === "" && asOf === null) return null;
+  const hasSource = info.source !== "";
+  if (!hasSource && asOf === null) return null;
   const isDemo = info.source.includes("DEMO SEED");
   return (
     <p className="score__meta score__source">
-      {info.source !== "" ? (
+      {hasSource ? (
         <>
           Źródło: {isDemo ? <span className="badge badge--demo">{info.source}</span> : info.source}
         </>
       ) : null}
-      {info.source !== "" && asOf !== null ? " · " : null}
-      {asOf !== null ? <span style={{ whiteSpace: "nowrap" }}>{asOf}</span> : null}
+      {hasSource && asOf !== null ? " " : null}
+      {asOf !== null ? <span className="nowrap">{hasSource ? `· ${asOf}` : asOf}</span> : null}
+    </p>
+  );
+}
+
+/** Cohort size in plain Polish: the pupils the score is calculated from. */
+function CohortLine({ cohortSize }: { readonly cohortSize: number }) {
+  return <>Grupa porównawcza: {formatStudents(cohortSize)}</>;
+}
+
+/** Methodology version as a small link to the explanation, so the term is read in context. */
+function MethodologyLine({ version }: { readonly version: string }) {
+  return (
+    <p className="score__meta score__meta--method">
+      <Link href="/metodologia">Wersja metodologii {version}</Link>
     </p>
   );
 }
@@ -83,33 +102,47 @@ export function ScoreBadge({
 }: ScoreBadgeProps) {
   if (status === "published" && block && block.score !== null) {
     const { score, intervalLow, intervalHigh, cohortSize, methodologyVersion } = block;
-    const halfWidth =
-      intervalLow !== null && intervalHigh !== null ? (intervalHigh - intervalLow) / 2 : null;
-    const intervalText =
-      intervalLow !== null && intervalHigh !== null
-        ? `przedział 95%: od ${formatScore(intervalLow)} do ${formatScore(intervalHigh)}`
-        : "przedział niedostępny";
+    const hasInterval = intervalLow !== null && intervalHigh !== null;
+    const halfWidth = hasInterval ? (intervalHigh - intervalLow) / 2 : null;
+    const intervalText = hasInterval
+      ? `przedział 95%: od ${formatScore(intervalLow)} do ${formatScore(intervalHigh)}`
+      : "przedział niedostępny";
     return (
       <div className={classes(variant, false)} data-status="published">
-        <p className="score__value">
-          <span className="score__number">{formatScore(score)}</span>
-          {halfWidth !== null ? (
-            <span className="score__pm"> ± {formatDecimal(halfWidth)}</span>
-          ) : null}
-        </p>
-        {variant === "compact" ? (
-          <p className="score__meta">
-            {intervalText} · Kohorta: {formatStudents(cohortSize)} · metodologia {methodologyVersion}
+        <div className="score__lead">
+          <p className="score__value">
+            <span className="score__number">{formatScore(score)}</span>
+            {halfWidth !== null ? <span className="score__pm"> ± {formatDecimal(halfWidth)}</span> : null}
           </p>
-        ) : (
-          <>
-            <p className="score__meta">{intervalText}</p>
+          {variant === "hero" && hasInterval ? (
+            // Decorative picture of the interval: the same two numbers as the text line below, never a scale.
+            <div className="score__range" aria-hidden="true">
+              <span className="score__range-end">{formatScore(intervalLow)}</span>
+              <span className="score__range-bar">
+                <span className="score__range-dot" />
+              </span>
+              <span className="score__range-end">{formatScore(intervalHigh)}</span>
+            </div>
+          ) : null}
+        </div>
+        {variant === "compact" ? (
+          <div className="score__facts">
             <p className="score__meta">
-              Kohorta: {formatStudents(cohortSize)} · metodologia {methodologyVersion}
+              {intervalText} · <CohortLine cohortSize={cohortSize} /> ·{" "}
+              <Link href="/metodologia">wersja {methodologyVersion}</Link>
             </p>
-          </>
+            <SourceLine info={sourceOf(block, provenance)} />
+          </div>
+        ) : (
+          <div className="score__facts">
+            <p className="score__meta score__meta--interval">{intervalText}</p>
+            <p className="score__meta score__meta--cohort">
+              <CohortLine cohortSize={cohortSize} />
+            </p>
+            <MethodologyLine version={methodologyVersion} />
+            <SourceLine info={sourceOf(block, provenance)} />
+          </div>
         )}
-        <SourceLine info={sourceOf(block, provenance)} />
       </div>
     );
   }
@@ -121,12 +154,22 @@ export function ScoreBadge({
     return (
       <div className={`${classes(variant, false)} score--limited`} data-status="limited">
         <p className="score__value">Profil ograniczony: mała grupa uczniów</p>
-        {block ? <p className="score__meta">Kohorta: {formatStudents(block.cohortSize)}</p> : null}
-        <p className="score__meta">Dla tej grupy nie publikujemy wyniku ani miejsca w zestawieniu.</p>
-        {variant !== "compact" ? (
-          <p className="score__meta">Średnie wyniki z przedmiotów i liczba uczniów przy każdym przedmiocie są w tabeli poniżej.</p>
+        {block ? (
+          <p className="score__meta score__meta--cohort">
+            <CohortLine cohortSize={block.cohortSize} />
+          </p>
         ) : null}
-        {version ? <p className="score__meta">metodologia {version}</p> : null}
+        <p className="score__meta score__meta--strong">Dla tej grupy nie publikujemy wyniku ani miejsca w zestawieniu.</p>
+        {variant !== "compact" ? (
+          <>
+            <p className="score__meta">
+              Powód: w tej grupie przystąpiło do egzaminu zbyt mało uczniów, by wynik był wiarygodny. To nie jest ocena
+              szkoły.
+            </p>
+            <p className="score__meta">Średnie wyniki z przedmiotów i liczba uczniów przy każdym przedmiocie są w tabeli poniżej.</p>
+          </>
+        ) : null}
+        {version ? <MethodologyLine version={version} /> : null}
         <SourceLine info={sourceOf(block, provenance)} />
       </div>
     );
@@ -139,9 +182,11 @@ export function ScoreBadge({
       <div className={classes(variant, true)} data-status="insufficient_cohort">
         <p className="score__value">Brak wyniku: zbyt mała grupa</p>
         {cohort !== undefined ? (
-          <p className="score__meta">Kohorta: {formatStudents(cohort)}</p>
+          <p className="score__meta score__meta--cohort">
+            <CohortLine cohortSize={cohort} />
+          </p>
         ) : null}
-        {version ? <p className="score__meta">metodologia {version}</p> : null}
+        {version ? <MethodologyLine version={version} /> : null}
         <p className="score__meta">Brak wyniku nie oznacza zera ani oceny.</p>
         <SourceLine info={sourceOf(block, provenance)} />
       </div>
@@ -153,9 +198,12 @@ export function ScoreBadge({
       <div className={classes(variant, true)} data-status="no_baseline">
         <p className="score__value">Brak wyniku: brak danych porównawczych</p>
         {block ? (
-          <p className="score__meta">
-            Kohorta: {formatStudents(block.cohortSize)} · metodologia {block.methodologyVersion}
-          </p>
+          <>
+            <p className="score__meta score__meta--cohort">
+              <CohortLine cohortSize={block.cohortSize} />
+            </p>
+            <MethodologyLine version={block.methodologyVersion} />
+          </>
         ) : null}
         <SourceLine info={sourceOf(block, provenance)} />
       </div>
@@ -166,8 +214,8 @@ export function ScoreBadge({
   const version = block?.methodologyVersion ?? fallbackMethodologyVersion ?? null;
   return (
     <div className={classes(variant, true)} data-status={status}>
-      <p className="score__value">Brak wyniku: brak danych egzaminacyjnych</p>
-      {version ? <p className="score__meta">metodologia {version}</p> : null}
+      <p className="score__value">Brak wyniku: nie ma danych egzaminacyjnych</p>
+      {version ? <MethodologyLine version={version} /> : null}
       <SourceLine info={sourceOf(block, provenance)} />
     </div>
   );

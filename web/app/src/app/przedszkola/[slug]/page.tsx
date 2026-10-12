@@ -9,8 +9,9 @@ import { asOfLabel } from "@/lib/format";
 import {
   confidenceLabel,
   formatPln,
-  freePlacesLabel,
+  freePlacesValue,
   hoursLabel,
+  sourceLine,
   tuitionLabel,
 } from "@/lib/preschool";
 import { siteOrigin } from "@/lib/site";
@@ -30,14 +31,26 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  if (!isSlug(slug)) return { title: "Przedszkole" };
+  if (!isSlug(slug)) return { title: "Nie znaleziono strony", robots: { index: false } };
   const result = await catalog.preschool(slug);
-  if (!result.ok) return { title: "Przedszkole" };
+  if (!result.ok) {
+    if (result.reason === "not_found") return { title: "Nie znaleziono strony", robots: { index: false } };
+    return { title: "Przedszkole" };
+  }
   const preschool = result.data;
+  const description = `${preschool.name}: lokalizacja, czesne, godziny otwarcia i wolne miejsca, każde ze źródłem i datą.`;
   return {
     title: preschool.name,
-    description: `${preschool.name}: lokalizacja, czesne, godziny otwarcia i wolne miejsca, każde ze źródłem i datą.`,
+    description,
     alternates: { canonical: `/przedszkola/${slug}` },
+    openGraph: {
+      type: "website",
+      locale: "pl_PL",
+      siteName: "Wyszukiwarka szkół",
+      title: `${preschool.name} | Wyszukiwarka szkół`,
+      description,
+      url: `/przedszkola/${slug}`,
+    },
   };
 }
 
@@ -100,6 +113,7 @@ export default async function PreschoolPage({ params }: Props) {
 
       <section aria-labelledby="facts-heading" className="section">
         <h2 id="facts-heading">Opłaty, godziny i wolne miejsca</h2>
+        <FactsSummary facts={preschool.facts} />
         <FactsTable facts={preschool.facts} />
       </section>
 
@@ -129,13 +143,52 @@ export default async function PreschoolPage({ params }: Props) {
   );
 }
 
-/** One row per fact. A null value shows "brak danych"; its source, date and confidence are not shown. */
+/** The three facts a parent asks first, each with its own source and date. Unknown values read "brak danych". */
+function FactsSummary({ facts }: { facts: PreschoolFactsBlock | null }) {
+  if (facts === null) {
+    return <p className="muted">Brak zapisanych danych o opłatach, godzinach i wolnych miejscach.</p>;
+  }
+  const source = facts.source;
+  const tuition = tuitionLabel(facts.monthlyTuition);
+  const hours = hoursLabel(facts.hours);
+  const places = freePlacesValue(facts.freePlaces.count);
+
+  const figures: ReadonlyArray<{
+    readonly key: string;
+    readonly label: string;
+    readonly value: string | null;
+    readonly meta: string | null;
+  }> = [
+    { key: "tuition", label: "Czesne", value: tuition, meta: tuition !== null ? sourceLine(source) : null },
+    { key: "hours", label: "Godziny otwarcia", value: hours, meta: hours !== null ? sourceLine(source) : null },
+    {
+      key: "places",
+      label: "Wolne miejsca",
+      value: places,
+      meta: places !== null ? sourceLine(source, facts.freePlaces.asOf) : null,
+    },
+  ];
+
+  return (
+    <ul className="fact-summary" aria-label="Najważniejsze informacje">
+      {figures.map((figure) => (
+        <li key={figure.key} className="fact-summary__item">
+          <p className="fact-summary__label">{figure.label}</p>
+          <p className="fact-summary__value">{figure.value ?? <span className="muted">{UNKNOWN}</span>}</p>
+          {figure.meta !== null ? <p className="fact-summary__meta">{figure.meta}</p> : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** One row per fact: the detail view. A null value shows "brak danych"; its source, date and confidence are not shown. */
 function FactsTable({ facts }: { facts: PreschoolFactsBlock | null }) {
   const source = facts?.source ?? null;
   const tuition = facts ? tuitionLabel(facts.monthlyTuition) : null;
   const meal = facts?.monthlyMealPln ?? null;
   const hours = facts ? hoursLabel(facts.hours) : null;
-  const places = facts ? freePlacesLabel(facts.freePlaces.count) : null;
+  const places = facts ? freePlacesValue(facts.freePlaces.count) : null;
 
   const rows: ReadonlyArray<{
     readonly key: string;
@@ -155,12 +208,12 @@ function FactsTable({ facts }: { facts: PreschoolFactsBlock | null }) {
   ];
 
   if (facts === null) {
-    return <p className="muted">Brak zapisanych danych o opłatach, godzinach i wolnych miejscach.</p>;
+    return null;
   }
 
   return (
     <div className="table-wrap">
-      <table className="table--stack">
+      <table className="table--stack facts-table">
         <caption className="muted">Każda wartość ma źródło, datę stanu i pewność</caption>
         <thead>
           <tr>
@@ -175,6 +228,9 @@ function FactsTable({ facts }: { facts: PreschoolFactsBlock | null }) {
           {rows.map((row) => {
             const known = row.value !== null;
             const url = source ? safeHttpUrl(source.sourceUrl) : null;
+            // The method repeats the source name for demo rows ("DEMO SEED (synthetic)" / "synthetic"): show it once.
+            const showMethod =
+              source !== null && !source.source.toLowerCase().includes(source.method.toLowerCase());
             return (
               <tr key={row.key}>
                 <th scope="row">{row.label}</th>
@@ -189,14 +245,20 @@ function FactsTable({ facts }: { facts: PreschoolFactsBlock | null }) {
                       ) : (
                         source.source
                       )}
-                      <br />
-                      <span className="muted">{source.method}</span>
+                      {showMethod ? (
+                        <>
+                          <br />
+                          <span className="muted">{source.method}</span>
+                        </>
+                      ) : null}
                     </>
                   ) : (
                     <span className="muted">—</span>
                   )}
                 </td>
-                <td data-label="Stan na">{known ? asOfDate(row.asOf) : <span className="muted">—</span>}</td>
+                <td data-label="Stan na" className="facts-table__date">
+                  {known ? asOfDate(row.asOf) : <span className="muted">—</span>}
+                </td>
                 <td data-label="Pewność">
                   {known && source ? (
                     <span className="badge" data-confidence={source.confidence}>

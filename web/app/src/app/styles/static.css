@@ -49,3 +49,18 @@
 .site-main .measure-block {
   max-width: var(--measure);
 }
+
+/* Page header and notices share the reading measure with the prose below them. */
+.site-main .prose > .page-header,
+.site-main .prose > .notice {
+  max-width: var(--measure);
+}
+
+/* 404: the home button and the suggestion list each get their own space. */
+.site-main .empty-state .actions {
+  margin: var(--space-4) 0 var(--space-5);
+}
+
+.site-main .empty-state nav > p {
+  margin: 0 0 var(--space-2);
+}

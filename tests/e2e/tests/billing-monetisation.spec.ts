@@ -14,7 +14,7 @@ test.describe("monetisation surface", () => {
     await page.goto("/cennik");
 
     await expect(page.getByRole("heading", { level: 1, name: "Cennik" })).toBeVisible();
-    await expect(page.getByText("Czego nie sprzedajemy:")).toBeVisible();
+    await expect(page.getByText("Czego nie sprzedajemy", { exact: true })).toBeVisible();
     await expect(
       page.getByText("Płatny profil nie wpływa na wynik, ranking, kolejność szkoły ani na opinie użytkowników."),
     ).toBeVisible();

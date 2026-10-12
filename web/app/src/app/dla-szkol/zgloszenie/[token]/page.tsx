@@ -81,6 +81,10 @@ export default async function CorrectionStatusPage({ params }: Props) {
         ) : null}
       </dl>
       <p className="muted">Treść zgłoszenia nie jest wyświetlana na tej stronie.</p>
+      <p className="actions">
+        <Link href={`/dla-szkol?slug=${encodeURIComponent(view.schoolSlug)}#korekta`}>Wróć do formularza</Link>
+        <Link href={`/szkoly/${encodeURIComponent(view.schoolSlug)}`}>Profil szkoły</Link>
+      </p>
     </article>
   );
 }

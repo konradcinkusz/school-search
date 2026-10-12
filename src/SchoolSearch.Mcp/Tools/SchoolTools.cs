@@ -67,7 +67,7 @@ public sealed class SchoolTools(CatalogClient catalog)
     }
 
     [McpServerTool(Name = "get_catchment_school")]
-    [Description("Answers which school's catchment (obwód) covers an address, according to the gmina's published resolution. Match 'street_list_match' names the school; 'no_match' means the street is not in the list; 'no_data' means the gmina has no published street list. 'no_data' is NOT a school and must never be turned into a guess from distance. The gmina decides the catchment: always give the resolutionUrl and the disclaimer." + ToolDescriptions.ScoreRules)]
+    [Description("Answers which school's catchment (obwód) covers an address, according to the gmina's published resolution. Match 'street_list_match' names the school; 'no_match' means the street is not in the list; 'no_number_match' means the street is listed but no rule covers the house number; 'no_data' means the gmina has no published street list. 'no_data' is NOT a school and must never be turned into a guess from distance. The gmina decides the catchment: always give the resolutionUrl and the disclaimer." + ToolDescriptions.ScoreRules)]
     public async Task<CallToolResult> GetCatchmentSchool(
         [Description("Gmina TERYT code, 7 digits.")] string gmina,
         [Description("Street name, for example 'ul. Przykładowa'.")] string street,

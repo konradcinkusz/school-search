@@ -1,22 +1,41 @@
 import Link from "next/link";
 import type { PreschoolListItem } from "@/lib/api";
-import { freePlacesLabel, tuitionLabel } from "@/lib/preschool";
+import { freePlacesValue, hoursLabel, sourceLine, tuitionLabel } from "@/lib/preschool";
 
-/** Sentence case for a label that starts a line ("wolne miejsca: 3" becomes "Wolne miejsca: 3"). */
-function sentenceCase(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
+function Fact({ label, value, meta }: { readonly label: string; readonly value: string | null; readonly meta: string | null }) {
+  return (
+    <div className="school-list__fact">
+      <dt>{label}</dt>
+      <dd>
+        <span className="school-list__value">{value ?? <span className="muted">brak danych</span>}</span>
+        {value !== null && meta !== null ? <span className="school-list__source muted">{meta}</span> : null}
+      </dd>
+    </div>
+  );
 }
 
-/** A list of preschools: practical facts only, no score, rank or grade. Names render as text inside a link. */
-export function PreschoolList({ items, emptyText }: { items: readonly PreschoolListItem[]; emptyText: string }) {
+/**
+ * A list of preschools: practical facts only, no score, rank or grade. Names render as text inside a link. Each item
+ * carries its facts with their source and date, so the list makes no request per preschool.
+ */
+export function PreschoolList({
+  items,
+  emptyText,
+}: {
+  readonly items: readonly PreschoolListItem[];
+  readonly emptyText: string;
+}) {
   if (items.length === 0) {
     return <p className="muted">{emptyText}</p>;
   }
   return (
     <ul className="school-list">
       {items.map((preschool) => {
+        const facts = preschool.facts;
         const tuition = tuitionLabel(preschool.monthlyTuition);
-        const places = freePlacesLabel(preschool.freePlacesCount);
+        const places = freePlacesValue(preschool.freePlacesCount);
+        const hours = facts ? hoursLabel(facts.hours) : null;
+        const noSource = facts ? null : "Źródło i data: brak danych";
         return (
           <li key={preschool.slug} className="school-list__item school-list__item--facts card">
             <div>
@@ -29,15 +48,19 @@ export function PreschoolList({ items, emptyText }: { items: readonly PreschoolL
                 {preschool.isPublic ? " · przedszkole publiczne" : " · przedszkole niepubliczne"}
               </p>
             </div>
-            <div className="school-list__facts">
-              <p>
-                Czesne: {tuition ?? <span className="muted">brak danych</span>}
-              </p>
-              <p>
-                {places !== null ? sentenceCase(places) : <span className="muted">Wolne miejsca: brak danych</span>}
-                {places !== null ? <span className="muted"> · stan z profilu</span> : null}
-              </p>
-            </div>
+            <dl className="school-list__facts">
+              <Fact
+                label="Czesne"
+                value={tuition}
+                meta={noSource ?? sourceLine(facts?.source, facts?.source.asOf)}
+              />
+              <Fact
+                label="Wolne miejsca"
+                value={places}
+                meta={noSource ?? sourceLine(facts?.source, facts?.freePlaces.asOf)}
+              />
+              <Fact label="Godziny otwarcia" value={hours} meta={noSource ?? sourceLine(facts?.source)} />
+            </dl>
           </li>
         );
       })}

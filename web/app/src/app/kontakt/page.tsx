@@ -7,18 +7,32 @@ import "../styles/static.css";
 // Single point of contact for authorities and users (DSA art. 11 and 12), read from the Reviews service.
 export const dynamic = "force-dynamic";
 
+const description =
+  "Punkt kontaktowy serwisu dla organów i użytkowników.";
+
 export const metadata: Metadata = {
   title: "Kontakt",
-  description: "Punkt kontaktowy serwisu dla organów i użytkowników.",
+  description,
   alternates: { canonical: "/kontakt" },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Kontakt | Wyszukiwarka szkół",
+    description,
+    url: "/kontakt",
+  },
 };
 
 export default async function ContactPage() {
   const contact = await legalContact();
   return (
     <article className="prose">
-      <h1>Kontakt</h1>
-      <p>Punkt kontaktowy dla organów państwowych i użytkowników serwisu (art. 11 i 12 DSA).</p>
+      <header className="page-header">
+        <p className="eyebrow">Serwis</p>
+        <h1>Kontakt</h1>
+        <p className="lead">Punkt kontaktowy dla organów państwowych i użytkowników serwisu (art. 11 i 12 DSA).</p>
+      </header>
       {contact.ok ? (
         contact.data.email !== null || contact.data.url !== null ? (
           <dl className="facts">
@@ -59,9 +73,20 @@ export default async function ContactPage() {
           </p>
         </>
       )}
-      <p>
-        Zgłoszenia treści składasz przez formularz <a href="/zglos-tresc">Zgłoś treść</a>.
-      </p>
+      <nav aria-label="Powiązane strony">
+        <p>Zobacz też:</p>
+        <ul className="plain-list">
+          <li>
+            <a href="/zglos-tresc">Zgłoś treść</a>
+          </li>
+          <li>
+            <a href="/regulamin">Regulamin</a>
+          </li>
+          <li>
+            <a href="/prywatnosc">Polityka prywatności</a>
+          </li>
+        </ul>
+      </nav>
     </article>
   );
 }

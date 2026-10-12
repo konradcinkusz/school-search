@@ -10,12 +10,13 @@ import { ServiceUnavailable } from "@/components/service-unavailable";
 import { catalog, type GminaItem } from "@/lib/api";
 import { HOUSE_NUMBER_MESSAGE, HOUSE_NUMBER_PATTERN } from "@/lib/house-number";
 import { firstParam, intParam, isTeryt } from "@/lib/validation";
+import "./styles/home.css";
 
 // Data-driven: never prerendered at build time, when the API is not reachable.
 export const dynamic = "force-dynamic";
 
 const HOME_DESCRIPTION =
-  "Wpisz adres, aby zobaczyć obwód szkolny i szkoły w zasięgu wraz z wynikami, ich niepewnością i liczebnością kohort. Nie jest oficjalnym rankingiem.";
+  "Wpisz adres, aby zobaczyć obwód szkolny i szkoły w zasięgu wraz z wynikami, ich niepewnością i liczbą uczniów w grupie porównawczej. Nie jest oficjalnym rankingiem.";
 const HOME_TITLE = "Sprawdź obwód szkolny i szkoły w zasięgu";
 
 const NAME_QUERY_MIN = 2;
@@ -49,6 +50,23 @@ function readSearch(sp: Record<string, string | string[] | undefined>): HomeSear
 }
 
 /** Result-specific titles, so a screen reader hears that the navigation produced a result. */
+/** Every search result on the home page points its canonical at "/", so result URLs do not compete with it. */
+function homeMetadata(title: string): Metadata {
+  return {
+    title,
+    description: HOME_DESCRIPTION,
+    alternates: { canonical: "/" },
+    openGraph: {
+      type: "website",
+      locale: "pl_PL",
+      siteName: "Wyszukiwarka szkół",
+      title: `${title} | Wyszukiwarka szkół`,
+      description: HOME_DESCRIPTION,
+      url: "/",
+    },
+  };
+}
+
 export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
   const search = readSearch(await searchParams);
   if (search.gminaParam && isTeryt(search.gminaParam) && search.street && search.numberValid) {
@@ -56,16 +74,13 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
     const gmina = gminas.ok ? gminas.data.find((item) => item.teryt === search.gminaParam) : undefined;
     if (gmina) {
       const address = search.number ? `${search.street} ${search.number}` : search.street;
-      return {
-        title: `Obwód: ${address}, ${gmina.name ?? "Nieznana gmina"}`,
-        description: HOME_DESCRIPTION,
-      };
+      return homeMetadata(`Obwód: ${address}, ${gmina.name ?? "Nieznana gmina"}`);
     }
   }
   if (search.nameQuery !== undefined && search.nameQuery.length >= NAME_QUERY_MIN) {
-    return { title: `Wyniki wyszukiwania: ${search.nameQuery}`, description: HOME_DESCRIPTION };
+    return homeMetadata(`Wyniki wyszukiwania: ${search.nameQuery}`);
   }
-  return { title: HOME_TITLE, description: HOME_DESCRIPTION };
+  return homeMetadata(HOME_TITLE);
 }
 
 export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
@@ -83,20 +98,29 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
   const focusKey = `${gminaParam ?? ""}|${street ?? ""}|${number ?? ""}|${nameQuery ?? ""}|${page}`;
 
   return (
-    <div>
+    <div className="home">
       <section className="hero" aria-labelledby="home-heading">
+        <HeroArt />
         <div className="hero__inner">
           <div className="hero__intro">
-            <p className="eyebrow">Niezależna wyszukiwarka szkół podstawowych</p>
+            <p className="eyebrow hero__eyebrow">Niezależna wyszukiwarka szkół podstawowych</p>
             <h1 id="home-heading">Znajdź szkołę podstawową dla swojego adresu</h1>
             <p className="hero__lead">
-              Wpisz adres, a zobaczysz obwód szkolny oraz szkoły w zasięgu, z wynikami, ich niepewnością i liczebnością
-              kohort.
+              Wpisz adres, a zobaczysz obwód szkolny oraz szkoły w zasięgu, z wynikami, ich niepewnością i liczbą uczniów,
+              na których je liczymy.
             </p>
           </div>
 
           <div className="hero__panel">
-            <h2>Twój adres</h2>
+            <h2>
+              <span className="hero__panel-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" focusable="false">
+                  <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
+                  <circle cx="12" cy="10" r="2.4" />
+                </svg>
+              </span>
+              Twój adres
+            </h2>
             {gminas.ok ? (
               <AddressForm gminas={gminaList} values={{ gmina: selectedGmina?.teryt, street, number }} />
             ) : (
@@ -119,10 +143,10 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
               </div>
             ) : null}
           </div>
-
-          {hasLookup ? null : <Principles />}
         </div>
       </section>
+
+      {hasLookup ? null : <Principles />}
 
       {selectedGmina && street && numberValid ? (
         <CatchmentPanel gmina={selectedGmina} street={street} number={number} />
@@ -130,10 +154,9 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
       {focusTarget !== undefined ? <FocusOnResults key={focusKey} targetId={focusTarget} /> : null}
 
       <div className="home-grid">
-        <SearchIntentBox />
-
         <section aria-labelledby="name-search-heading" className="card name-search">
           <h2 id="name-search-heading">Szukaj szkoły po nazwie</h2>
+          <p className="muted name-search__hint">Wpisz fragment nazwy, numer szkoły albo miejscowość.</p>
           <form method="get" action="/" className="name-search__form inline-form" role="search">
             <div className="field">
               <label htmlFor="q">Nazwa szkoły</label>
@@ -147,10 +170,16 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
               />
             </div>
             <button type="submit" className="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true" focusable="false">
+                <circle cx="11" cy="11" r="6.5" />
+                <path d="m16 16 4.5 4.5" />
+              </svg>
               Szukaj
             </button>
           </form>
         </section>
+
+        <SearchIntentBox />
       </div>
 
       <NameResults query={nameQuery} page={page} />
@@ -159,6 +188,38 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
         Każdy wynik jest opisany w <Link href="/metodologia">metodologii</Link>. Nie jest oficjalnym rankingiem.
       </p>
     </div>
+  );
+}
+
+/**
+ * Decorative background for the hero: a quiet street grid with one highlighted street, a dashed boundary and an
+ * address marker, the idea of "your address, your catchment area". Hidden from assistive technology.
+ */
+function HeroArt() {
+  return (
+    <svg className="hero__art" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+      <g className="hero__art-streets">
+        <path d="M-40 70 L1240 30" />
+        <path d="M-40 250 L1240 200" />
+        <path d="M-40 470 L1240 430" />
+        <path d="M130 -40 L170 560" />
+        <path d="M470 -40 L500 560" />
+        <path d="M820 -40 L800 560" />
+        <path d="M1080 -40 L1110 560" />
+        <path d="M-40 380 Q300 300 560 390 T1240 330" />
+        <path className="hero__art-minor" d="M-40 160 L1240 115" />
+        <path className="hero__art-minor" d="M-40 360 L1240 315" />
+        <path className="hero__art-minor" d="M300 -40 L330 560" />
+        <path className="hero__art-minor" d="M650 -40 L655 560" />
+        <path className="hero__art-minor" d="M960 -40 L950 560" />
+      </g>
+      <path className="hero__art-zone" d="M560 306 L690 292 L730 362 L700 466 L590 482 L548 404 Z" />
+      <path className="hero__art-route" d="M575 470 L570 424 L628 414" />
+      <g className="hero__art-pin" transform="translate(628 414)">
+        <circle r="18" />
+        <circle className="hero__art-pin-core" r="6.5" />
+      </g>
+    </svg>
   );
 }
 
@@ -172,7 +233,7 @@ function Principles() {
         </svg>
         <span>
           <strong>Wynik zawsze z niepewnością</strong>
-          Przedział 95%, liczebność kohorty i wersja metodologii są przy każdym wyniku.
+          Przedział 95%, liczba uczniów w grupie porównawczej i wersja metodologii są przy każdym wyniku.
         </span>
       </li>
       <li>

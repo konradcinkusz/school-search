@@ -1,16 +1,27 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CorrectionForm } from "@/components/correction-form";
+import { NotSoldList } from "@/components/billing/not-sold-list";
 import "../styles/static.css";
 
 // Reads ?slug= to prefill the form; no data is fetched here.
 export const dynamic = "force-dynamic";
 
+const description =
+  "Profil rozszerzony dla szkół: co można kupić, a czego nie. Płatność nie wpływa na wynik, ranking ani opinie. Zgłoś korektę danych szkoły.";
+
 export const metadata: Metadata = {
   title: "Dla szkół",
-  description:
-    "Profil rozszerzony dla szkół: co można kupić, a czego nie. Płatność nie wpływa na wynik, ranking ani opinie. Zgłoś korektę danych szkoły.",
+  description,
   alternates: { canonical: "/dla-szkol" },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Dla szkół | Wyszukiwarka szkół",
+    description,
+    url: "/dla-szkol",
+  },
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -23,6 +34,7 @@ export default async function ForSchoolsPage({ searchParams }: { searchParams: S
   return (
     <article className="prose">
       <header className="page-header">
+        <p className="eyebrow">Korekty danych</p>
         <h1>Dla szkół</h1>
         <p className="lead">
           Jeśli prowadzisz szkołę albo widzisz błędne dane o szkole, możesz zgłosić korektę. Każde zgłoszenie zostanie
@@ -55,12 +67,14 @@ export default async function ForSchoolsPage({ searchParams }: { searchParams: S
       </p>
 
       <h3>Czego nie sprzedajemy</h3>
-      <ul className="checklist checklist--no">
-        <li>Wyniku szkoły, pozycji w rankingu ani kolejności wyników.</li>
-        <li>Usuwania, ograniczania ani ukrywania opinii i danych o szkole.</li>
-        <li>Odznak „najlepsza”, „zweryfikowana” czy podobnych. Potwierdzenie przedstawiciela przez redakcję nie jest do kupienia.</li>
-        <li>Wpływu płatności na listy, porównania, sortowanie wyników i opinie użytkowników.</li>
-      </ul>
+      <NotSoldList
+        items={[
+          "Wyniku szkoły, pozycji w rankingu ani kolejności wyników.",
+          "Usuwania, ograniczania ani ukrywania opinii i danych o szkole.",
+          "Odznak „najlepsza”, „zweryfikowana” czy podobnych. Potwierdzenie przedstawiciela przez redakcję nie jest do kupienia.",
+          "Wpływu płatności na listy, porównania, sortowanie wyników i opinie użytkowników.",
+        ]}
+      />
 
       <h2 id="korekta">Zgłoszenie korekty</h2>
       <div className="card form-card">

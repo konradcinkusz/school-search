@@ -14,11 +14,21 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 20;
 
+const description =
+  "Przedszkola: lokalizacja, czesne, godziny otwarcia i wolne miejsca, każde ze źródłem i datą. Przedszkola nie mają wyniku jakości.";
+
 export const metadata: Metadata = {
   title: "Przedszkola",
-  description:
-    "Przedszkola: lokalizacja, czesne, godziny otwarcia i wolne miejsca, każde ze źródłem i datą. Przedszkola nie mają wyniku jakości.",
+  description,
   alternates: { canonical: "/przedszkola" },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Przedszkola | Wyszukiwarka szkół",
+    description,
+    url: "/przedszkola",
+  },
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -65,6 +75,7 @@ export default async function PreschoolsPage({ searchParams }: { searchParams: S
   return (
     <section>
       <header className="page-header">
+        <p className="eyebrow">Lokalizacja, czesne, wolne miejsca</p>
         <h1>Przedszkola</h1>
         <p className="lead">
           Nie porównujemy przedszkoli według jakości. Pokazujemy praktyczne informacje: lokalizację, czesne, godziny

@@ -1,30 +1,118 @@
 /* School profile only (imported from app/szkoly/[slug]/page.tsx). Scoped under .site-main to win over globals.css. */
 
-/* Cards in the result row share one height, so the AI card does not end early. */
-.site-main .profile-grid {
-  align-items: stretch;
+/* The result card leads. With a published score the AI explanation sits beside it on wide screens; without one the
+   result card has the row to itself. */
+.site-main .profile-grid--result {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
 }
 
-/* Trend chart on phone: a wider drawing with larger labels, and a visible edge that says the box scrolls. */
+@media (min-width: 60rem) {
+  .site-main .profile-grid--result:has(> .ai-explain) {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+    align-items: stretch;
+  }
+}
+
+.site-main .result-card {
+  box-shadow: var(--shadow);
+}
+
+.site-main .result-card > h2 {
+  font-size: var(--text-2xl);
+}
+
+/* The provenance version line and the correction prompt close the page quietly. */
+.site-main .correction-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.site-main .correction-cta > p {
+  margin: 0;
+}
+
+.site-main .correction-cta .actions {
+  margin: 0;
+}
+
+/* Trend chart: value labels keep a surface halo so no gridline or whisker runs through a number, and the dot is a
+   solid data point, not a hollow ring. */
+.site-main .trend__dot {
+  r: 4.5px;
+  fill: var(--color-score);
+  stroke: var(--color-surface);
+  stroke-width: 2;
+}
+
+.site-main .trend__value {
+  paint-order: stroke;
+  stroke: var(--color-surface);
+  stroke-width: 6px;
+  stroke-linejoin: round;
+}
+
+/* Phone: two or three years are drawn to the full width at a readable size. Only longer series scroll sideways. */
 @media (max-width: 39.99rem) {
-  .site-main .trend__svg {
-    min-width: 36rem;
-  }
-
-  .site-main .trend__text,
-  .site-main .trend__value {
-    font-size: 20px;
-  }
-
-  .site-main .trend__note {
-    font-size: 18px;
-  }
-
-  .site-main .trend__tick {
-    font-size: 17px;
-  }
-
   .site-main .trend__scroll {
-    box-shadow: var(--shadow-scroll-edge);
+    background: var(--color-surface);
   }
+
+  .site-main .trend__scroll--wide {
+    background:
+      linear-gradient(to right, transparent calc(100% - 24px), var(--color-surface-sunken)) scroll 0 0 / 100% 100% no-repeat,
+      var(--color-surface);
+  }
+
+  .site-main .trend__scroll:not(.trend__scroll--wide) .trend__svg {
+    min-width: 0;
+  }
+
+  .site-main .trend__scroll:not(.trend__scroll--wide) .trend__text,
+  .site-main .trend__scroll:not(.trend__scroll--wide) .trend__value {
+    font-size: 30px;
+  }
+
+  .site-main .trend__scroll:not(.trend__scroll--wide) .trend__tick {
+    font-size: 26px;
+  }
+
+  .site-main .trend__scroll:not(.trend__scroll--wide) .trend__note {
+    font-size: 22px;
+  }
+
+  /* Provenance and other stacked tables: links keep a 44px tap target. */
+  .site-main .table--stack td a,
+  .site-main .table--stack td[data-label="Źródło"] a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap);
+  }
+
+  /* Stacked cohort table: numbers sit next to their label, not at the far edge of the card. */
+  .site-main .table--stack td.num {
+    text-align: left;
+    justify-content: flex-start;
+  }
+}
+
+/* Trend table at tablet width: the interval gets its own line and cells are a little tighter, so the five columns fit
+   the container from 40rem without scrolling sideways. */
+@media (min-width: 40rem) and (max-width: 59.99rem) {
+  .site-main .trend-table .trend__interval {
+    display: block;
+  }
+
+  .site-main .trend-table th,
+  .site-main .trend-table td {
+    padding-inline: var(--space-3);
+  }
+}
+
+/* Limited and suppressed states: the AI note under the trend section reads as a plain line, not a card. */
+.site-main .explain-off {
+  margin-top: var(--space-3);
 }

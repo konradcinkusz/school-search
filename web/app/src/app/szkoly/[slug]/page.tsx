@@ -65,20 +65,32 @@ const STATUS_LABEL: Record<ScoreStatus, string> = {
   published: "wynik opublikowany",
   limited: "profil ograniczony: mała grupa, bez wyniku i miejsca",
   insufficient_cohort: "brak wyniku: zbyt mała grupa",
-  no_exam_data: "brak danych egzaminacyjnych",
+  no_exam_data: "nie ma danych egzaminacyjnych",
   no_baseline: "brak danych porównawczych",
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  if (!isSlug(slug)) return { title: "Szkoła" };
+  if (!isSlug(slug)) return { title: "Nie znaleziono strony", robots: { index: false } };
   const result = await catalog.school(slug);
-  if (!result.ok) return { title: "Szkoła" };
+  if (!result.ok) {
+    if (result.reason === "not_found") return { title: "Nie znaleziono strony", robots: { index: false } };
+    return { title: "Szkoła" };
+  }
   const school = result.data;
+  const description = `Profil szkoły ${school.name}: wynik z przedziałem, liczba uczniów w grupie porównawczej, źródła i metodologia. Nie jest oficjalnym rankingiem.`;
   return {
     title: school.name,
-    description: `Profil szkoły ${school.name}: wynik z przedziałem, liczebność kohorty, źródła i metodologia. Nie jest oficjalnym rankingiem.`,
+    description,
     alternates: { canonical: `/szkoly/${slug}` },
+    openGraph: {
+      type: "website",
+      locale: "pl_PL",
+      siteName: "Wyszukiwarka szkół",
+      title: `${school.name} | Wyszukiwarka szkół`,
+      description,
+      url: `/szkoly/${slug}`,
+    },
   };
 }
 
@@ -130,15 +142,23 @@ export default async function SchoolPage({ params, searchParams }: Props) {
         ) : null}
         <p className="school-actions">
           <Link href={`/ranking/gmina:${school.gminaTeryt}`} className="button button--secondary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false">
+              <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />
+            </svg>
             Ranking w gminie
           </Link>
           <Link href={`/porownaj?s=${encodeURIComponent(school.slug)}`} className="button button--secondary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+              <rect x="3.5" y="5" width="7" height="14" rx="1.5" />
+              <rect x="13.5" y="5" width="7" height="14" rx="1.5" />
+            </svg>
             Dodaj do porównania
           </Link>
         </p>
       </header>
 
-      <div className="profile-grid">
+      {/* One column: the result is the only card in its row. The AI explanation sits below it, full width. */}
+      <div className="profile-grid profile-grid--result">
         <section aria-labelledby="result-heading" className="card result-card">
           <h2 id="result-heading">Wynik</h2>
           <ScoreBadge
@@ -148,27 +168,30 @@ export default async function SchoolPage({ params, searchParams }: Props) {
             provenance={scoreProvenance}
             variant="hero"
           />
-          <p className="score-explainer">
-            Wskaźnik pokazuje, jak wynik egzaminów szkoły różni się od średniej krajowej, z uwzględnieniem udziału
-            uczniów, którzy przystąpili do egzaminu. Nie jest oficjalnym rankingiem i nie ocenia nauczycieli ani
-            uczniów. Zasady są w <Link href="/metodologia">metodologii</Link>.
-          </p>
+          {school.scoreStatus === "published" ? (
+            <p className="score-explainer">
+              Wskaźnik pokazuje, jak wynik egzaminów szkoły różni się od średniej krajowej, z uwzględnieniem udziału
+              uczniów, którzy przystąpili do egzaminu. Nie jest oficjalnym rankingiem i nie ocenia nauczycieli ani
+              uczniów. Zasady są w <Link href="/metodologia">metodologii</Link>.
+            </p>
+          ) : (
+            <p className="score-explainer">
+              Wynik jest liczony tylko wtedy, gdy w egzaminach przystąpiło wystarczająco dużo uczniów. Zasady są w{" "}
+              <Link href="/metodologia">metodologii</Link>.
+            </p>
+          )}
         </section>
 
-        {school.scoreStatus === "published" ? (
-          <ExplainPanel slug={school.slug} />
-        ) : (
-          <section aria-labelledby="explain-off-heading" className="card">
-            <h2 id="explain-off-heading">Wyjaśnienie wyniku</h2>
-            <p className="muted">Wyjaśnienie AI jest dostępne, gdy szkoła ma opublikowany wynik.</p>
-          </section>
-        )}
+        {school.scoreStatus === "published" ? <ExplainPanel slug={school.slug} /> : null}
       </div>
 
       <section aria-labelledby="trend-heading" className="section">
         <h2 id="trend-heading">Wyniki w kolejnych latach</h2>
         <TrendChart points={school.trend} />
         <TrendTable trend={school.trend} />
+        {school.scoreStatus === "published" ? null : (
+          <p className="muted explain-off">Wyjaśnienie AI jest dostępne, gdy szkoła ma opublikowany wynik.</p>
+        )}
       </section>
 
       <section aria-labelledby="cohorts-heading" className="section">
@@ -219,14 +242,14 @@ export default async function SchoolPage({ params, searchParams }: Props) {
         <section aria-labelledby="faith-heading" className="card">
           <h2 id="faith-heading">Charakter wyznaniowy</h2>
           <p>
-            {school.faith.derived
-              ? "Ustalone pośrednio: wyprowadzone z organu prowadzącego, nie z nazwy szkoły."
-              : "Nie wyprowadzono z nazwy szkoły."}{" "}
+            {school.faith.derived ? "Ustalone pośrednio na podstawie organu prowadzącego, nie nazwy szkoły. " : null}
             {school.faith.declared === true
               ? "Szkoła deklaruje charakter wyznaniowy."
               : school.faith.declared === false
                 ? "Szkoła deklaruje brak charakteru wyznaniowego."
-                : "Brak deklaracji szkoły."}
+                : school.faith.derived
+                  ? null
+                  : "Szkoła nie zadeklarowała charakteru wyznaniowego."}
           </p>
           {school.faith.note ? <p className="muted">{school.faith.note}</p> : null}
         </section>
@@ -243,7 +266,9 @@ export default async function SchoolPage({ params, searchParams }: Props) {
       <SponsoredProfile slug={school.slug} />
 
       <div className="notice correction-cta" role="note">
-        <p>Widzisz błąd w danych tej szkoły?</p>
+        <p>
+          <strong>Widzisz błąd w danych tej szkoły?</strong>
+        </p>
         <p className="actions">
           <Link className="button button--secondary" href={`/dla-szkol?slug=${encodeURIComponent(school.slug)}`}>
             Zgłoś błąd w danych
@@ -281,7 +306,7 @@ function TrendTable({ trend }: { trend: readonly TrendPoint[] }) {
   const rows = [...trend].sort((a, b) => a.examYear - b.examYear);
   return (
     <div className="table-wrap">
-      <table className="table--stack">
+      <table className="table--stack trend-table">
         <caption className="muted">Wyniki i statusy według roku egzaminu</caption>
         <thead>
           <tr>
@@ -304,7 +329,7 @@ function TrendTable({ trend }: { trend: readonly TrendPoint[] }) {
                   <>
                     {formatScore(row.score.score)}
                     {row.score.intervalLow !== null && row.score.intervalHigh !== null ? (
-                      <span className="muted">
+                      <span className="muted trend__interval">
                         {" "}
                         (od {formatScore(row.score.intervalLow)} do {formatScore(row.score.intervalHigh)})
                       </span>
@@ -313,7 +338,7 @@ function TrendTable({ trend }: { trend: readonly TrendPoint[] }) {
                     <span className="muted">{formatStudents(row.score.cohortSize)}</span>
                   </>
                 ) : (
-                  <span className="muted">brak wyniku</span>
+                  <span className="muted">nie dotyczy</span>
                 )}
               </td>
               <td data-label="Pokrycie">

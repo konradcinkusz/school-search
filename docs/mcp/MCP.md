@@ -86,8 +86,8 @@ Looks up the catchment (obwód) for a street in a gmina. Maps to `GET /api/v1/ca
 | `street` | string | yes | Street name. Matching is normalised (case and diacritics). |
 | `number` | string | no | House number, for streets where the number decides. |
 
-The response has `coverage` (`state`, `resolutionUrl`, `resolutionDate`), `match` (`street_list_match`, `no_match` or
-`no_data`), `schools` and a `disclaimer`. `no_data` means the gmina has no catchment data. It is **not** a school and
+The response has `coverage` (`state`, `resolutionUrl`, `resolutionDate`), `match` (`street_list_match`, `no_number_match`, `no_match` or
+`no_data`), `schools` and a `disclaimer`. `no_number_match` means the street is on the list but no rule covers the house number; `no_match` means the street is not on the list. `no_data` means the gmina has no catchment data. It is **not** a school and
 the tool never invents one. The gmina decides the catchment; the resolution link is in the response.
 
 ### compare_schools
@@ -122,8 +122,9 @@ description and the docs URL. Maps to `GET /api/v1/methodology`. No arguments.
 ### find_preschools
 
 Finds preschools (przedszkola). Maps to `GET /api/v1/preschools`. **Preschools have no quality score** (ADR-0014).
-The reply carries practical facts only, and each fact has its source, as-of date and confidence. No argument
-sorts or filters by a score.
+The reply carries practical facts only, and each fact has its source, as-of date and confidence. Each list item
+carries `facts`: the same block `get_preschool` returns (null when no facts row exists), so the source and date of
+the tuition, free places and opening hours come with the list. No argument sorts or filters by a score.
 
 | Argument | Type | Required | Meaning |
 |---|---|---|---|

@@ -11,11 +11,21 @@ import { firstParam, parseSlugList } from "@/lib/validation";
 // Data-driven: rendered per request.
 export const dynamic = "force-dynamic";
 
+const description =
+  "Porównanie 2 do 4 szkół obok siebie: wynik z przedziałem, liczba uczniów w grupie porównawczej i wersja metodologii. Nie jest oficjalnym rankingiem.";
+
 export const metadata: Metadata = {
   title: "Porównaj szkoły",
-  description:
-    "Porównanie 2 do 4 szkół obok siebie: wynik z przedziałem, liczebność kohorty i wersja metodologii. Nie jest oficjalnym rankingiem.",
+  description,
   alternates: { canonical: "/porownaj" },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Porównaj szkoły | Wyszukiwarka szkół",
+    description,
+    url: "/porownaj",
+  },
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -28,10 +38,11 @@ export default async function ComparePage({ searchParams }: { searchParams: Sear
   return (
     <section>
       <header className="page-header">
+        <p className="eyebrow">Od 2 do 4 szkół obok siebie</p>
         <h1>Porównaj szkoły</h1>
         <p className="lead">
-          Porównujesz od 2 do 4 szkół obok siebie. Każda pozycja ma wynik z przedziałem, liczebność kohorty i wersję
-          metodologii.
+          Porównujesz od 2 do 4 szkół obok siebie. Każda pozycja ma wynik z przedziałem, liczbę uczniów w grupie
+          porównawczej i wersję metodologii.
         </p>
       </header>
 
@@ -90,6 +101,8 @@ async function CompareResults({ slugs }: { slugs: string[] }) {
   const items: readonly SchoolProfile[] = result.data.items;
   const versions = new Set(items.map((item) => item.methodologyVersion));
   const sameVersion = versions.size <= 1;
+  // Removing a school is a link to the same page without its ID. Two schools is the minimum, so none is removed then.
+  const canRemove = items.length > 2;
 
   return (
     <>
@@ -102,6 +115,28 @@ async function CompareResults({ slugs }: { slugs: string[] }) {
           Wybrane szkoły mają wyniki z różnych wersji metodologii. Nie porównujemy takich wyników bezpośrednio.
         </div>
       ) : null}
+      <ul className="compare-chips" aria-label="Wybrane szkoły">
+        {items.map((school) => {
+          const others = items.filter((item) => item.slug !== school.slug).map((item) => item.slug);
+          return (
+            <li key={school.slug} className="compare-chip">
+              <span>{school.name}</span>
+              {canRemove ? (
+                <Link
+                  href={`/porownaj?slugs=${others.map(encodeURIComponent).join(",")}`}
+                  className="compare-chip__remove"
+                  aria-label={`Usuń z porównania: ${school.name}`}
+                >
+                  ×
+                </Link>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      <p id="compare-caption" className="muted">
+        Porównanie szkół: te same cechy dla każdej szkoły.
+      </p>
       <p className="compare-scroll-hint muted">Przesuń tabelę w bok, aby zobaczyć wszystkie szkoły.</p>
       <div className="compare-scroll">
         <div
@@ -110,8 +145,7 @@ async function CompareResults({ slugs }: { slugs: string[] }) {
           aria-label="Tabela porównania (przewiń w bok na małym ekranie)"
           tabIndex={0}
         >
-          <table className="table--sticky table--compare">
-            <caption>Porównanie szkół: te same cechy dla każdej szkoły</caption>
+          <table className="table--sticky table--compare" aria-describedby="compare-caption">
             <thead>
               <tr>
                 <th scope="col">Cecha</th>
@@ -123,21 +157,6 @@ async function CompareResults({ slugs }: { slugs: string[] }) {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <th scope="row">Gmina</th>
-                {items.map((school) => (
-                  <td key={school.slug}>{school.gminaName ?? `TERYT ${school.gminaTeryt}`}</td>
-                ))}
-              </tr>
-              <tr>
-                <th scope="row">Rodzaj szkoły</th>
-                {items.map((school) => (
-                  <td key={school.slug}>
-                    {school.isPublic ? "publiczna" : "niepubliczna"}
-                    {school.isSpecial ? ", specjalna" : ""}
-                  </td>
-                ))}
-              </tr>
               <tr>
                 <th scope="row">Wynik z przedziałem</th>
                 {items.map((school) => (
@@ -152,7 +171,7 @@ async function CompareResults({ slugs }: { slugs: string[] }) {
                 ))}
               </tr>
               <tr>
-                <th scope="row">Liczebność kohorty</th>
+                <th scope="row">Liczba uczniów w grupie porównawczej</th>
                 {items.map((school) => (
                   <td key={school.slug}>
                     {school.score ? formatStudents(school.score.cohortSize) : "brak danych"}
@@ -163,6 +182,21 @@ async function CompareResults({ slugs }: { slugs: string[] }) {
                 <th scope="row">Rok egzaminu</th>
                 {items.map((school) => (
                   <td key={school.slug}>{school.score ? school.score.examYear : "brak danych"}</td>
+                ))}
+              </tr>
+              <tr>
+                <th scope="row">Gmina</th>
+                {items.map((school) => (
+                  <td key={school.slug}>{school.gminaName ?? `TERYT ${school.gminaTeryt}`}</td>
+                ))}
+              </tr>
+              <tr>
+                <th scope="row">Rodzaj szkoły</th>
+                {items.map((school) => (
+                  <td key={school.slug}>
+                    {school.isPublic ? "publiczna" : "niepubliczna"}
+                    {school.isSpecial ? ", specjalna" : ""}
+                  </td>
                 ))}
               </tr>
               <tr>
@@ -186,9 +220,7 @@ async function CompareResults({ slugs }: { slugs: string[] }) {
           </table>
         </div>
       </div>
-      <p className="muted">
-        Wersja metodologii: {[...versions].join(", ") || "brak"}. Wynik nie jest oficjalnym rankingiem.
-      </p>
+      <p className="muted">Wynik nie jest oficjalnym rankingiem.</p>
     </>
   );
 }

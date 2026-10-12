@@ -13,7 +13,8 @@ namespace SchoolSearch.Api.Catchment;
 /// <summary>
 /// GET /api/v1/catchment?gmina=&lt;TERYT&gt;&amp;street=&amp;number=. Answers "which school's catchment (obwód) covers
 /// this address according to the gmina's published resolution". It never derives a boundary from distance:
-/// without a street list for the gmina the answer is <c>no_data</c>.
+/// without a street list for the gmina the answer is <c>no_data</c>. A listed street whose rules do not cover the
+/// house number is <c>no_number_match</c>; a street that is not listed at all is <c>no_match</c>.
 /// </summary>
 public static class CatchmentEndpoints
 {
@@ -26,6 +27,7 @@ public static class CatchmentEndpoints
 
     internal const string MatchStreetListMatch = "street_list_match";
     internal const string MatchNoMatch = "no_match";
+    internal const string MatchNoNumberMatch = "no_number_match";
     internal const string MatchNoData = "no_data";
 
     private const int MaxStreetLength = 200;
@@ -124,7 +126,12 @@ public static class CatchmentEndpoints
         }
 
         var items = await ToItemsAsync(schools, scores, ct);
-        var match = items.Count > 0 ? MatchStreetListMatch : MatchNoMatch;
+
+        // The street is on the list but no rule covers this number: no_number_match. An unknown street, or a
+        // rule that covers the number but whose school is not public, stays no_match.
+        var match = items.Count > 0 ? MatchStreetListMatch
+            : rows.Count > 0 && schoolIds.Count == 0 ? MatchNoNumberMatch
+            : MatchNoMatch;
 
         return TypedResults.Ok(new CatchmentResponse(gminaTeryt, coverageDto, match, items, Disclaimer));
     }

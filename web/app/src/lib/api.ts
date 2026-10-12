@@ -150,7 +150,7 @@ export interface CatchmentResponse {
     readonly resolutionUrl: string | null;
     readonly resolutionDate: string | null;
   };
-  readonly match: "street_list_match" | "no_match" | "no_data";
+  readonly match: "street_list_match" | "no_match" | "no_number_match" | "no_data";
   readonly schools: readonly SchoolListItem[];
   readonly disclaimer: string;
 }
@@ -226,6 +226,8 @@ export interface PreschoolListItem {
   readonly distanceKm: number | null;
   readonly monthlyTuition: MoneyRange;
   readonly freePlacesCount: number | null;
+  /** Same block as the profile's facts, with source, date and confidence. Null when no facts row exists. */
+  readonly facts: PreschoolFactsBlock | null;
 }
 
 export interface PreschoolProfile {

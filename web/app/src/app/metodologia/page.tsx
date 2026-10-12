@@ -2,16 +2,27 @@ import type { Metadata } from "next";
 import { catalog, type Methodology } from "@/lib/api";
 import { formatPercent } from "@/lib/format";
 import { MethodologyQa } from "@/components/ai/methodology-qa";
+import { NotSoldList } from "@/components/billing/not-sold-list";
 import "../styles/static.css";
 
 // Live values come from /api/v1/methodology per request; the fallback is the documented 1.0.0 set.
 export const dynamic = "force-dynamic";
 
+const description =
+  "Jak liczymy wyniki szkół: wynik z przedziałem, wskaźnik udziału w egzaminie, próg liczebności i znane ograniczenia. Nie jest oficjalnym rankingiem.";
+
 export const metadata: Metadata = {
   title: "Metodologia",
-  description:
-    "Jak liczymy wyniki szkół: wynik z przedziałem, wskaźnik pokrycia kohorty, próg liczebności i znane ograniczenia. Nie jest oficjalnym rankingiem.",
+  description,
   alternates: { canonical: "/metodologia" },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Metodologia | Wyszukiwarka szkół",
+    description,
+    url: "/metodologia",
+  },
 };
 
 /** Fallback when the API cannot be reached. Matches docs/methodology/RANKING-METHODOLOGY.md (1.0.0). */
@@ -38,6 +49,7 @@ export default async function MethodologyPage() {
   return (
     <article className="prose">
       <header className="page-header">
+        <p className="eyebrow">Jak liczymy</p>
         <h1>Metodologia</h1>
         <p className="lead">Jak liczymy i pokazujemy wyniki szkół, czego nie mierzą i jakie mają ograniczenia.</p>
       </header>
@@ -66,7 +78,7 @@ export default async function MethodologyPage() {
               <a href="#skladowe">Składowe wyniku</a>
             </li>
             <li>
-              <a href="#pokrycie">Wskaźnik kontrolny: pokrycie kohorty</a>
+              <a href="#pokrycie">Wskaźnik kontrolny: udział w egzaminie</a>
             </li>
             <li>
               <a href="#ograniczenia">Znane ograniczenia i obciążenia</a>
@@ -77,10 +89,11 @@ export default async function MethodologyPage() {
             <li>
               <a href="#korekty">Korekty i kontakt</a>
             </li>
+            <li>
+              <a href="#pytania">Zapytaj o metodologię</a>
+            </li>
           </ul>
         </nav>
-
-        <MethodologyQa />
       </div>
 
       <h2 id="czym-jest">Czym jest ta strona</h2>
@@ -94,14 +107,14 @@ export default async function MethodologyPage() {
       <p>Każdy wynik szkoły występuje zawsze razem z poziomem pewności. Każdy wynik zawiera:</p>
       <ul>
         <li>wartość wyniku, czyli wskaźnik wartości dodanej opisany poniżej,</li>
-        <li>liczebność kohorty, czyli liczbę uczniów, na której wynik został obliczony,</li>
+        <li>grupa porównawcza (kohorta), czyli liczba uczniów, na której wynik został obliczony,</li>
         <li>przedział niepewności 95%,</li>
         <li>wersję metodologii, według której wynik został policzony,</li>
         <li>datę danych (stan na dzień) oraz źródło.</li>
       </ul>
       <p>
-        Wynik publikujemy od <strong>{m.publicationThreshold}</strong> uczniów w kohorcie. Poniżej tego progu wyniku nie
-        pokazujemy: zamiast liczby pojawia się informacja o zbyt małej kohorcie. Brak wyniku nie oznacza zera ani gorszej
+        Wynik publikujemy od <strong>{m.publicationThreshold}</strong> uczniów w grupie porównawczej. Poniżej tego progu
+        wyniku nie pokazujemy: zamiast liczby pojawia się informacja o zbyt małej grupie porównawczej. Brak wyniku nie oznacza zera ani gorszej
         oceny. Próg liczebności jest zapisany w jednym miejscu, a jego uzasadnienie jest opublikowane razem z wersją
         metodologii.
       </p>
@@ -113,11 +126,11 @@ export default async function MethodologyPage() {
         niepewności 95% liczymy ze współczynnikiem z = <strong>{intervalZLabel(m.intervalZ)}</strong>.
       </p>
 
-      <h2 id="pokrycie">Wskaźnik kontrolny: pokrycie kohorty</h2>
+      <h2 id="pokrycie">Wskaźnik kontrolny: udział w egzaminie</h2>
       <p>
         Wynik egzaminu może być zawyżony, jeśli szkoła przystępuje do egzaminu tylko część uczniów albo zmienia się
         skład przystępujących. Dlatego wynik uwzględnia udział uczniów rocznika, którzy przystąpili do egzaminu. Wskaźnik
-        jest wplatany w składową egzaminacyjną, a nie pokazywany obok jako osobna odznaka. Poniżej pokrycia{" "}
+        jest wplatany w składową egzaminacyjną, a nie pokazywany obok jako osobna odznaka. Poniżej udziału{" "}
         <strong>{formatPercent(m.coverageFloor * 100)}</strong> wynik jest proporcjonalnie obniżany, nawet jeśli średnia
         rośnie.
       </p>
@@ -133,12 +146,12 @@ export default async function MethodologyPage() {
           porównywalne. Nie korygujemy tego w wersji {version}.
         </li>
         <li>
-          <strong>Selekcja do egzaminu.</strong> Nawet z wskaźnikiem pokrycia część zniekształceń pozostaje, zwłaszcza w
-          małych kohortach.
+          <strong>Selekcja do egzaminu.</strong> Nawet ze wskaźnikiem udziału w egzaminie część zniekształceń pozostaje, zwłaszcza w
+          małych grupach porównawczych.
         </li>
         <li>
           <strong>Jeden rok danych.</strong> Pojedynczy rok bywa przypadkowy. Wyniki czytamy razem z poziomem pewności i
-          kohortą.
+          liczbą uczniów w grupie porównawczej.
         </li>
         <li>
           <strong>Obwód a wybór szkoły.</strong> Obwód szkolny nie zawsze odpowiada temu, co rodzic faktycznie wybiera.
@@ -151,18 +164,24 @@ export default async function MethodologyPage() {
       </ul>
 
       <h2 id="czego-nie-robimy">Czego nie robimy</h2>
-      <ul>
-        <li>Nie publikujemy nazwisk uczniów ani danych umożliwiających ich identyfikację.</li>
-        <li>Nie oceniamy na podstawie pochodzenia ani narodowości uczniów.</li>
-        <li>Nie przyjmujemy opłat za pozycję w wynikach. Wynik nie jest do kupienia.</li>
-        <li>Nie pobieramy danych z serwisów konkurencyjnych.</li>
-      </ul>
+      <NotSoldList
+        items={[
+          "Nie publikujemy nazwisk uczniów ani danych umożliwiających ich identyfikację.",
+          "Nie oceniamy na podstawie pochodzenia ani narodowości uczniów.",
+          "Nie przyjmujemy opłat za pozycję w wynikach. Wynik nie jest do kupienia.",
+          "Nie pobieramy danych z serwisów konkurencyjnych.",
+        ]}
+      />
 
       <h2 id="korekty">Korekty i kontakt</h2>
       <p>
         Jeżeli dane dotyczące szkoły są błędne, szkoła lub każdy inny zainteresowany może zgłosić korektę na{" "}
         <a href="/dla-szkol">stronie dla szkół</a>. Zgłoszenia są sprawdzane, a zmiany opisywane w historii wersji.
       </p>
+
+      <div id="pytania" className="measure-block">
+        <MethodologyQa />
+      </div>
     </article>
   );
 }

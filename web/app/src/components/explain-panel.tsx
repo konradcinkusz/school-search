@@ -221,7 +221,7 @@ function ExplanationOutput({ data }: { readonly data: ExplainResponse }) {
         {/* Plain text: React escapes it. Line breaks are kept by CSS (white-space: pre-line). */}
         <p className="ai-box__text">{data.text}</p>
         <p className="muted ai-box__meta">
-          Model {data.model} · rok egzaminu {data.examYear} · metodologia {data.methodologyVersion}
+          Model {data.model} · rok egzaminu {data.examYear} · wersja metodologii {data.methodologyVersion}
           {generated ? ` · wygenerowano ${generated}` : ""}
           {data.cached ? " · z pamięci podręcznej" : ""}
         </p>

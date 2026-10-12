@@ -2,18 +2,33 @@ import type { Metadata } from "next";
 import "../styles/static.css";
 
 // DRAFT privacy notice. Working text for legal review, not legal advice (SPEC-E).
+const description =
+  "Jakie dane zbiera serwis, po co i jak długo. Projekt do weryfikacji przez prawnika.";
+
 export const metadata: Metadata = {
   title: "Prywatność",
-  description: "Jakie dane zbiera serwis, po co i jak długo. Projekt do weryfikacji przez prawnika.",
+  description,
   alternates: { canonical: "/prywatnosc" },
   // Draft text: kept out of search results until the owner and a lawyer approve it.
   robots: { index: false, follow: true },
+  openGraph: {
+    type: "website",
+    locale: "pl_PL",
+    siteName: "Wyszukiwarka szkół",
+    title: "Prywatność | Wyszukiwarka szkół",
+    description,
+    url: "/prywatnosc",
+  },
 };
 
 export default function PrivacyPage() {
   return (
     <article className="prose">
-      <h1>Polityka prywatności</h1>
+      <header className="page-header">
+        <p className="eyebrow">Informacje prawne</p>
+        <h1>Polityka prywatności</h1>
+        <p className="lead">Jakie dane zbiera serwis i po co je wykorzystuje.</p>
+      </header>
       <div className="notice" role="note">
         <strong>Projekt do weryfikacji przez prawnika.</strong> Ten tekst jest roboczą wersją i nie jest poradą prawną.
       </div>
