@@ -49,8 +49,13 @@ export function MethodologyQa() {
   }
 
   return (
-    <section className="card ai-explain" aria-labelledby={ids.heading}>
-      <h2 id={ids.heading}>Zapytaj o metodologię</h2>
+    <section className="card ai-explain ai-panel" aria-labelledby={ids.heading}>
+      <div className="ai-panel__head">
+        <h2 id={ids.heading}>Zapytaj o metodologię</h2>
+        <span className="badge badge--ai" aria-hidden="true">
+          AI
+        </span>
+      </div>
       <p className="muted">
         Asystent odpowiada wyłącznie na podstawie tego dokumentu. Nie odpowiada o konkretne szkoły ani o to, która szkoła
         jest lepsza.

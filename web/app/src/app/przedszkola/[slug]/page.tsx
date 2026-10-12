@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import "@/app/styles/lists.css";
 import { PreschoolJsonLd } from "@/components/preschool-jsonld";
 import { ServiceUnavailable } from "@/components/service-unavailable";
 import { catalog, type GoverningBody, type PreschoolFactsBlock } from "@/lib/api";
@@ -19,6 +20,11 @@ import { isSlug, safeHttpUrl } from "@/lib/validation";
 export const dynamic = "force-dynamic";
 
 const UNKNOWN = "brak danych";
+
+/** The date alone: the column header already says "Stan na". */
+function asOfDate(iso: string | null | undefined): string {
+  return asOfLabel(iso).replace(/^stan na /, "");
+}
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -57,42 +63,52 @@ export default async function PreschoolPage({ params }: Props) {
 
   return (
     <article>
-      <header>
+      <header className="profile-header">
+        <p className="eyebrow">Profil przedszkola</p>
         <h1>{preschool.name}</h1>
-        <p className="muted">
-          {gminaLabel ?? "Gmina: brak danych"} · {preschool.isPublic ? "przedszkole publiczne" : "przedszkole niepubliczne"}
-        </p>
+        <ul className="meta-row" aria-label="Podstawowe informacje">
+          <li>
+            <span className="badge">{gminaLabel ?? "Gmina: brak danych"}</span>
+          </li>
+          <li>
+            <span className="badge">{preschool.isPublic ? "przedszkole publiczne" : "przedszkole niepubliczne"}</span>
+          </li>
+        </ul>
         {preschool.gminaTeryt ? (
           <p className="school-actions">
-            <Link href={`/przedszkola?gmina=${encodeURIComponent(preschool.gminaTeryt)}`}>
+            <Link
+              href={`/przedszkola?gmina=${encodeURIComponent(preschool.gminaTeryt)}`}
+              className="button button--secondary"
+            >
               Przedszkola w tej gminie
             </Link>
-            {" · "}
-            <Link href="/przedszkola">Wszystkie przedszkola</Link>
+            <Link href="/przedszkola" className="button button--secondary">
+              Wszystkie przedszkola
+            </Link>
           </p>
         ) : null}
       </header>
 
-      <div className="notice" role="note">
+      <div className="notice notice--caution" role="note">
         {preschool.notice}
       </div>
 
-      <section aria-labelledby="address-heading">
+      <section aria-labelledby="address-heading" className="section">
         <h2 id="address-heading">Adres</h2>
         <p>{address !== "" ? address : <span className="muted">{UNKNOWN}</span>}</p>
       </section>
 
-      <section aria-labelledby="facts-heading">
+      <section aria-labelledby="facts-heading" className="section">
         <h2 id="facts-heading">Opłaty, godziny i wolne miejsca</h2>
         <FactsTable facts={preschool.facts} />
       </section>
 
-      <section aria-labelledby="body-heading">
+      <section aria-labelledby="body-heading" className="section">
         <h2 id="body-heading">Organ prowadzący</h2>
         <GoverningBodyNote body={preschool.governingBody} />
       </section>
 
-      <section aria-labelledby="corrections-heading">
+      <section aria-labelledby="corrections-heading" className="section">
         <h2 id="corrections-heading">Korekty danych</h2>
         <p className="muted">
           Formularz korekt jest obecnie dla szkół podstawowych. Korekty danych przedszkoli nie są jeszcze przyjmowane
@@ -144,7 +160,7 @@ function FactsTable({ facts }: { facts: PreschoolFactsBlock | null }) {
 
   return (
     <div className="table-wrap">
-      <table>
+      <table className="table--stack">
         <caption className="muted">Każda wartość ma źródło, datę stanu i pewność</caption>
         <thead>
           <tr>
@@ -162,8 +178,8 @@ function FactsTable({ facts }: { facts: PreschoolFactsBlock | null }) {
             return (
               <tr key={row.key}>
                 <th scope="row">{row.label}</th>
-                <td>{known ? row.value : <span className="muted">{UNKNOWN}</span>}</td>
-                <td>
+                <td data-label="Wartość">{known ? row.value : <span className="muted">{UNKNOWN}</span>}</td>
+                <td data-label="Źródło">
                   {known && source ? (
                     <>
                       {url ? (
@@ -180,8 +196,8 @@ function FactsTable({ facts }: { facts: PreschoolFactsBlock | null }) {
                     <span className="muted">—</span>
                   )}
                 </td>
-                <td>{known ? asOfLabel(row.asOf) : <span className="muted">—</span>}</td>
-                <td>
+                <td data-label="Stan na">{known ? asOfDate(row.asOf) : <span className="muted">—</span>}</td>
+                <td data-label="Pewność">
                   {known && source ? (
                     <span className="badge" data-confidence={source.confidence}>
                       {confidenceLabel(source.confidence)}

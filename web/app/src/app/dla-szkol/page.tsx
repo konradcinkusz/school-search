@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CorrectionForm } from "@/components/correction-form";
+import "../styles/static.css";
 
 // Reads ?slug= to prefill the form; no data is fetched here.
 export const dynamic = "force-dynamic";
@@ -20,13 +21,15 @@ export default async function ForSchoolsPage({ searchParams }: { searchParams: S
   const slug = raw !== undefined && /^[a-z0-9-]{1,120}$/.test(raw) ? raw : undefined;
 
   return (
-    <article>
-      <h1>Dla szkół</h1>
-      <p>
-        Jeśli prowadzisz szkołę albo widzisz błędne dane o szkole, możesz zgłosić korektę. Każde zgłoszenie zostanie
-        sprawdzone, a zmiana zapisana w historii wersji.
-      </p>
-      <div className="notice" role="note">
+    <article className="prose">
+      <header className="page-header">
+        <h1>Dla szkół</h1>
+        <p className="lead">
+          Jeśli prowadzisz szkołę albo widzisz błędne dane o szkole, możesz zgłosić korektę. Każde zgłoszenie zostanie
+          sprawdzone, a zmiana zapisana w historii wersji.
+        </p>
+      </header>
+      <div className="notice notice--caution" role="note">
         <strong>Pozycja szkoły nie jest do kupienia.</strong> Płatność nie wpływa na wynik, kolejność ani sposób
         prezentacji szkoły.
       </div>
@@ -52,15 +55,17 @@ export default async function ForSchoolsPage({ searchParams }: { searchParams: S
       </p>
 
       <h3>Czego nie sprzedajemy</h3>
-      <ul>
+      <ul className="checklist checklist--no">
         <li>Wyniku szkoły, pozycji w rankingu ani kolejności wyników.</li>
         <li>Usuwania, ograniczania ani ukrywania opinii i danych o szkole.</li>
         <li>Odznak „najlepsza”, „zweryfikowana” czy podobnych. Potwierdzenie przedstawiciela przez redakcję nie jest do kupienia.</li>
         <li>Wpływu płatności na listy, porównania, sortowanie wyników i opinie użytkowników.</li>
       </ul>
 
-      <h2>Zgłoszenie korekty</h2>
-      <CorrectionForm initialSlug={slug} />
+      <h2 id="korekta">Zgłoszenie korekty</h2>
+      <div className="card form-card">
+        <CorrectionForm initialSlug={slug} />
+      </div>
     </article>
   );
 }

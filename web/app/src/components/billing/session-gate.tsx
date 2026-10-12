@@ -40,9 +40,15 @@ export function SessionGate({
   if (gate === "loading") return <p className="muted">Sprawdzanie logowania…</p>;
   if (gate === "unavailable") {
     return (
-      <p className="notice" role="alert">
-        Konta są chwilowo niedostępne.
-      </p>
+      <div className="notice notice--caution" role="status">
+        <p>
+          <strong>Konta są chwilowo niedostępne.</strong> Zarządzanie profilem szkoły wymaga konta. Przeglądanie szkół i
+          wyników działa bez konta.
+        </p>
+        <p className="actions">
+          <Link href="/">Wróć do wyszukiwarki</Link>
+        </p>
+      </div>
     );
   }
   if (gate === "anonymous") {

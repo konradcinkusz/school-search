@@ -101,8 +101,13 @@ export function SearchIntentBox() {
   const link = draft !== null ? resultsHref(draft) : null;
 
   return (
-    <section className="card ai-search" aria-labelledby={ids.heading}>
-      <h2 id={ids.heading}>Opisz czego szukasz</h2>
+    <section className="card ai-search ai-panel" aria-labelledby={ids.heading}>
+      <div className="ai-panel__head">
+        <h2 id={ids.heading}>Opisz czego szukasz</h2>
+        <span className="badge badge--ai" aria-hidden="true">
+          AI
+        </span>
+      </div>
       <p className="muted">
         Napisz zwykłymi słowami, na przykład „szkoła podstawowa w gminie Przykładowo, z oddziałem sportowym”. AI tylko
         przygotuje filtry, które możesz poprawić. Portal nie ocenia szkół ani nie układa ich według jakości.
@@ -219,7 +224,7 @@ export function SearchIntentBox() {
             </ul>
           ) : null}
 
-          <p>
+          <p className="actions">
             <Link href={link.href} className="button">
               Pokaż wyniki z tymi filtrami
             </Link>

@@ -3,6 +3,7 @@ import { ServiceUnavailable } from "@/components/service-unavailable";
 import { INTERVAL_LABEL } from "@/components/billing/billing-messages";
 import { listPlans } from "@/lib/billing";
 import { formatDecimal } from "@/lib/format";
+import "../styles/static.css";
 
 // Plans come from the Billing service configuration at request time; nothing about prices is written here.
 export const dynamic = "force-dynamic";
@@ -18,14 +19,16 @@ export default async function PricingPage() {
   const result = await listPlans();
 
   return (
-    <article>
-      <h1>Cennik</h1>
-      <p>
-        Profil rozszerzony to płatna, oznaczona jako sponsorowana treść przygotowana przez przedstawiciela szkoły oraz
-        formularz kontaktu dla rodziców. Wynik szkoły pozostaje taki sam, niezależnie od tego, czy szkoła ma profil.
-      </p>
+    <article className="prose">
+      <header className="page-header">
+        <h1>Cennik</h1>
+        <p className="lead">
+          Profil rozszerzony to płatna, oznaczona jako sponsorowana treść przygotowana przez przedstawiciela szkoły oraz
+          formularz kontaktu dla rodziców. Wynik szkoły pozostaje taki sam, niezależnie od tego, czy szkoła ma profil.
+        </p>
+      </header>
 
-      <div className="notice" role="note">
+      <div className="notice notice--caution" role="note">
         <p>
           <strong>Czego nie sprzedajemy:</strong>
         </p>
@@ -45,7 +48,13 @@ export default async function PricingPage() {
           Płatne profile są chwilowo niedostępne.
         </p>
       ) : !result.ok ? (
-        <ServiceUnavailable what="cennik" />
+        <>
+          <ServiceUnavailable what="cennik" />
+          <p className="actions">
+            <a href="/cennik">Odśwież stronę</a>
+            <a href="/dla-szkol">Dla szkół</a>
+          </p>
+        </>
       ) : result.data.plans.length === 0 ? (
         <p className="muted">{result.data.note ?? "Cennik w przygotowaniu."}</p>
       ) : (
@@ -67,8 +76,9 @@ export default async function PricingPage() {
         </ul>
       )}
 
-      {result.ok && result.data.mode === "mock" ? (
-        <p className="notice" role="note">
+      {/* Shown only when plans exist: with no plans the page already says that sales are not open yet. */}
+      {result.ok && result.data.mode === "mock" && result.data.plans.length > 0 ? (
+        <p className="notice notice--caution" role="note">
           <strong>Sprzedaż działa w trybie testowym.</strong> Żadna płatność nie zostanie pobrana.
         </p>
       ) : null}

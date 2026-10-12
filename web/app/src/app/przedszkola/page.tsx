@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "@/app/styles/lists.css";
 import { PreschoolFilters } from "@/components/preschool-filters";
 import { PreschoolList } from "@/components/preschool-list";
 import { Pagination } from "@/components/pagination";
@@ -56,16 +57,20 @@ export default async function PreschoolsPage({ searchParams }: { searchParams: S
 
   return (
     <section>
-      <h1>Przedszkola</h1>
-      <p>
-        Nie porównujemy przedszkoli według jakości. Pokazujemy praktyczne informacje: lokalizację, czesne, godziny
-        otwarcia i wolne miejsca. Każda wartość ma źródło i datę.
-      </p>
+      <header className="page-header">
+        <h1>Przedszkola</h1>
+        <p className="lead">
+          Nie porównujemy przedszkoli według jakości. Pokazujemy praktyczne informacje: lokalizację, czesne, godziny
+          otwarcia i wolne miejsca. Każda wartość ma źródło i datę.
+        </p>
+      </header>
 
-      <PreschoolFilters
-        gminas={gminaList}
-        values={{ gmina, q, maxTuition: maxTuitionRaw, publicOnly, hasFreePlaces }}
-      />
+      <div className="card filters">
+        <PreschoolFilters
+          gminas={gminaList}
+          values={{ gmina, q, maxTuition: maxTuitionRaw, publicOnly, hasFreePlaces }}
+        />
+      </div>
 
       {maxTuitionRaw !== undefined && maxTuition === null ? (
         <div className="notice" role="alert">
@@ -83,7 +88,7 @@ export default async function PreschoolsPage({ searchParams }: { searchParams: S
         )
       ) : (
         <>
-          <p className="muted">Znaleziono: {formatInteger(result.data.total)}</p>
+          <p className="result-count">Znaleziono: {formatInteger(result.data.total)}</p>
           <PreschoolList items={result.data.items} emptyText="Brak przedszkoli spełniających te kryteria." />
           <Pagination
             page={result.data.page}

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { OwnerSchoolPanel } from "@/components/billing/owner-school";
 import { OwnerRepliesPanel } from "@/components/reviews/owner-replies";
 import { isSlug } from "@/lib/validation";
+import "../../../styles/static.css";
 
 // Client-driven owner area. Access is re-checked by the Billing service on every call.
 export const dynamic = "force-dynamic";

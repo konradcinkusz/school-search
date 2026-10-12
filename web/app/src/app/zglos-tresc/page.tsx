@@ -3,6 +3,7 @@ import Link from "next/link";
 import { NoticeForm } from "@/components/reviews/notice-form";
 import { NoticeStatus } from "@/components/reviews/notice-status";
 import { isSlug } from "@/lib/validation";
+import "../styles/static.css";
 
 // Notice-and-action intake (DSA art. 16). Reads the optional ?slug= and ?review= prefill only.
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ export default async function ReportPage({ searchParams }: { searchParams: Searc
   const initialReference = slug !== undefined ? `/szkoly/${slug}${reviewId ? `#opinie` : ""}` : "";
 
   return (
-    <article>
+    <article className="prose">
       <h1>Zgłoś treść</h1>
       <p>
         Zgłoszenie dotyczy treści na tym serwisie, na przykład opinii, które naruszają prawo lub{" "}
@@ -41,12 +42,16 @@ export default async function ReportPage({ searchParams }: { searchParams: Searc
         <p className="muted">Zgłaszasz konkretną opinię. Jej numer zostanie dołączony do zgłoszenia.</p>
       ) : null}
       <h2>Nowe zgłoszenie</h2>
-      <NoticeForm initialReference={initialReference} reviewId={reviewId} />
+      <div className="card form-card">
+        <NoticeForm initialReference={initialReference} reviewId={reviewId} />
+      </div>
       <h2>Sprawdź status zgłoszenia</h2>
       <p className="muted">
         Potrzebny jest numer zgłoszenia i token potwierdzenia, które pokazaliśmy po wysłaniu.
       </p>
-      <NoticeStatus />
+      <div className="card form-card">
+        <NoticeStatus />
+      </div>
       <p className="muted">
         Kontakt w sprawach serwisu: <Link href="/kontakt">punkt kontaktowy</Link>.
       </p>

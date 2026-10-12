@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
+import "../styles/static.css";
 
 // DRAFT privacy notice. Working text for legal review, not legal advice (SPEC-E).
 export const metadata: Metadata = {
   title: "Prywatność",
   description: "Jakie dane zbiera serwis, po co i jak długo. Projekt do weryfikacji przez prawnika.",
   alternates: { canonical: "/prywatnosc" },
+  // Draft text: kept out of search results until the owner and a lawyer approve it.
+  robots: { index: false, follow: true },
 };
 
 export default function PrivacyPage() {
   return (
-    <article>
+    <article className="prose">
       <h1>Polityka prywatności</h1>
       <div className="notice" role="note">
         <strong>Projekt do weryfikacji przez prawnika.</strong> Ten tekst jest roboczą wersją i nie jest poradą prawną.
@@ -40,7 +43,9 @@ export default function PrivacyPage() {
       </p>
 
       <h2>Okres przechowywania</h2>
-      <p>[do uzupełnienia przez właściciela serwisu i prawnika].</p>
+      <p className="notice notice--caution" role="note">
+        [do uzupełnienia przez właściciela serwisu i prawnika].
+      </p>
 
       <h2>Twoje prawa</h2>
       <p>

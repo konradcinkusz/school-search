@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { legalTerms } from "@/lib/reviews";
+import "../styles/static.css";
 
 // DRAFT terms. The text is a working draft for legal review and is not legal advice (SPEC-E).
 export const dynamic = "force-dynamic";
@@ -8,19 +9,21 @@ export const metadata: Metadata = {
   title: "Regulamin",
   description: "Regulamin kont i opinii w wyszukiwarce szkół. Projekt do weryfikacji przez prawnika.",
   alternates: { canonical: "/regulamin" },
+  // Draft text: kept out of search results until the owner and a lawyer approve it.
+  robots: { index: false, follow: true },
 };
 
 export default async function TermsPage() {
   const terms = await legalTerms();
   const version = terms.ok ? terms.data.version : null;
   return (
-    <article>
+    <article className="prose">
       <h1>Regulamin</h1>
       <div className="notice" role="note">
         <strong>Projekt do weryfikacji przez prawnika.</strong> Ten tekst jest roboczą wersją i nie jest poradą prawną.
       </div>
       <p className="muted">
-        Wersja regulaminu: {version ?? "niedostępna (usługa opinii jest chwilowo niedostępna)"}
+        Wersja regulaminu: {version ?? "chwilowo niedostępna. Spróbuj ponownie później."}
       </p>
 
       <h2>1. Zakres</h2>
@@ -59,7 +62,9 @@ export default async function TermsPage() {
       <p>
         Punkt kontaktowy jest opisany na stronie <a href="/kontakt">Kontakt</a>.
       </p>
-      <p className="muted">Ostatnia aktualizacja: [do uzupełnienia przez właściciela serwisu].</p>
+      <p className="notice notice--caution" role="note">
+        Ostatnia aktualizacja: [do uzupełnienia przez właściciela serwisu].
+      </p>
     </article>
   );
 }

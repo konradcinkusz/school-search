@@ -1,0 +1,30 @@
+/* School profile only (imported from app/szkoly/[slug]/page.tsx). Scoped under .site-main to win over globals.css. */
+
+/* Cards in the result row share one height, so the AI card does not end early. */
+.site-main .profile-grid {
+  align-items: stretch;
+}
+
+/* Trend chart on phone: a wider drawing with larger labels, and a visible edge that says the box scrolls. */
+@media (max-width: 39.99rem) {
+  .site-main .trend__svg {
+    min-width: 36rem;
+  }
+
+  .site-main .trend__text,
+  .site-main .trend__value {
+    font-size: 20px;
+  }
+
+  .site-main .trend__note {
+    font-size: 18px;
+  }
+
+  .site-main .trend__tick {
+    font-size: 17px;
+  }
+
+  .site-main .trend__scroll {
+    box-shadow: inset -14px 0 12px -12px rgb(0 0 0 / 0.35);
+  }
+}

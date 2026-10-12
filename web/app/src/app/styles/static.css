@@ -1,0 +1,51 @@
+/*
+ * Static page patterns for the pages owned by the UI fixer (metodologia, dla-szkol, cennik, kontakt, regulamin,
+ * prywatnosc, zglos-tresc, doradca, konto). Imported from those pages only. Every selector is scoped to .site-main
+ * so it wins over globals.css without editing it.
+ */
+
+/* Table of contents: 44px tap targets (globals.css sets 36px). */
+.site-main .toc a {
+  min-height: var(--tap);
+}
+
+/* Plain inline links in running text: a 44px hit area without changing the line box (WCAG 2.5.8 exempts running text,
+   but these are the only links a reader can reach on a phone). Links with classes (buttons, nav) are not touched. */
+.site-main .prose p > a:not([class]),
+.site-main .prose li:not(.toc li) > a:not([class]) {
+  padding-block: 12px;
+  margin-block: -12px;
+}
+
+/* Checkbox rows: a 24px box centred on the 44px label row. */
+.site-main .field--check {
+  align-items: center;
+}
+
+.site-main .field--check > input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+}
+
+.site-main .field--check > input {
+  margin-top: 0;
+}
+
+/* Definition lists: label and value share a baseline in the two-column layout. */
+@media (min-width: 36rem) {
+  .site-main .facts {
+    align-items: baseline;
+  }
+}
+
+/* Long text measure: the AI disclaimer box stops at the reading measure instead of spanning the whole container. */
+.site-main .notice--ai {
+  max-width: calc(var(--measure) + 2 * var(--space-4));
+}
+
+/* Reading column for the methodology page: the TOC and the question box share the prose measure. */
+.site-main .measure-block {
+  max-width: var(--measure);
+}

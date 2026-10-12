@@ -37,9 +37,10 @@ export async function CatchmentPanel({ gmina, street, number }: CatchmentPanelPr
   const catchmentSlugs = new Set(catchmentSchools.map((school) => school.slug));
 
   return (
-    <section className="card" aria-labelledby="catchment-heading" aria-live="polite">
+    <section className="card catchment" aria-labelledby="catchment-heading" aria-live="polite">
+      <p className="eyebrow">Sprawdzony adres</p>
       <h2 id="catchment-heading">Obwód szkolny</h2>
-      <p>
+      <p className="catchment__address">
         Adres: <strong>{addressLine(street, number)}</strong>, {gmina.name ?? `TERYT ${gmina.teryt}`}
       </p>
 
@@ -52,16 +53,18 @@ export async function CatchmentPanel({ gmina, street, number }: CatchmentPanelPr
       {data.match === "street_list_match" ? (
         <>
           <h3>Szkoła obwodowa</h3>
-          <SchoolList items={catchmentSchools} emptyText="Brak szkoły przypisanej do tej ulicy w danych." />
+          <div className="catchment__school">
+            <SchoolList items={catchmentSchools} emptyText="Brak szkoły przypisanej do tej ulicy w danych." />
+          </div>
         </>
       ) : null}
       {data.match === "no_match" ? (
-        <div className="notice" role="note">
+        <div className="notice notice--caution" role="note">
           Nie znaleźliśmy tej ulicy na liście obwodów tej gminy. Sprawdź pisownię nazwy ulicy albo uchwałę gminy.
         </div>
       ) : null}
       {data.match === "no_data" ? (
-        <div className="notice" role="note">
+        <div className="notice notice--caution" role="note">
           Ta gmina nie ma w serwisie danych o obwodach. Obwód ustala gmina. Nie wyznaczamy go na podstawie odległości.
         </div>
       ) : null}
@@ -74,8 +77,10 @@ export async function CatchmentPanel({ gmina, street, number }: CatchmentPanelPr
         anchor={data.match === "street_list_match" ? anchor ?? null : null}
         excludeSlugs={catchmentSlugs}
       />
-      <p>
-        <Link href={`/ranking/gmina:${gmina.teryt}`}>Ranking szkół w tej gminie</Link>
+      <p className="actions">
+        <Link href={`/ranking/gmina:${gmina.teryt}`} className="button button--secondary">
+          Ranking szkół w tej gminie
+        </Link>
       </p>
     </section>
   );

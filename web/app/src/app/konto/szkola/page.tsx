@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClaimsOverview } from "@/components/billing/owner-claims";
 import { SessionGate } from "@/components/billing/session-gate";
+import "../../styles/static.css";
 
 // Client-driven: the session and the claims are read through the BFF on the client.
 export const dynamic = "force-dynamic";

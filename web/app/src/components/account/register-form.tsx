@@ -10,7 +10,7 @@ import { bffRequest, errorCodeOf, errorListOf, errorMessageOf, isUnavailable } f
  * boolean acceptance. Passwords are never stored by this application.
  */
 export function RegisterForm() {
-  const ids = { email: useId(), password: useId(), accept: useId() };
+  const ids = { email: useId(), password: useId(), passwordHint: useId(), accept: useId() };
   const router = useRouter();
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState<{ kind: "error" | "info"; text: string; details: string[] } | null>(null);
@@ -65,13 +65,30 @@ export function RegisterForm() {
 
   return (
     <form onSubmit={onSubmit} noValidate>
+      <p className="field-hint">Pola oznaczone * są wymagane.</p>
       <div className="field">
-        <label htmlFor={ids.email}>Adres e-mail</label>
+        <label htmlFor={ids.email}>
+          Adres e-mail<span aria-hidden="true"> *</span>
+        </label>
         <input id={ids.email} name="email" type="email" autoComplete="email" maxLength={200} required />
       </div>
       <div className="field">
-        <label htmlFor={ids.password}>Hasło (od 8 do 100 znaków, wielka i mała litera, cyfra i znak)</label>
-        <input id={ids.password} name="password" type="password" autoComplete="new-password" minLength={8} maxLength={100} required />
+        <label htmlFor={ids.password}>
+          Hasło<span aria-hidden="true"> *</span>
+        </label>
+        <input
+          id={ids.password}
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          minLength={8}
+          maxLength={100}
+          required
+          aria-describedby={ids.passwordHint}
+        />
+        <p id={ids.passwordHint} className="field-hint">
+          Od 8 do 100 znaków.
+        </p>
       </div>
       <div className="field field--check">
         <input id={ids.accept} name="acceptTerms" type="checkbox" required />
