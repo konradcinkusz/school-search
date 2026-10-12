@@ -15,7 +15,7 @@ export interface PreschoolFilterValues {
 export function PreschoolFilters({ gminas, values }: { gminas: readonly GminaItem[]; values: PreschoolFilterValues }) {
   const sorted = [...gminas].sort((a, b) => (a.name ?? a.teryt).localeCompare(b.name ?? b.teryt, "pl"));
   return (
-    <form method="get" action="/przedszkola" className="address-form">
+    <form method="get" action="/przedszkola" className="form-grid form-grid--filters">
       <div className="field">
         <label htmlFor="pre-gmina">Gmina</label>
         <select id="pre-gmina" name="gmina" defaultValue={values.gmina ?? ""}>
@@ -50,20 +50,20 @@ export function PreschoolFilters({ gminas, values }: { gminas: readonly GminaIte
           defaultValue={values.maxTuition ?? ""}
         />
       </div>
-      <div className="field">
-        <label>
+      <div className="form-grid__full filters__checks">
+        <label className="check-label">
           <input type="checkbox" name="publicOnly" value="true" defaultChecked={values.publicOnly} /> Tylko publiczne
         </label>
-      </div>
-      <div className="field">
-        <label>
+        <label className="check-label">
           <input type="checkbox" name="hasFreePlaces" value="true" defaultChecked={values.hasFreePlaces} /> Są wolne
           miejsca
         </label>
       </div>
-      <button type="submit" className="button">
-        Szukaj przedszkoli
-      </button>
+      <div className="form-grid__actions">
+        <button type="submit" className="button">
+          Szukaj przedszkoli
+        </button>
+      </div>
     </form>
   );
 }

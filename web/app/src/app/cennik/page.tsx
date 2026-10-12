@@ -18,14 +18,16 @@ export default async function PricingPage() {
   const result = await listPlans();
 
   return (
-    <article>
-      <h1>Cennik</h1>
-      <p>
-        Profil rozszerzony to płatna, oznaczona jako sponsorowana treść przygotowana przez przedstawiciela szkoły oraz
-        formularz kontaktu dla rodziców. Wynik szkoły pozostaje taki sam, niezależnie od tego, czy szkoła ma profil.
-      </p>
+    <article className="prose">
+      <header className="page-header">
+        <h1>Cennik</h1>
+        <p className="lead">
+          Profil rozszerzony to płatna, oznaczona jako sponsorowana treść przygotowana przez przedstawiciela szkoły oraz
+          formularz kontaktu dla rodziców. Wynik szkoły pozostaje taki sam, niezależnie od tego, czy szkoła ma profil.
+        </p>
+      </header>
 
-      <div className="notice" role="note">
+      <div className="notice notice--caution" role="note">
         <p>
           <strong>Czego nie sprzedajemy:</strong>
         </p>
@@ -68,7 +70,7 @@ export default async function PricingPage() {
       )}
 
       {result.ok && result.data.mode === "mock" ? (
-        <p className="notice" role="note">
+        <p className="notice notice--caution" role="note">
           <strong>Sprzedaż działa w trybie testowym.</strong> Żadna płatność nie zostanie pobrana.
         </p>
       ) : null}

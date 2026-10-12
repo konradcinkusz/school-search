@@ -25,30 +25,34 @@ export default async function ComparePage({ searchParams }: { searchParams: Sear
 
   return (
     <section>
-      <h1>Porównaj szkoły</h1>
-      <p>
-        Porównujesz od 2 do 4 szkół obok siebie. Każda pozycja ma wynik z przedziałem, liczebność kohorty i wersję
-        metodologii.
-      </p>
+      <header className="page-header">
+        <h1>Porównaj szkoły</h1>
+        <p className="lead">
+          Porównujesz od 2 do 4 szkół obok siebie. Każda pozycja ma wynik z przedziałem, liczebność kohorty i wersję
+          metodologii.
+        </p>
+      </header>
 
-      <form method="get" action="/porownaj" className="address-form">
-        <div className="field">
-          <label htmlFor="slugs">Identyfikatory szkół (slug), oddzielone przecinkami</label>
-          <input
-            id="slugs"
-            name="slugs"
-            type="text"
-            placeholder="np. szkola-podstawowa-nr-1-warszawa,szkola-podstawowa-nr-2-warszawa"
-            defaultValue={raw ?? ""}
-          />
-        </div>
-        <button type="submit" className="button">
-          Porównaj
-        </button>
-      </form>
-      <p className="muted">
-        Identyfikator szkoły znajdziesz w adresie jej profilu. Na profilu jest też przycisk „Dodaj do porównania”.
-      </p>
+      <div className="card">
+        <form method="get" action="/porownaj" className="inline-form">
+          <div className="field">
+            <label htmlFor="slugs">Identyfikatory szkół (slug), oddzielone przecinkami</label>
+            <input
+              id="slugs"
+              name="slugs"
+              type="text"
+              placeholder="np. szkola-podstawowa-nr-1-warszawa,szkola-podstawowa-nr-2-warszawa"
+              defaultValue={raw ?? ""}
+            />
+          </div>
+          <button type="submit" className="button">
+            Porównaj
+          </button>
+        </form>
+        <p className="muted field-hint compare-hint">
+          Identyfikator szkoły znajdziesz w adresie jej profilu. Na profilu jest też przycisk „Dodaj do porównania”.
+        </p>
+      </div>
 
       {raw !== undefined && slugs === null ? (
         <div className="notice" role="alert">
@@ -78,12 +82,12 @@ async function CompareResults({ slugs }: { slugs: string[] }) {
   return (
     <>
       {!sameVersion ? (
-        <div className="notice" role="alert">
+        <div className="notice notice--caution" role="alert">
           Wybrane szkoły mają wyniki z różnych wersji metodologii. Nie porównujemy takich wyników bezpośrednio.
         </div>
       ) : null}
-      <div className="table-wrap">
-        <table>
+      <div className="table-wrap" role="region" aria-label="Tabela porównania (przewiń w bok na małym ekranie)" tabIndex={0}>
+        <table className="table--sticky table--compare">
           <caption>Porównanie szkół: te same cechy dla każdej szkoły</caption>
           <thead>
             <tr>
@@ -119,6 +123,7 @@ async function CompareResults({ slugs }: { slugs: string[] }) {
                     status={school.scoreStatus}
                     block={school.score}
                     fallbackMethodologyVersion={school.methodologyVersion}
+                    variant="compact"
                   />
                 </td>
               ))}

@@ -14,21 +14,25 @@ export function PreschoolList({ items, emptyText }: { items: readonly PreschoolL
         const places = freePlacesLabel(preschool.freePlacesCount);
         return (
           <li key={preschool.slug} className="school-list__item card">
-            <h3 className="school-list__name">
-              <Link href={`/przedszkola/${preschool.slug}`}>{preschool.name}</Link>
-            </h3>
-            <p className="muted">
-              {preschool.gminaName ??
-                (preschool.gminaTeryt ? `Gmina TERYT ${preschool.gminaTeryt}` : "Gmina: brak danych")}
-              {preschool.isPublic ? " · przedszkole publiczne" : " · przedszkole niepubliczne"}
-            </p>
-            <p>
-              Czesne: {tuition ?? <span className="muted">brak danych</span>}
-            </p>
-            <p>
-              {places ?? <span className="muted">Wolne miejsca: brak danych</span>}
-              {places !== null ? <span className="muted"> · data stanu w profilu</span> : null}
-            </p>
+            <div>
+              <h3 className="school-list__name">
+                <Link href={`/przedszkola/${preschool.slug}`}>{preschool.name}</Link>
+              </h3>
+              <p className="muted school-list__meta">
+                {preschool.gminaName ??
+                  (preschool.gminaTeryt ? `Gmina TERYT ${preschool.gminaTeryt}` : "Gmina: brak danych")}
+                {preschool.isPublic ? " · przedszkole publiczne" : " · przedszkole niepubliczne"}
+              </p>
+            </div>
+            <div className="school-list__facts">
+              <p>
+                Czesne: {tuition ?? <span className="muted">brak danych</span>}
+              </p>
+              <p>
+                {places ?? <span className="muted">Wolne miejsca: brak danych</span>}
+                {places !== null ? <span className="muted"> · data stanu w profilu</span> : null}
+              </p>
+            </div>
           </li>
         );
       })}

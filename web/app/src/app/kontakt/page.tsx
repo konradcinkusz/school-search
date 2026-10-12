@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default async function ContactPage() {
   const contact = await legalContact();
   return (
-    <article>
+    <article className="prose">
       <h1>Kontakt</h1>
       <p>Punkt kontaktowy dla organów państwowych i użytkowników serwisu (art. 11 i 12 DSA).</p>
       {contact.ok ? (

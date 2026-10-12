@@ -14,14 +14,16 @@ export const metadata: Metadata = {
 export default function RegisterPage() {
   const available = accountsConfigured();
   return (
-    <article>
+    <article className="narrow">
       <h1>Rejestracja</h1>
       <p>
         Konto jest potrzebne tylko do pisania opinii i sprawdzania ich statusu. Opinie piszą zalogowani użytkownicy z
         potwierdzonym adresem e-mail. Nie weryfikujemy, czy autor jest rodzicem ucznia danej szkoły.
       </p>
       {available ? (
-        <RegisterForm />
+        <div className="card form-card">
+          <RegisterForm />
+        </div>
       ) : (
         <div className="notice" role="alert">
           <p>

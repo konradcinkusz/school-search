@@ -161,12 +161,17 @@ export function ExplainPanel({ slug }: { readonly slug: string }) {
   }
 
   return (
-    <section className="card ai-explain" aria-labelledby={ids.heading}>
-      <h2 id={ids.heading}>Wyjaśnienie wyniku</h2>
+    <section className="card ai-explain ai-panel" aria-labelledby={ids.heading}>
+      <div className="ai-panel__head">
+        <h2 id={ids.heading}>Wyjaśnienie wyniku</h2>
+        <span className="badge badge--ai" aria-hidden="true">
+          AI
+        </span>
+      </div>
       <p className="muted">
         Krótki tekst wygenerowany przez AI na podstawie danych z tej strony. Nie zastępuje wyniku ani metodologii.
       </p>
-      <button type="button" className="button" onClick={onExplain} disabled={loading || explanation !== null} aria-describedby={ids.status}>
+      <button type="button" className="button button--secondary" onClick={onExplain} disabled={loading || explanation !== null} aria-describedby={ids.status}>
         Wyjaśnij ten wynik
       </button>
       <div id={ids.status} role="status" aria-live="polite">

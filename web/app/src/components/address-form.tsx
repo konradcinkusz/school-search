@@ -15,8 +15,8 @@ export function AddressForm({ gminas, values }: { gminas: readonly GminaItem[]; 
     (a.name ?? a.teryt).localeCompare(b.name ?? b.teryt, "pl"),
   );
   return (
-    <form method="get" action="/" className="address-form">
-      <div className="field">
+    <form method="get" action="/" className="address-form form-grid form-grid--address">
+      <div className="field form-grid__full">
         <label htmlFor="gmina">Gmina</label>
         <select id="gmina" name="gmina" defaultValue={values.gmina ?? ""} required>
           <option value="">Wybierz gminę</option>
@@ -52,9 +52,11 @@ export function AddressForm({ gminas, values }: { gminas: readonly GminaItem[]; 
           defaultValue={values.number ?? ""}
         />
       </div>
-      <button type="submit" className="button">
-        Sprawdź obwód i szkoły w zasięgu
-      </button>
+      <div className="form-grid__actions">
+        <button type="submit" className="button button--block">
+          Sprawdź obwód i szkoły w zasięgu
+        </button>
+      </div>
     </form>
   );
 }

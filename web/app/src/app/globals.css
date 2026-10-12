@@ -363,7 +363,6 @@ hr {
 
 /* ---------------------------------------------------------------- Layout */
 
-.container,
 .site-header__inner,
 .site-main,
 .site-footer__inner {
@@ -397,10 +396,6 @@ hr {
 .site-main td li,
 .site-main th p {
   max-width: none;
-}
-
-.stack > * + * {
-  margin-top: var(--space-4);
 }
 
 /* ---------------------------------------------------------------- Header and navigation */
@@ -653,20 +648,6 @@ hr {
   }
 }
 
-.panel {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-  box-shadow: var(--shadow);
-}
-
-@media (min-width: 40rem) {
-  .panel {
-    padding: var(--space-6);
-  }
-}
-
 /* A content section with a hairline above its heading. */
 .section {
   margin-top: var(--space-6);
@@ -733,6 +714,12 @@ hr {
   --notice-border: var(--color-warn-border);
 }
 
+.notice--ai {
+  --notice-bg: var(--color-ai-bg);
+  --notice-fg: var(--color-ai-fg);
+  --notice-border: var(--color-ai-border);
+}
+
 .notice--demo {
   --notice-bg: var(--color-demo-bg);
   --notice-fg: var(--color-demo-fg);
@@ -768,6 +755,7 @@ hr {
   color: var(--color-demo-fg);
   font-weight: var(--weight-semibold);
   white-space: normal;
+  border-radius: var(--radius-sm);
 }
 
 .badge--ai {
@@ -921,8 +909,7 @@ form {
 }
 
 .field > label,
-.chip > label,
-.field-label {
+.chip > label {
   font-weight: var(--weight-semibold);
   font-size: 0.9375rem;
 }
@@ -1084,7 +1071,12 @@ legend {
   }
 
   .form-grid--address {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(9rem, 13rem);
+  }
+
+  .form-grid--address > .field,
+  .form-grid--filters > .field {
+    justify-content: flex-end;
   }
 }
 
@@ -1197,8 +1189,34 @@ legend {
 
   .hero__inner {
     grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-    gap: var(--space-7);
+    grid-template-areas:
+      "intro panel"
+      "principles panel";
+    grid-template-rows: auto 1fr;
+    gap: var(--space-5) var(--space-7);
   }
+
+  .hero__intro {
+    grid-area: intro;
+  }
+
+  .hero__panel {
+    grid-area: panel;
+  }
+
+  .hero .principles {
+    grid-area: principles;
+    margin-top: 0;
+  }
+}
+
+.hero__intro > :last-child {
+  margin-bottom: 0;
+}
+
+.home-footnote {
+  margin-top: var(--space-6);
+  font-size: var(--text-sm);
 }
 
 /* Three plain promises under the hero. */
@@ -1267,7 +1285,7 @@ legend {
   margin-top: 0;
 }
 
-.catchment h3 {
+.catchment > h3 {
   font-size: var(--text-xl);
   margin-top: var(--space-6);
 }
@@ -1276,16 +1294,33 @@ legend {
   font-size: var(--text-lg);
 }
 
-.catchment__school {
+.catchment__school .school-list__item.card {
   border: 2px solid var(--color-accent);
-  border-radius: var(--radius);
-  padding: var(--space-1) var(--space-3);
-  background: var(--color-accent-soft);
+  box-shadow: var(--shadow);
 }
 
-.catchment__school .school-list__item {
-  border-color: transparent;
+/* Cards nested in a card (lists inside the catchment result) are lighter and tighter. */
+.card .card {
+  padding: var(--space-3);
   box-shadow: none;
+}
+
+@media (min-width: 40rem) {
+  .card .card {
+    padding: var(--space-4);
+  }
+}
+
+@media (max-width: 39.99rem) {
+  .catchment.card {
+    margin-left: calc(var(--gutter) * -0.5);
+    margin-right: calc(var(--gutter) * -0.5);
+    padding: var(--space-3);
+  }
+
+  .site-main .score {
+    padding: var(--space-2) var(--space-3);
+  }
 }
 
 /* ---------------------------------------------------------------- School and preschool lists */
@@ -1377,15 +1412,6 @@ legend {
 .score > * {
   margin: 0;
   max-width: none;
-}
-
-.score__label {
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-  margin-bottom: var(--space-1);
 }
 
 .score__value {
@@ -1623,14 +1649,29 @@ td .score {
     padding: var(--space-1) 0;
   }
 
+  .table--stack caption {
+    display: block;
+    width: 100%;
+  }
+
+  /* Label floats in a left column, the value flows beside it; works for any cell content. */
+  .table--stack td[data-label] {
+    display: flow-root;
+    padding-left: 8.5rem;
+  }
+
   .table--stack td[data-label]::before {
     content: attr(data-label);
-    display: block;
+    float: left;
+    width: 7.5rem;
+    margin-left: -8.5rem;
     font-size: var(--text-xs);
     font-weight: var(--weight-semibold);
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
+    line-height: var(--leading-snug);
     text-transform: uppercase;
     color: var(--color-muted);
+    padding-top: 0.25em;
   }
 
   .table--stack tbody tr:hover > * {
@@ -1686,13 +1727,19 @@ td .score {
   text-decoration: underline;
 }
 
-.table--wide {
-  min-width: 40rem;
-}
-
 /* Demo-seed provenance rows are marked so they are never read as real data. */
 tr[data-demo="true"] > td:first-child {
   box-shadow: inset 4px 0 0 var(--color-demo-border);
+}
+
+@media (max-width: 39.99rem) {
+  tr[data-demo="true"] > td:first-child {
+    box-shadow: none;
+  }
+
+  .table--stack tr[data-demo="true"] {
+    box-shadow: inset 4px 0 0 var(--color-demo-border);
+  }
 }
 
 /* ---------------------------------------------------------------- Ranking */
@@ -1847,6 +1894,7 @@ tr[data-demo="true"] > td:first-child {
   min-width: 30rem;
   max-width: 48rem;
   height: auto;
+  margin: 0 auto;
 }
 
 .trend figcaption {
@@ -1882,6 +1930,12 @@ tr[data-demo="true"] > td:first-child {
 .trend__note {
   fill: var(--color-fg);
   font-family: var(--font-sans);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.trend__tick {
+  fill: var(--color-muted);
   font-size: 15px;
 }
 
@@ -1892,26 +1946,7 @@ tr[data-demo="true"] > td:first-child {
 
 .trend__note {
   fill: var(--color-muted);
-  font-size: 13px;
-}
-
-/* ---------------------------------------------------------------- Comparison */
-
-.compare-grid {
-  display: grid;
-  gap: var(--space-4);
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.compare-card h2 {
-  font-size: var(--text-lg);
-  margin-top: 0;
-}
-
-@media (min-width: 40rem) {
-  .compare-grid {
-    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  }
+  font-size: 14px;
 }
 
 /* ---------------------------------------------------------------- Long-form text (methodology, legal) */
@@ -2047,9 +2082,13 @@ tr[data-demo="true"] > td:first-child {
   margin: 0;
 }
 
-@media (min-width: 40rem) {
+.ai-explain {
+  container-type: inline-size;
+}
+
+@container (min-width: 34rem) {
   .ai-explain__result {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 17rem);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 16rem);
     align-items: start;
   }
 
@@ -2402,6 +2441,88 @@ details > summary + * {
 [role="tabpanel"] > div > .plain-list > li.card,
 .plain-list > li.card {
   margin: var(--space-3) 0;
+}
+
+/* ---------------------------------------------------------------- Page patterns */
+
+.narrow {
+  max-width: 36rem;
+}
+
+.form-card {
+  max-width: 44rem;
+}
+
+.form-card > form > :last-child {
+  margin-bottom: 0;
+}
+
+.filters.card {
+  margin-top: 0;
+}
+
+.filters__checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-5);
+}
+
+.section-pair {
+  margin-top: var(--space-6);
+}
+
+.section-pair .card h2 {
+  font-size: var(--text-xl);
+  margin-top: 0;
+}
+
+.reviews {
+  margin-top: var(--space-6);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.reviews > h2:first-child {
+  margin-top: var(--space-4);
+}
+
+.correction-cta {
+  margin-top: var(--space-6);
+}
+
+.compare-hint {
+  margin-top: var(--space-3);
+}
+
+.ai-panel__head h1 {
+  margin: 0;
+}
+
+.page-header.ai-panel__head {
+  margin-bottom: var(--space-4);
+}
+
+/* Lists of things the portal does not do: a cross instead of a bullet. */
+.checklist {
+  list-style: none;
+  padding-left: 0;
+}
+
+.checklist > li {
+  position: relative;
+  padding-left: 1.75rem;
+}
+
+.checklist--no > li::before {
+  content: "";
+  position: absolute;
+  left: 0.2rem;
+  top: 0.35em;
+  width: 1rem;
+  height: 1rem;
+  background:
+    linear-gradient(45deg, transparent 43%, var(--color-danger-fg) 43%, var(--color-danger-fg) 57%, transparent 57%),
+    linear-gradient(-45deg, transparent 43%, var(--color-danger-fg) 43%, var(--color-danger-fg) 57%, transparent 57%);
 }
 
 /* ---------------------------------------------------------------- Not found */

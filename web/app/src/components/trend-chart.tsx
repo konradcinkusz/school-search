@@ -29,10 +29,10 @@ function isPublishedBlock(status: ScoreStatus, block: ScoreBlock | null): block 
 
 const WIDTH = 640;
 const HEIGHT = 280;
-const PAD_LEFT = 52;
-const PAD_RIGHT = 16;
-const PAD_TOP = 24;
-const PAD_BOTTOM = 52;
+const PAD_LEFT = 64;
+const PAD_RIGHT = 24;
+const PAD_TOP = 32;
+const PAD_BOTTOM = 60;
 
 export function TrendChart({ points }: { points: readonly TrendPoint[] }) {
   const years = [...points].sort((a, b) => a.examYear - b.examYear);
@@ -69,15 +69,21 @@ export function TrendChart({ points }: { points: readonly TrendPoint[] }) {
   const yMin = rawMin - span * 0.12;
   const yMax = rawMax + span * 0.12;
 
+  // Points are inset from the plot edges so the year and "brak wyniku" labels never run outside the drawing.
+  const inset = 44;
   const xFor = (index: number): number =>
-    years.length === 1 ? PAD_LEFT + plotWidth / 2 : PAD_LEFT + (index * plotWidth) / (years.length - 1);
+    years.length === 1
+      ? PAD_LEFT + plotWidth / 2
+      : PAD_LEFT + inset + (index * (plotWidth - 2 * inset)) / (years.length - 1);
   const yFor = (value: number): number => PAD_TOP + ((yMax - value) / (yMax - yMin)) * plotHeight;
 
   const zeroY = yFor(0);
-  const ticks = [yMax, 0, yMin];
+  // Axis labels that would overlap the zero label are dropped; the grid keeps the zero line.
+  const ticks = [yMax, 0, yMin].filter((tick) => tick === 0 || Math.abs(yFor(tick) - zeroY) >= 22);
 
   return (
     <figure className="trend">
+      <div className="trend__scroll" role="region" aria-label="Wykres wyników (przewiń w bok na małym ekranie)" tabIndex={0}>
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         width="100%"
@@ -94,7 +100,7 @@ export function TrendChart({ points }: { points: readonly TrendPoint[] }) {
         {ticks.map((tick) => (
           <g key={`tick-${tick}`}>
             <line className="trend__grid" x1={PAD_LEFT} x2={WIDTH - PAD_RIGHT} y1={yFor(tick)} y2={yFor(tick)} />
-            <text className="trend__text" x={PAD_LEFT - 8} y={yFor(tick) + 4} textAnchor="end">
+            <text className="trend__text trend__tick" x={PAD_LEFT - 10} y={yFor(tick) + 5} textAnchor="end">
               {formatScore(tick)}
             </text>
           </g>
@@ -105,7 +111,7 @@ export function TrendChart({ points }: { points: readonly TrendPoint[] }) {
         {years.map((point, index) => {
           const x = xFor(index);
           const label = (
-            <text className="trend__text" x={x} y={HEIGHT - PAD_BOTTOM + 20} textAnchor="middle">
+            <text className="trend__text" x={x} y={HEIGHT - PAD_BOTTOM + 24} textAnchor="middle">
               {point.examYear}
             </text>
           );
@@ -113,7 +119,7 @@ export function TrendChart({ points }: { points: readonly TrendPoint[] }) {
             return (
               <g key={`year-${point.examYear}`}>
                 {label}
-                <text className="trend__note" x={x} y={HEIGHT - PAD_BOTTOM + 38} textAnchor="middle">
+                <text className="trend__note" x={x} y={HEIGHT - PAD_BOTTOM + 44} textAnchor="middle">
                   brak wyniku
                 </text>
               </g>
@@ -124,20 +130,21 @@ export function TrendChart({ points }: { points: readonly TrendPoint[] }) {
           return (
             <g key={`year-${point.examYear}`}>
               <line className="trend__whisker" x1={cx} x2={cx} y1={yFor(block.intervalHigh)} y2={yFor(block.intervalLow)} />
-              <line className="trend__whisker" x1={cx - 6} x2={cx + 6} y1={yFor(block.intervalHigh)} y2={yFor(block.intervalHigh)} />
-              <line className="trend__whisker" x1={cx - 6} x2={cx + 6} y1={yFor(block.intervalLow)} y2={yFor(block.intervalLow)} />
-              <circle className="trend__dot" cx={cx} cy={yFor(block.score)} r={5} />
-              <text className="trend__value" x={cx} y={yFor(block.intervalHigh) - 8} textAnchor="middle">
+              <line className="trend__whisker" x1={cx - 8} x2={cx + 8} y1={yFor(block.intervalHigh)} y2={yFor(block.intervalHigh)} />
+              <line className="trend__whisker" x1={cx - 8} x2={cx + 8} y1={yFor(block.intervalLow)} y2={yFor(block.intervalLow)} />
+              <circle className="trend__dot" cx={cx} cy={yFor(block.score)} r={6} />
+              <text className="trend__value" x={cx} y={yFor(block.intervalHigh) - 10} textAnchor="middle">
                 {formatScore(block.score)}
               </text>
               {label}
-              <text className="trend__note" x={cx} y={HEIGHT - PAD_BOTTOM + 38} textAnchor="middle">
+              <text className="trend__note" x={cx} y={HEIGHT - PAD_BOTTOM + 44} textAnchor="middle">
                 n={formatInteger(block.cohortSize)}
               </text>
             </g>
           );
         })}
       </svg>
+      </div>
       <figcaption className="muted">
         Wykres pokazuje wynik i przedział 95% dla lat z publikowanym wynikiem. Pionowa kreska to przedział, a liczba
         pod rokiem to liczebność kohorty.

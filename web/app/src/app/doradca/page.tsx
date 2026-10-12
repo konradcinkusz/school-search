@@ -13,9 +13,14 @@ export const metadata: Metadata = {
 
 export default function AdvisorPage() {
   return (
-    <article>
-      <h1>Doradca wyboru szkoły</h1>
-      <div className="notice" role="note">
+    <article className="advisor">
+      <header className="page-header ai-panel__head">
+        <h1>Doradca wyboru szkoły</h1>
+        <span className="badge badge--ai" aria-hidden="true">
+          AI
+        </span>
+      </header>
+      <div className="notice notice--ai" role="note">
         <p>
           <strong>Wygenerowano przez AI.</strong> Doradca korzysta z tych samych danych co reszta portalu i podaje źródła.
           Nie ocenia szkół, nie tworzy rankingu i nie zgaduje faktów, których nie ma w danych. Obwód szkolny ustala gmina.

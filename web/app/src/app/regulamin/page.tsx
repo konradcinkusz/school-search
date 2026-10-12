@@ -14,7 +14,7 @@ export default async function TermsPage() {
   const terms = await legalTerms();
   const version = terms.ok ? terms.data.version : null;
   return (
-    <article>
+    <article className="prose">
       <h1>Regulamin</h1>
       <div className="notice" role="note">
         <strong>Projekt do weryfikacji przez prawnika.</strong> Ten tekst jest roboczą wersją i nie jest poradą prawną.

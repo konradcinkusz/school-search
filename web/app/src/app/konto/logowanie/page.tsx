@@ -15,10 +15,12 @@ export const metadata: Metadata = {
 export default function LoginPage() {
   const available = accountsConfigured();
   return (
-    <article>
+    <article className="narrow">
       <h1>Logowanie</h1>
       {available ? (
-        <LoginForm />
+        <div className="card form-card">
+          <LoginForm />
+        </div>
       ) : (
         <div className="notice" role="alert">
           <p>

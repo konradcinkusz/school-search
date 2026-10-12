@@ -53,14 +53,14 @@ export default async function RankingPage({ params, searchParams }: Props) {
 
   return (
     <section>
-      <header>
+      <header className="page-header">
         <h1>Ranking szkół podstawowych {where}</h1>
-        <p className="muted">
+        <p className="lead">
           Kolejność: od najwyższego wyniku. Szkoły bez wystarczającej kohorty nie są w rankingu.{" "}
           <Link href="/metodologia">Metodologia</Link>.
         </p>
       </header>
-      <div className="notice" role="note">
+      <div className="notice notice--caution" role="note">
         Ranking nie jest oficjalnym rankingiem. Nie zastępuje rozmowy z nauczycielami ani wizyty w szkole.
       </div>
 
@@ -74,15 +74,23 @@ export default async function RankingPage({ params, searchParams }: Props) {
         )
       ) : (
         <>
-          <p>
-            Wersja metodologii: <strong>{result.data.methodologyVersion}</strong>
-            {result.data.examYear !== null ? <> · rok egzaminu {result.data.examYear}</> : null}
-          </p>
+          <ul className="meta-row" aria-label="Zakres rankingu">
+            <li>
+              <span className="badge badge--info">
+                Wersja metodologii: <strong>{result.data.methodologyVersion}</strong>
+              </span>
+            </li>
+            {result.data.examYear !== null ? (
+              <li>
+                <span className="badge">rok egzaminu {result.data.examYear}</span>
+              </li>
+            ) : null}
+          </ul>
           {result.data.items.length === 0 ? (
             <p className="muted">Brak szkół z publikowanym wynikiem w tym zasięgu.</p>
           ) : (
             <div className="table-wrap">
-              <table>
+              <table className="table--stack ranking-table">
                 <caption className="muted">Ranking, od najwyższego wyniku</caption>
                 <thead>
                   <tr>
@@ -94,14 +102,18 @@ export default async function RankingPage({ params, searchParams }: Props) {
                 <tbody>
                   {result.data.items.map((item) => (
                     <tr key={item.slug}>
-                      <td>{item.rank}</td>
                       <td>
-                        <Link href={`/szkoly/${item.slug}`}>{item.name}</Link>
+                        <span className="rank">{item.rank}</span>
+                      </td>
+                      <td>
+                        <Link href={`/szkoly/${item.slug}`} className="ranking-table__name">
+                          {item.name}
+                        </Link>
                         <br />
                         <span className="muted">{item.gminaName ?? ""}</span>
                       </td>
                       <td>
-                        <ScoreBadge status={scoreStatusOf(item.score)} block={item.score} />
+                        <ScoreBadge status={scoreStatusOf(item.score)} block={item.score} variant="compact" />
                       </td>
                     </tr>
                   ))}
@@ -110,7 +122,7 @@ export default async function RankingPage({ params, searchParams }: Props) {
             </div>
           )}
           {result.data.unrankedCount > 0 ? (
-            <p className="muted">
+            <p className="notice" role="note">
               {formatInteger(result.data.unrankedCount)} szkół nie jest w rankingu, bo nie ma dla nich wyniku (zbyt
               mała kohorta). Brak wyniku nie oznacza zera ani oceny.
             </p>

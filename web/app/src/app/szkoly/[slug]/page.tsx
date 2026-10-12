@@ -25,6 +25,9 @@ const SUBJECT_LABEL: Record<string, string> = {
   foreign_language: "język obcy",
 };
 
+/** Source marker of the synthetic demo seed (never in Production). Rows carrying it are labelled as demo data. */
+const DEMO_MARK = "DEMO SEED";
+
 const STATUS_LABEL: Record<ScoreStatus, string> = {
   published: "wynik opublikowany",
   insufficient_cohort: "brak wyniku: zbyt mała grupa",
@@ -63,45 +66,68 @@ export default async function SchoolPage({ params, searchParams }: Props) {
   }
   const school = result.data;
   const gminaLabel = school.gminaName ?? `gmina TERYT ${school.gminaTeryt}`;
+  const isDemo = school.provenance.some((row) => row.source.includes(DEMO_MARK));
 
   return (
     <article>
-      <header>
+      <header className="profile-header">
+        <p className="eyebrow">Profil szkoły</p>
         <h1>{school.name}</h1>
-        <p className="muted">
-          {gminaLabel} · {school.isPublic ? "szkoła publiczna" : "szkoła niepubliczna"}
-          {school.isSpecial ? " · szkoła specjalna" : ""}
-        </p>
+        <ul className="meta-row" aria-label="Podstawowe informacje">
+          <li>
+            <span className="badge">{gminaLabel}</span>
+          </li>
+          <li>
+            <span className="badge">{school.isPublic ? "szkoła publiczna" : "szkoła niepubliczna"}</span>
+          </li>
+          {school.isSpecial ? (
+            <li>
+              <span className="badge">szkoła specjalna</span>
+            </li>
+          ) : null}
+        </ul>
+        {isDemo ? (
+          <p className="notice notice--demo" role="note">
+            <strong>Dane demonstracyjne ({DEMO_MARK}, syntetyczne).</strong> Ta szkoła i wszystkie jej wartości są
+            fikcyjne. Służą tylko do pokazania działania serwisu.
+          </p>
+        ) : null}
         <p className="school-actions">
-          <Link href={`/ranking/gmina:${school.gminaTeryt}`}>Ranking w gminie</Link>
-          {" · "}
-          <Link href={`/porownaj?s=${encodeURIComponent(school.slug)}`}>Dodaj do porównania</Link>
+          <Link href={`/ranking/gmina:${school.gminaTeryt}`} className="button button--secondary">
+            Ranking w gminie
+          </Link>
+          <Link href={`/porownaj?s=${encodeURIComponent(school.slug)}`} className="button button--secondary">
+            Dodaj do porównania
+          </Link>
         </p>
       </header>
 
-      <section aria-labelledby="result-heading">
-        <h2 id="result-heading">Wynik</h2>
-        <ScoreBadge
-          status={school.scoreStatus}
-          block={school.score}
-          fallbackMethodologyVersion={school.methodologyVersion}
-        />
-        <p className="muted">
-          Wskaźnik pokazuje, jak wynik egzaminów szkoły różni się od średniej krajowej, z uwzględnieniem udziału
-          uczniów, którzy przystąpili do egzaminu. Nie jest oficjalnym rankingiem i nie ocenia nauczycieli ani
-          uczniów. Zasady są w <Link href="/metodologia">metodologii</Link>.
-        </p>
-      </section>
+      <div className="profile-grid">
+        <section aria-labelledby="result-heading" className="card result-card">
+          <h2 id="result-heading">Wynik</h2>
+          <ScoreBadge
+            status={school.scoreStatus}
+            block={school.score}
+            fallbackMethodologyVersion={school.methodologyVersion}
+            variant="hero"
+          />
+          <p className="score-explainer">
+            Wskaźnik pokazuje, jak wynik egzaminów szkoły różni się od średniej krajowej, z uwzględnieniem udziału
+            uczniów, którzy przystąpili do egzaminu. Nie jest oficjalnym rankingiem i nie ocenia nauczycieli ani
+            uczniów. Zasady są w <Link href="/metodologia">metodologii</Link>.
+          </p>
+        </section>
 
-      <ExplainPanel slug={school.slug} />
+        <ExplainPanel slug={school.slug} />
+      </div>
 
-      <section aria-labelledby="trend-heading">
+      <section aria-labelledby="trend-heading" className="section">
         <h2 id="trend-heading">Wyniki w kolejnych latach</h2>
         <TrendChart points={school.trend} />
         <TrendTable trend={school.trend} />
       </section>
 
-      <section aria-labelledby="cohorts-heading">
+      <section aria-labelledby="cohorts-heading" className="section">
         <h2 id="cohorts-heading">Roczniki i oddziały</h2>
         {school.cohorts.length === 0 ? (
           <p className="muted">Brak danych o rocznikach.</p>
@@ -113,8 +139,12 @@ export default async function SchoolPage({ params, searchParams }: Props) {
                 <tr>
                   <th scope="col">Rok szkolny</th>
                   <th scope="col">Klasa</th>
-                  <th scope="col">Uczniowie</th>
-                  <th scope="col">Oddziały</th>
+                  <th scope="col" className="num">
+                    Uczniowie
+                  </th>
+                  <th scope="col" className="num">
+                    Oddziały
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -122,8 +152,8 @@ export default async function SchoolPage({ params, searchParams }: Props) {
                   <tr key={`${row.schoolYear}-${row.classLevel}`}>
                     <td>{schoolYearLabel(row.schoolYear)}</td>
                     <td>{row.classLevel}</td>
-                    <td>{formatInteger(row.pupils)}</td>
-                    <td>{formatInteger(row.oddzialy)}</td>
+                    <td className="num">{formatInteger(row.pupils)}</td>
+                    <td className="num">{formatInteger(row.oddzialy)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -132,27 +162,29 @@ export default async function SchoolPage({ params, searchParams }: Props) {
         )}
       </section>
 
-      <section aria-labelledby="body-heading">
-        <h2 id="body-heading">Organ prowadzący</h2>
-        <GoverningBodyNote school={school} />
-      </section>
+      <div className="profile-grid section-pair">
+        <section aria-labelledby="body-heading" className="card">
+          <h2 id="body-heading">Organ prowadzący</h2>
+          <GoverningBodyNote school={school} />
+        </section>
 
-      <section aria-labelledby="faith-heading">
-        <h2 id="faith-heading">Charakter wyznaniowy</h2>
-        <p>
-          {school.faith.derived
-            ? "Ustalone pośrednio: wyprowadzone z organu prowadzącego, nie z nazwy szkoły."
-            : "Nie wyprowadzono z nazwy szkoły."}{" "}
-          {school.faith.declared === true
-            ? "Szkoła deklaruje charakter wyznaniowy."
-            : school.faith.declared === false
-              ? "Szkoła deklaruje brak charakteru wyznaniowego."
-              : "Brak deklaracji szkoły."}
-        </p>
-        {school.faith.note ? <p className="muted">{school.faith.note}</p> : null}
-      </section>
+        <section aria-labelledby="faith-heading" className="card">
+          <h2 id="faith-heading">Charakter wyznaniowy</h2>
+          <p>
+            {school.faith.derived
+              ? "Ustalone pośrednio: wyprowadzone z organu prowadzącego, nie z nazwy szkoły."
+              : "Nie wyprowadzono z nazwy szkoły."}{" "}
+            {school.faith.declared === true
+              ? "Szkoła deklaruje charakter wyznaniowy."
+              : school.faith.declared === false
+                ? "Szkoła deklaruje brak charakteru wyznaniowego."
+                : "Brak deklaracji szkoły."}
+          </p>
+          {school.faith.note ? <p className="muted">{school.faith.note}</p> : null}
+        </section>
+      </div>
 
-      <section aria-labelledby="provenance-heading">
+      <section aria-labelledby="provenance-heading" className="section">
         <h2 id="provenance-heading">Źródła i stan danych</h2>
         <ProvenanceTable rows={school.provenance} />
         <p className="muted">Wersja metodologii: {school.methodologyVersion}</p>
@@ -162,7 +194,7 @@ export default async function SchoolPage({ params, searchParams }: Props) {
 
       <SponsoredProfile slug={school.slug} />
 
-      <p className="muted">
+      <p className="notice correction-cta" role="note">
         Widzisz błąd w danych tej szkoły?{" "}
         <Link href={`/dla-szkol?slug=${encodeURIComponent(school.slug)}`}>Zgłoś błąd w danych</Link>.
       </p>
@@ -197,7 +229,7 @@ function TrendTable({ trend }: { trend: readonly TrendPoint[] }) {
   const rows = [...trend].sort((a, b) => a.examYear - b.examYear);
   return (
     <div className="table-wrap">
-      <table>
+      <table className="table--stack">
         <caption className="muted">Wyniki i statusy według roku egzaminu</caption>
         <thead>
           <tr>
@@ -211,9 +243,11 @@ function TrendTable({ trend }: { trend: readonly TrendPoint[] }) {
         <tbody>
           {rows.map((row) => (
             <tr key={row.examYear}>
-              <td>{row.examYear}</td>
-              <td>{STATUS_LABEL[row.scoreStatus]}</td>
-              <td>
+              <td data-label="Rok egzaminu">
+                <strong>{row.examYear}</strong>
+              </td>
+              <td data-label="Status">{STATUS_LABEL[row.scoreStatus]}</td>
+              <td data-label="Wynik">
                 {row.score && row.score.score !== null ? (
                   <>
                     {formatScore(row.score.score)}
@@ -230,8 +264,10 @@ function TrendTable({ trend }: { trend: readonly TrendPoint[] }) {
                   <span className="muted">brak wyniku</span>
                 )}
               </td>
-              <td>{row.coveragePercent !== null ? formatPercent(row.coveragePercent) : "brak danych"}</td>
-              <td>
+              <td data-label="Pokrycie">
+                {row.coveragePercent !== null ? formatPercent(row.coveragePercent) : "brak danych"}
+              </td>
+              <td data-label="Średnie wyniki z przedmiotów">
                 {row.subjects.length === 0 ? (
                   <span className="muted">brak danych</span>
                 ) : (
@@ -260,7 +296,7 @@ function ProvenanceTable({ rows }: { rows: SchoolProfile["provenance"] }) {
   }
   return (
     <div className="table-wrap">
-      <table>
+      <table className="table--stack">
         <caption className="muted">Każda wartość ma źródło, datę i metodę</caption>
         <thead>
           <tr>
@@ -273,20 +309,22 @@ function ProvenanceTable({ rows }: { rows: SchoolProfile["provenance"] }) {
         <tbody>
           {rows.map((row, index) => {
             const url = safeHttpUrl(row.sourceUrl);
+            const demo = row.source.includes(DEMO_MARK);
+            const source = url ? (
+              <a href={url} rel="noopener noreferrer nofollow">
+                {row.source}
+              </a>
+            ) : (
+              row.source
+            );
             return (
-              <tr key={`${row.field}-${index}`}>
-                <td>{row.field}</td>
-                <td>
-                  {url ? (
-                    <a href={url} rel="noopener noreferrer nofollow">
-                      {row.source}
-                    </a>
-                  ) : (
-                    row.source
-                  )}
+              <tr key={`${row.field}-${index}`} data-demo={demo ? "true" : undefined}>
+                <td data-label="Pole">
+                  <strong>{row.field}</strong>
                 </td>
-                <td>{asOfLabel(row.asOf)}</td>
-                <td>{row.method}</td>
+                <td data-label="Źródło">{demo ? <span className="badge badge--demo">{source}</span> : source}</td>
+                <td data-label="Stan">{asOfLabel(row.asOf)}</td>
+                <td data-label="Metoda">{row.method}</td>
               </tr>
             );
           })}

@@ -35,9 +35,12 @@ export default async function MethodologyPage() {
   const version = m.version;
 
   return (
-    <article>
-      <h1>Metodologia</h1>
-      <div className="notice" role="note">
+    <article className="prose">
+      <header className="page-header">
+        <h1>Metodologia</h1>
+        <p className="lead">Jak liczymy i pokazujemy wyniki szkół, czego nie mierzą i jakie mają ograniczenia.</p>
+      </header>
+      <div className="notice notice--caution" role="note">
         Wersja metodologii: <strong>{version}</strong>. Ten dokument zmienia się wraz z wersją i każda zmiana jest
         opisana. Nie jest oficjalnym rankingiem.
         {live ? null : (
@@ -48,16 +51,43 @@ export default async function MethodologyPage() {
         )}
       </div>
 
+      <nav className="toc" aria-label="Spis treści">
+        <p>Na tej stronie</p>
+        <ul>
+          <li>
+            <a href="#czym-jest">Czym jest ta strona</a>
+          </li>
+          <li>
+            <a href="#wynik">Wynik i poziom pewności</a>
+          </li>
+          <li>
+            <a href="#skladowe">Składowe wyniku</a>
+          </li>
+          <li>
+            <a href="#pokrycie">Wskaźnik kontrolny: pokrycie kohorty</a>
+          </li>
+          <li>
+            <a href="#ograniczenia">Znane ograniczenia i obciążenia</a>
+          </li>
+          <li>
+            <a href="#czego-nie-robimy">Czego nie robimy</a>
+          </li>
+          <li>
+            <a href="#korekty">Korekty i kontakt</a>
+          </li>
+        </ul>
+      </nav>
+
       <MethodologyQa />
 
-      <h2>Czym jest ta strona</h2>
+      <h2 id="czym-jest">Czym jest ta strona</h2>
       <p>
         To niezależne narzędzie, które zestawia publicznie dostępne dane o szkołach podstawowych. Nie jest oficjalnym
         rankingiem, nie jest zaleceniem ani opinią organu prowadzącego, kuratorium ani ministerstwa. Pomaga zrozumieć
         dane, a nie zastępuje rozmowy z nauczycielami i wizyty w szkole.
       </p>
 
-      <h2>Wynik i poziom pewności</h2>
+      <h2 id="wynik">Wynik i poziom pewności</h2>
       <p>Każdy wynik szkoły występuje zawsze razem z poziomem pewności. Każdy wynik zawiera:</p>
       <ul>
         <li>wartość wyniku, czyli wskaźnik wartości dodanej opisany poniżej,</li>
@@ -73,14 +103,14 @@ export default async function MethodologyPage() {
         metodologii.
       </p>
 
-      <h2>Składowe wyniku</h2>
+      <h2 id="skladowe">Składowe wyniku</h2>
       <p>
         Składowa egzaminacyjna porównuje wyniki szkoły z średnią krajową dla danego przedmiotu i roku (standaryzacja).
         Obejmuje trzy przedmioty z równymi wagami: język polski, matematykę oraz język obcy nowożytny. Przedział
         niepewności 95% liczymy ze współczynnikiem z = <strong>{intervalZLabel(m.intervalZ)}</strong>.
       </p>
 
-      <h2>Wskaźnik kontrolny: pokrycie kohorty</h2>
+      <h2 id="pokrycie">Wskaźnik kontrolny: pokrycie kohorty</h2>
       <p>
         Wynik egzaminu może być zawyżony, jeśli szkoła przystępuje do egzaminu tylko część uczniów albo zmienia się
         skład przystępujących. Dlatego wynik uwzględnia udział uczniów rocznika, którzy przystąpili do egzaminu. Wskaźnik
@@ -89,7 +119,7 @@ export default async function MethodologyPage() {
         rośnie.
       </p>
 
-      <h2>Znane ograniczenia i obciążenia</h2>
+      <h2 id="ograniczenia">Znane ograniczenia i obciążenia</h2>
       <ul>
         <li>
           <strong>Wartość dodana, a nie jakość nauczania.</strong> Wynik nie mierzy wszystkiego, co szkoła daje uczniom:
@@ -117,7 +147,7 @@ export default async function MethodologyPage() {
         </li>
       </ul>
 
-      <h2>Czego nie robimy</h2>
+      <h2 id="czego-nie-robimy">Czego nie robimy</h2>
       <ul>
         <li>Nie publikujemy nazwisk uczniów ani danych umożliwiających ich identyfikację.</li>
         <li>Nie oceniamy na podstawie pochodzenia ani narodowości uczniów.</li>
@@ -125,7 +155,7 @@ export default async function MethodologyPage() {
         <li>Nie pobieramy danych z serwisów konkurencyjnych.</li>
       </ul>
 
-      <h2>Korekty i kontakt</h2>
+      <h2 id="korekty">Korekty i kontakt</h2>
       <p>
         Jeżeli dane dotyczące szkoły są błędne, szkoła lub każdy inny zainteresowany może zgłosić korektę na{" "}
         <a href="/dla-szkol">stronie dla szkół</a>. Zgłoszenia są sprawdzane, a zmiany opisywane w historii wersji.
