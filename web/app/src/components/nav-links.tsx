@@ -35,10 +35,16 @@ export function NavLinks() {
       list.scrollLeft = 0;
       return;
     }
-    const left = current.offsetLeft - list.offsetLeft;
-    const right = left + current.offsetWidth;
-    if (left < list.scrollLeft || right > list.scrollLeft + list.clientWidth) {
-      list.scrollLeft = Math.max(0, left - 16);
+    // Viewport rectangles, not offsetLeft: offsetLeft is measured from a different offsetParent and clipped the active item.
+    // The 16px inset matches the row's left padding; the 40px inset on the right matches the fade in globals.css.
+    const box = list.getBoundingClientRect();
+    const item = current.getBoundingClientRect();
+    const LEFT_INSET = 16;
+    const RIGHT_INSET = 40;
+    if (item.left < box.left + LEFT_INSET) {
+      list.scrollLeft -= box.left + LEFT_INSET - item.left;
+    } else if (item.right > box.right - RIGHT_INSET) {
+      list.scrollLeft += item.right - (box.right - RIGHT_INSET);
     }
   }, [pathname]);
 

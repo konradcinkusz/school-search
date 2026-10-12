@@ -12,7 +12,7 @@
 /* Plain inline links in running text: a 44px hit area without changing the line box (WCAG 2.5.8 exempts running text,
    but these are the only links a reader can reach on a phone). Links with classes (buttons, nav) are not touched. */
 .site-main .prose p > a:not([class]),
-.site-main .prose li > a:not([class]) {
+.site-main .prose li:not(.toc li) > a:not([class]) {
   padding-block: 12px;
   margin-block: -12px;
 }

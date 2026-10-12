@@ -1854,14 +1854,11 @@ tr[data-demo="true"] > td:first-child {
 }
 
 .ranking-table__name {
-  font-weight: var(--weight-semibold);
-  font-size: var(--text-base);
-}
-
-.ranking-table__name a {
   display: inline-flex;
   align-items: center;
   min-height: var(--tap);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-base);
 }
 
 @media (max-width: 39.99rem) {

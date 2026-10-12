@@ -87,12 +87,17 @@ export function EnquiryForm({
         Wiadomość trafi wyłącznie do osoby prowadzącej profil szkoły. Nie jest publikowana ani nie jest wysyłana
         marketingowo.
       </p>
+      <p className="field-hint">Pola oznaczone * są wymagane.</p>
       <div className="field">
-        <label htmlFor={ids.email}>Twój adres e-mail</label>
+        <label htmlFor={ids.email}>
+          Twój adres e-mail<span aria-hidden="true"> *</span>
+        </label>
         <input id={ids.email} name="email" type="email" maxLength={ENQUIRY_EMAIL_MAX} autoComplete="email" required />
       </div>
       <div className="field">
-        <label htmlFor={ids.message}>Wiadomość (do {ENQUIRY_MESSAGE_MAX} znaków)</label>
+        <label htmlFor={ids.message}>
+          Wiadomość (do {ENQUIRY_MESSAGE_MAX} znaków)<span aria-hidden="true"> *</span>
+        </label>
         <textarea id={ids.message} name="message" rows={5} maxLength={ENQUIRY_MESSAGE_MAX} required />
       </div>
       {/* Honeypot: hidden from people and assistive technology; bots that fill it are dropped by the service. */}

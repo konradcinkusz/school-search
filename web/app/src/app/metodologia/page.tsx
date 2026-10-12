@@ -53,34 +53,34 @@ export default async function MethodologyPage() {
       </div>
 
       <div className="measure-block">
-      <nav className="toc" aria-label="Spis treści">
-        <p>Na tej stronie</p>
-        <ul>
-          <li>
-            <a href="#czym-jest">Czym jest ta strona</a>
-          </li>
-          <li>
-            <a href="#wynik">Wynik i poziom pewności</a>
-          </li>
-          <li>
-            <a href="#skladowe">Składowe wyniku</a>
-          </li>
-          <li>
-            <a href="#pokrycie">Wskaźnik kontrolny: pokrycie kohorty</a>
-          </li>
-          <li>
-            <a href="#ograniczenia">Znane ograniczenia i obciążenia</a>
-          </li>
-          <li>
-            <a href="#czego-nie-robimy">Czego nie robimy</a>
-          </li>
-          <li>
-            <a href="#korekty">Korekty i kontakt</a>
-          </li>
-        </ul>
-      </nav>
+        <nav className="toc" aria-label="Spis treści">
+          <p>Na tej stronie</p>
+          <ul>
+            <li>
+              <a href="#czym-jest">Czym jest ta strona</a>
+            </li>
+            <li>
+              <a href="#wynik">Wynik i poziom pewności</a>
+            </li>
+            <li>
+              <a href="#skladowe">Składowe wyniku</a>
+            </li>
+            <li>
+              <a href="#pokrycie">Wskaźnik kontrolny: pokrycie kohorty</a>
+            </li>
+            <li>
+              <a href="#ograniczenia">Znane ograniczenia i obciążenia</a>
+            </li>
+            <li>
+              <a href="#czego-nie-robimy">Czego nie robimy</a>
+            </li>
+            <li>
+              <a href="#korekty">Korekty i kontakt</a>
+            </li>
+          </ul>
+        </nav>
 
-      <MethodologyQa />
+        <MethodologyQa />
       </div>
 
       <h2 id="czym-jest">Czym jest ta strona</h2>
