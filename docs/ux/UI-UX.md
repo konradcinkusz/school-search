@@ -63,7 +63,7 @@ and 15).
    *Status: wording updated to match the implementation; version bump / ADR amendment pending owner decision.*
 4. **Read insufficient cohort (fewer than 5 pupils who sat, ADR-0009):** shows the cohort size and the reason. It shows
    no value and no zero.
-5. **Address to catchment school (Phase C, gated by ADR-0010 and catchment availability):** not scaffolded as working.
+5. **Address to catchment school (Phase C, gated by ADR-0010 and catchment availability):** the home page has the address form and the catchment panel. A street and number in a gmina with street data shows the catchment school; a gmina without catchment data shows a note that the gmina sets the boundary and the product does not estimate it by distance.
 6. **Correction request (Phase C):** a school or parent submits a correction, which an operator reviews through an
    admin endpoint (ADR-0008).
 7. **Compare two schools (Phase C):** side by side, same cohort, same methodology version.
@@ -78,17 +78,17 @@ Status column shows what Phase C delivered; open items are the ones still gated.
 
 | Rank | Item | Why this rank | Gate | Status (Phase C) |
 |---|---|---|---|---|
-| 1 | `insufficient_cohort` shown as an explicit message, never 0 or blank (8 pupils) | A zero reads as a bad school | e2e 8-sat profile | Done in the e2e suite; needs its first CI run |
-| 2 | Score never shown without cohort size, interval and methodology version in the same block | Prevents comparing noise (METRIC-ETHICS §3) | e2e catchment result; API contract tests | Done in the e2e suite; needs its first CI run |
-| 3 | Every value shows source, as-of date and method | A value without provenance is the most damaging failure | e2e profile provenance table | Done in the e2e suite; needs its first CI run |
-| 4 | Gmina with no catchment data shows "brak danych", never a guessed school | A guessed school is a false statement about a child's school | e2e no-data gmina | Done in the e2e suite; needs its first CI run |
+| 1 | `insufficient_cohort` shown as an explicit message, never 0 or blank (fewer than 5 pupils) | A zero reads as a bad school | e2e below-5 school (no spec yet; `journey.spec.ts` covers the 8-sat `limited` case) | Message in the UI; e2e job green on PR #10. No e2e spec for a below-5 school yet |
+| 2 | Score never shown without cohort size, interval and methodology version in the same block | Prevents comparing noise (METRIC-ETHICS §3) | e2e catchment result; API contract tests | Done in the e2e suite; e2e job green on PR #10 |
+| 3 | Every value shows source, as-of date and method | A value without provenance is the most damaging failure | e2e profile provenance table | Done in the e2e suite; e2e job green on PR #10 |
+| 4 | Gmina with no catchment data shows "brak danych", never a guessed school | A guessed school is a false statement about a child's school | e2e no-data gmina | Done in the e2e suite; e2e job green on PR #10 |
 | 5 | Methodology page: "nie jest oficjalnym rankingiem", reading guide, version, draft status | Users need to know what a score means before reading one | e2e methodology text | Text checked; reading guide still in review |
 | 6 | Correction path for schools (`/dla-szkol`) | Required for a public data portal | e2e token on submit; admin flow after ADR-0008 | Token path checked; operator review is manual |
 | 7 | Limited-confidence profile band (ADR-0009: cohort 5 to 8) | Keeps about 1 550 schools informative without a rank | Boundary tests at 4, 5, 8, 9 | Built: engine returns `limited` for 5 to 8 (no score, no rank), dashed badge and profile copy, excluded from ranking; boundary unit tests and `limited-band.spec.ts` need their first CI run |
 | 8 | Phone-width layout with no horizontal scroll | Most searches happen on phones | Playwright viewport test | Partly. Visual collector at 360, 768 and 1366 px in `tests/e2e/visual` (run locally, not in CI). It asserts load and status only, not overflow. No CI gate yet |
 | 9 | Accessibility pass: keyboard, contrast, screen-reader labels on all states | Required for a public service | axe check in Playwright | Partly. Contrast is measured in `docs/ux/DESIGN-SYSTEM.md`. The visual collector counts images without alt and unnamed form fields (local only). No axe test, not in CI |
 | 10 | Catchment by street and number (`street_list` only; no polygon, no distance guess) | The wedge; the gmina decides the boundary | Gmina resolution linked; ADR-0010 | Working for the demo gmina; real gminas wait on data |
-| 11 | Compare two to four schools | Useful after profiles are trusted | e2e three-column compare | Working; needs its first CI run |
+| 11 | Compare two to four schools | Useful after profiles are trusted | e2e three-column compare | Working; e2e job green on PR #10 |
 | 12 | Ranking list (country and gmina) | Only after cohort rules and methodology are final | e2e descending scores and no sort control | Working; needs Phase B methodology sign-off |
 | 13 | Preschool cost and availability (no quality score) | Phase D; a different data shape | Phase D scope | Pages exist: `/przedszkola` and `/przedszkola/[slug]`, practical facts only, no score. Gmina tuition tables are still OPEN in `docs/data/SOURCES.md` |
 | 14 | Parent reviews and accounts | Phase E; DSA machinery required first | authservice wired; DSA terms | Pages and components exist: `/konto` (login, register, school claims), reviews and billing components. Login against authservice is NOT RUN in CI (`AUTH_BASE_URL` unset there) |

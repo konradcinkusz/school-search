@@ -17,7 +17,7 @@ export function SchoolList({ items, emptyText }: { items: readonly SchoolListIte
               <Link href={`/szkoly/${school.slug}`}>{school.name}</Link>
             </h3>
             <p className="muted school-list__meta">
-              {school.gminaName ?? `Gmina TERYT ${school.gminaTeryt}`}
+              {school.gminaName ?? "Nieznana gmina"}
               {school.distanceKm !== null ? ` · ok. ${formatDistanceKm(school.distanceKm)}` : null}
               {school.isPublic ? null : " · szkoła niepubliczna"}
               {school.isSpecial ? " · szkoła specjalna" : null}

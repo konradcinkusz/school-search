@@ -16,7 +16,7 @@ internal static class CorrectionTriageEval
 {
     public const string Feature = "correction-triage";
 
-    /// <summary>Draft limit from the prompt rule 6 (AI-FEATURES feature 5). The product parser allows 1500; this eval holds the prompt's own limit.</summary>
+    /// <summary>Draft limit from the prompt rule 6 (AI-FEATURES feature 5). The product parser uses the same 900-character limit (<c>CorrectionTriageParser.MaxDraftLength</c>); this eval holds the prompt's own limit.</summary>
     public const int MaxDraftChars = 900;
 
     /// <summary>Checks that are hard rules. Category and action agreement are graded as agreement rates, not as hard rules.</summary>

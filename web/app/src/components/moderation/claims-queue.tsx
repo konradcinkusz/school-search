@@ -1,5 +1,6 @@
 "use client";
 
+import "@/app/styles/forms.css";
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { billingFeedback, CLAIM_STATUS_LABEL } from "@/components/billing/billing-messages";
 import { bffRequest } from "@/lib/bff-client";
@@ -88,6 +89,7 @@ function ClaimRow({ item, onDone }: { readonly item: ModerationClaimView; readon
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (sending) return;
     const data = new FormData(event.currentTarget);
     const action = String(data.get("action") ?? "approve");
     const notes = String(data.get("notes") ?? "").trim();
@@ -138,7 +140,7 @@ function ClaimRow({ item, onDone }: { readonly item: ModerationClaimView; readon
             <label htmlFor={ids.notes}>Notatka wewnętrzna (do 500 znaków, nie jest pokazywana publicznie)</label>
             <textarea id={ids.notes} name="notes" rows={3} maxLength={500} />
           </div>
-          <button type="submit" className="button" disabled={sending}>
+          <button type="submit" className="button" aria-disabled={sending ? true : undefined}>
             {sending ? "Zapisywanie…" : "Zapisz decyzję"}
           </button>
         </form>

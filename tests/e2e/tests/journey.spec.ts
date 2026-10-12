@@ -160,7 +160,7 @@ test.describe("public journey on the synthetic demo gmina", () => {
   test("correction form submit returns a public token", async ({ page }) => {
     await page.goto("/dla-szkol");
 
-    await page.getByLabel("Identyfikator szkoły (slug)").fill("demo-sp-1");
+    await page.getByLabel("Identyfikator szkoły z adresu jej profilu (np. szkola-podstawowa-nr-1)").fill("demo-sp-1");
     await page.getByLabel("Czego dotyczy korekta?").selectOption("name");
     await page
       .getByLabel("Co jest błędne i jakie są właściwe dane?")

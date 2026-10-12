@@ -54,8 +54,10 @@ Code: `tests/SchoolSearch.Evals.Tests/CorrectionTriageEval.cs`.
 
 Hard checks: `CorrectionTriageEval.HardChecks`. Category and action agreement are thresholds (80% PROPOSAL, owner to decide).
 
-Known gap, recorded by a test (`A_banned_claim_in_the_draft_fails_even_though_the_product_parser_accepts_it`): the product parser
-(`CorrectionTriageParser`) does not refuse banned claims; the prompt asks the model not to write them. The grader does refuse them.
+Resolved: the product parser (`CorrectionTriageParser`) now refuses banned claims (the `BannedClaim` pattern) and caps the draft at
+900 characters, the same limit the grader uses. The grader and the product parser agree on both rules. The test
+`A_banned_claim_in_the_draft_fails_the_grader_and_the_product_parser_refuses_it` (`CorrectionTriageGraderTests`) covers the banned
+claim case.
 
 ## Running it
 

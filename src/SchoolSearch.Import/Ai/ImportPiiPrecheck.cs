@@ -9,7 +9,8 @@ namespace SchoolSearch.Import.Ai;
 /// </summary>
 /// <remarks>
 /// A deliberate, cheap screen, not a detector of every name: it catches PESEL-like numbers, e-mail addresses, formatted
-/// phone numbers, and column or label words for personal fields. Unformatted 9-digit numbers (REGON) are not flagged.
+/// phone numbers, column or label words for personal fields, and a bare list of five or more lines that are each exactly
+/// two capitalised words (a possible pupil list). Unformatted 9-digit numbers (REGON) are not flagged.
 /// </remarks>
 public static partial class ImportPiiPrecheck
 {

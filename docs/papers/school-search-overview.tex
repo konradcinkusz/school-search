@@ -74,7 +74,10 @@ Decisions are recorded as numbered ADRs in \texttt{docs/adr/}.
 \section{Methodology and its limits}
 
 The ranking methodology is in draft (\texttt{docs/methodology/RANKING-METHODOLOGY.md}). The cohort
-publication threshold is \emph{proposed}, not accepted (ADR-0009). The geocoding source is
+publication threshold is accepted (ADR-0009): a score is published from 9 pupils who sat the exam; from 5 to 8
+pupils the output is a limited profile with no score, interval or rank; below 5 it is \texttt{insufficient\_cohort}.
+Whether the limited band needs a methodology version bump or an amendment of ADR-0009 is still an open owner decision.
+The geocoding source is
 \emph{pending} (ADR-0010). Scores are not published in Phase A. Each open data question is listed,
 with how to verify it, in \texttt{docs/data/SOURCES.md}. The Polish registry API was not reachable
 from the build environment at the time of writing, and that is recorded there.

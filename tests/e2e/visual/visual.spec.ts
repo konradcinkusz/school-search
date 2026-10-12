@@ -21,7 +21,7 @@ const ROUTES: readonly Route[] = [
   { slug: "home", path: "/" },
   { slug: "home-adres", path: "/?gmina=9999999&ulica=Przykladowa&numer=5", note: "catchment result" },
   { slug: "szkola-demo-sp-1", path: "/szkoly/demo-sp-1", note: "published score" },
-  { slug: "szkola-demo-sp-3", path: "/szkoly/demo-sp-3", note: "insufficient_cohort" },
+  { slug: "szkola-demo-sp-3", path: "/szkoly/demo-sp-3", note: "limited" },
   { slug: "szkola-demo-sp-6", path: "/szkoly/demo-sp-6", note: "no_exam_data" },
   { slug: "ranking-country", path: "/ranking/country" },
   { slug: "ranking-gmina-9999999", path: "/ranking/gmina:9999999" },

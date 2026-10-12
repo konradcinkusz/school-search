@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { AddressForm } from "@/components/address-form";
+import { AddressForm, HOUSE_NUMBER_MESSAGE, HOUSE_NUMBER_PATTERN } from "@/components/address-form";
 import { SearchIntentBox } from "@/components/ai/search-intent-box";
 import { CatchmentPanel } from "@/components/catchment-panel";
 import { Pagination } from "@/components/pagination";
@@ -12,31 +12,69 @@ import { firstParam, intParam, isTeryt } from "@/lib/validation";
 // Data-driven: never prerendered at build time, when the API is not reachable.
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: { absolute: "Start | Wyszukiwarka szkół" },
-  description:
-    "Wpisz adres, aby zobaczyć obwód szkolny i szkoły w zasięgu wraz z wynikami, ich niepewnością i liczebnością kohort. Nie jest oficjalnym rankingiem.",
-};
+const HOME_DESCRIPTION =
+  "Wpisz adres, aby zobaczyć obwód szkolny i szkoły w zasięgu wraz z wynikami, ich niepewnością i liczebnością kohort. Nie jest oficjalnym rankingiem.";
+const HOME_TITLE = "Sprawdź obwód szkolny i szkoły w zasięgu";
 
 const NAME_QUERY_MIN = 2;
 const NAME_PAGE_SIZE = 20;
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+interface HomeSearch {
+  readonly gminaParam: string | undefined;
+  readonly street: string | undefined;
+  /** Trimmed house number as typed; undefined when empty. */
+  readonly number: string | undefined;
+  /** False when the number is not digits with an optional letter. The lookup then never runs. */
+  readonly numberValid: boolean;
+  readonly nameQuery: string | undefined;
+  readonly page: number;
+}
+
+/** Reads the search parameters once, for both the page and its metadata. */
+function readSearch(sp: Record<string, string | string[] | undefined>): HomeSearch {
+  const rawNumber = Array.isArray(sp.numer) ? sp.numer[0] : sp.numer;
+  const number = (rawNumber ?? "").trim();
+  return {
+    gminaParam: firstParam(sp.gmina, 10),
+    street: firstParam(sp.ulica, 200),
+    number: number === "" ? undefined : number,
+    numberValid: number === "" || HOUSE_NUMBER_PATTERN.test(number),
+    nameQuery: firstParam(sp.q, 100),
+    page: intParam(sp.page, 1, 1000),
+  };
+}
+
+/** Result-specific titles, so a screen reader hears that the navigation produced a result. */
+export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
+  const search = readSearch(await searchParams);
+  if (search.gminaParam && isTeryt(search.gminaParam) && search.street && search.numberValid) {
+    const gminas = await catalog.gminas();
+    const gmina = gminas.ok ? gminas.data.find((item) => item.teryt === search.gminaParam) : undefined;
+    if (gmina) {
+      const address = search.number ? `${search.street} ${search.number}` : search.street;
+      return {
+        title: `Obwód: ${address}, ${gmina.name ?? "Nieznana gmina"}`,
+        description: HOME_DESCRIPTION,
+      };
+    }
+  }
+  if (search.nameQuery !== undefined && search.nameQuery.length >= NAME_QUERY_MIN) {
+    return { title: `Wyniki wyszukiwania: ${search.nameQuery}`, description: HOME_DESCRIPTION };
+  }
+  return { title: HOME_TITLE, description: HOME_DESCRIPTION };
+}
+
 export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
-  const sp = await searchParams;
-  const gminaParam = firstParam(sp.gmina, 10);
-  const street = firstParam(sp.ulica, 200);
-  const number = firstParam(sp.numer, 20);
-  const nameQuery = firstParam(sp.q, 100);
-  const page = intParam(sp.page, 1, 1000);
+  const { gminaParam, street, number, numberValid, nameQuery, page } = readSearch(await searchParams);
 
   const gminas = await catalog.gminas();
   const gminaList: readonly GminaItem[] = gminas.ok ? gminas.data : [];
   const selectedGmina =
     gminaParam && isTeryt(gminaParam) ? gminaList.find((gmina) => gmina.teryt === gminaParam) : undefined;
 
-  const hasLookup = selectedGmina !== undefined && street !== undefined && street !== "";
+  const hasLookup = selectedGmina !== undefined && street !== undefined && street !== "" && numberValid;
 
   return (
     <div>
@@ -69,13 +107,20 @@ export default async function HomePage({ searchParams }: { searchParams: SearchP
                 Podaj nazwę ulicy, aby sprawdzić obwód.
               </div>
             ) : null}
+            {!numberValid ? (
+              <div className="notice" role="alert">
+                {HOUSE_NUMBER_MESSAGE}
+              </div>
+            ) : null}
           </div>
 
           {hasLookup ? null : <Principles />}
         </div>
       </section>
 
-      {selectedGmina && street ? <CatchmentPanel gmina={selectedGmina} street={street} number={number} /> : null}
+      {selectedGmina && street && numberValid ? (
+        <CatchmentPanel gmina={selectedGmina} street={street} number={number} />
+      ) : null}
 
       <div className="home-grid">
         <SearchIntentBox />
@@ -160,11 +205,19 @@ async function NameResults({ query, page }: { query: string | undefined; page: n
   if (!result.ok) {
     return <ServiceUnavailable what="wyniki wyszukiwania" />;
   }
+  const beyondLastPage = page > 1 && result.data.items.length === 0;
   return (
     <section aria-labelledby="name-results-heading" className="section">
       <h2 id="name-results-heading">Wyniki wyszukiwania</h2>
       <p className="result-count">Znaleziono: {result.data.total}</p>
-      <SchoolList items={result.data.items} emptyText="Nie znaleziono szkół o tej nazwie." />
+      {beyondLastPage ? (
+        <p className="muted">
+          Na tej stronie nie ma wyników.{" "}
+          <Link href={`/?${new URLSearchParams({ q: query }).toString()}`}>Wróć do pierwszej strony</Link>.
+        </p>
+      ) : (
+        <SchoolList items={result.data.items} emptyText="Nie znaleziono szkół o tej nazwie." />
+      )}
       <Pagination
         page={result.data.page}
         pageSize={result.data.pageSize}

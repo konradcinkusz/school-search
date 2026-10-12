@@ -1,5 +1,6 @@
 "use client";
 
+import "@/app/styles/forms.css";
 import { useEffect, useId, useState } from "react";
 import { AI_LABEL, parseAdminCorrections, parseCorrectionTriage, type AdminCorrection, type CorrectionTriage } from "@/lib/ai-contract";
 import { aiFailureText } from "@/lib/ai-messages";
@@ -108,6 +109,7 @@ function CorrectionRow({ item, onChanged }: { readonly item: AdminCorrection; re
   const created = formatDatePl(item.createdAt);
 
   async function proposeReply() {
+    if (busy) return;
     setBusy(true);
     setFailure(null);
     const response = await bffRequest(`/api/proxy/api/v1/admin/corrections/${encodeURIComponent(item.id)}/triage`, {
@@ -148,7 +150,7 @@ function CorrectionRow({ item, onChanged }: { readonly item: AdminCorrection; re
         Identyfikator: <span className="token">{item.id}</span>
       </p>
 
-      <button type="button" className="button" onClick={proposeReply} disabled={busy}>
+      <button type="button" className="button" onClick={proposeReply} aria-disabled={busy ? true : undefined}>
         {busy ? "Przygotowywanie propozycji…" : "Zaproponuj odpowiedź (AI)"}
       </button>
 

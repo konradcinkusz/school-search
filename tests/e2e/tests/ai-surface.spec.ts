@@ -191,7 +191,7 @@ test.describe("AI surface: degrade states and guard rails", () => {
     await expect(fieldOptions.filter({ hasText: "Czesne: minimum" })).toHaveCount(0);
 
     await page.getByLabel("Czego dotyczy zgłoszenie?").selectOption("preschool");
-    await expect(page.getByLabel("Identyfikator przedszkola (slug)")).toBeVisible();
+    await expect(page.getByLabel("Identyfikator przedszkola z adresu jego profilu (np. przedszkole-demonstracyjne-nr-1)")).toBeVisible();
     await expect(fieldOptions.filter({ hasText: "Czesne: minimum" })).toHaveCount(1);
     await expect(fieldOptions.filter({ hasText: "Wolne miejsca" })).toHaveCount(1);
   });

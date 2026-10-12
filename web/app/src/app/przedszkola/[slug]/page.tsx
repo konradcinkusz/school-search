@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const preschool = result.data;
   return {
     title: preschool.name,
-    description: `Przedszkole ${preschool.name}: lokalizacja, czesne, godziny otwarcia i wolne miejsca, każde ze źródłem i datą.`,
+    description: `${preschool.name}: lokalizacja, czesne, godziny otwarcia i wolne miejsca, każde ze źródłem i datą.`,
     alternates: { canonical: `/przedszkola/${slug}` },
   };
 }

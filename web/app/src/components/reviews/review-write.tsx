@@ -1,8 +1,9 @@
 "use client";
 
+import "@/app/styles/forms.css";
 import Link from "next/link";
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { bffRequest, errorCodeOf, errorListOf, isUnavailable } from "@/lib/bff-client";
+import { bffRequest, errorCodeOf, isUnavailable } from "@/lib/bff-client";
 import { schoolYearLabel } from "@/lib/format";
 import type { LegalTerms } from "@/lib/reviews-types";
 
@@ -16,6 +17,9 @@ const BODY_MIN = 40;
 const BODY_MAX = 4000;
 
 type Gate = "loading" | "unavailable" | "anonymous" | "unverified" | "ready";
+type FieldKey = "rating" | "title" | "body" | "terms";
+type FieldErrors = Partial<Record<FieldKey, string>>;
+const FIELD_ORDER: readonly FieldKey[] = ["rating", "title", "body", "terms"];
 
 const ERROR_TEXT: Record<string, string> = {
   unauthenticated: "Sesja wygasła. Zaloguj się ponownie, aby dodać opinię.",
@@ -27,6 +31,14 @@ const ERROR_TEXT: Record<string, string> = {
   rate_limited: "Zbyt wiele opinii w krótkim czasie. Spróbuj ponownie później.",
   reviews_unavailable: "Opinie są chwilowo niedostępne. Spróbuj ponownie za chwilę.",
   upstream_timeout: "Usługa opinii nie odpowiedziała na czas. Spróbuj ponownie.",
+};
+
+const FIELD_COPY = {
+  rating: "Wybierz ocenę od 1 do 5.",
+  title: `Podaj tytuł (do ${TITLE_MAX} znaków).`,
+  body: `Opinia musi mieć od ${BODY_MIN} do ${BODY_MAX} znaków.`,
+  terms: "Potwierdź akceptację regulaminu opinii.",
+  summary: "Popraw pola oznaczone błędem i wyślij opinię ponownie.",
 };
 
 /** The last school years a review can refer to (school year 2025 means 2025/2026). */
@@ -94,15 +106,22 @@ export function ReviewWrite({ slug }: { readonly slug: string }) {
 function ReviewForm({ slug, onClose }: { readonly slug: string; readonly onClose: () => void }) {
   const ids = {
     rating: useId(),
+    ratingError: useId(),
     title: useId(),
+    titleError: useId(),
     body: useId(),
+    bodyError: useId(),
     year: useId(),
     terms: useId(),
+    termsError: useId(),
   };
   const [years] = useState(() => schoolYearOptions(new Date()));
   const [termsVersion, setTermsVersion] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [feedback, setFeedback] = useState<{ kind: "error" | "done"; text: string; details: string[] } | null>(null);
+  const [fields, setFields] = useState<FieldErrors>({});
+  const [feedback, setFeedback] = useState<{ kind: "error" | "done"; text: string } | null>(null);
+
+  const idOf: Record<FieldKey, string> = { rating: ids.rating, title: ids.title, body: ids.body, terms: ids.terms };
 
   useEffect(() => {
     let active = true;
@@ -117,8 +136,17 @@ function ReviewForm({ slug, onClose }: { readonly slug: string; readonly onClose
     };
   }, []);
 
+  /** Shows the errors and moves focus to the first invalid field, in form order. */
+  function reject(next: FieldErrors, text: string | null) {
+    setFields(next);
+    setFeedback(text === null ? null : { kind: "error", text });
+    const first = FIELD_ORDER.find((key) => next[key] !== undefined);
+    if (first !== undefined) document.getElementById(idOf[first])?.focus();
+  }
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (sending) return;
     const data = new FormData(event.currentTarget);
     const rating = Number(data.get("rating"));
     const title = String(data.get("title") ?? "").trim();
@@ -126,24 +154,18 @@ function ReviewForm({ slug, onClose }: { readonly slug: string; readonly onClose
     const schoolYearFrom = Number(data.get("schoolYearFrom"));
     const accepted = data.get("acceptTerms") === "on";
 
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-      setFeedback({ kind: "error", text: "Wybierz ocenę od 1 do 5.", details: [] });
-      return;
-    }
-    if (title === "" || title.length > TITLE_MAX) {
-      setFeedback({ kind: "error", text: `Podaj tytuł (do ${TITLE_MAX} znaków).`, details: [] });
-      return;
-    }
-    if (body.length < BODY_MIN || body.length > BODY_MAX) {
-      setFeedback({ kind: "error", text: `Opinia musi mieć od ${BODY_MIN} do ${BODY_MAX} znaków.`, details: [] });
-      return;
-    }
-    if (!accepted || termsVersion === null) {
-      setFeedback({ kind: "error", text: "Potwierdź akceptację regulaminu opinii.", details: [] });
+    const invalid: FieldErrors = {};
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) invalid.rating = FIELD_COPY.rating;
+    if (title === "" || title.length > TITLE_MAX) invalid.title = FIELD_COPY.title;
+    if (body.length < BODY_MIN || body.length > BODY_MAX) invalid.body = FIELD_COPY.body;
+    if (!accepted || termsVersion === null) invalid.terms = FIELD_COPY.terms;
+    if (Object.keys(invalid).length > 0) {
+      reject(invalid, FIELD_COPY.summary);
       return;
     }
 
     setSending(true);
+    setFields({});
     setFeedback(null);
     const response = await bffRequest(`/api/proxy/api/v1/schools/${encodeURIComponent(slug)}/reviews`, {
       method: "POST",
@@ -155,19 +177,18 @@ function ReviewForm({ slug, onClose }: { readonly slug: string; readonly onClose
       setFeedback({
         kind: "done",
         text: "Dziękujemy. Opinia została przyjęta i zostanie opublikowana po sprawdzeniu przez moderatora.",
-        details: [],
       });
       return;
     }
     const code = errorCodeOf(response?.body);
-    // The status decides for session and availability errors; the server message is English and never shown here.
+    // The status and code decide the copy. The server message is never shown; it may be English.
     const text =
       (response?.status === 401 ? ERROR_TEXT.unauthenticated : null) ||
       (response?.status === 503 ? ERROR_TEXT.reviews_unavailable : null) ||
       (code !== null && ERROR_TEXT[code]) ||
       (response === null ? "Nie udało się połączyć z usługą. Opinia nie została wysłana." : null) ||
       "Nie udało się wysłać opinii. Spróbuj ponownie.";
-    setFeedback({ kind: "error", text, details: errorListOf(response?.body) });
+    setFeedback({ kind: "error", text });
   }
 
   return (
@@ -177,15 +198,29 @@ function ReviewForm({ slug, onClose }: { readonly slug: string; readonly onClose
         Opinia pochodzi od zalogowanego użytkownika z potwierdzonym adresem e-mail. Nie sprawdzamy, czy jesteś rodzicem
         ucznia tej szkoły. Nie podawaj imion dzieci ani nauczycieli. Opinie nie wpływają na wynik szkoły.
       </p>
+      <p className="field-hint">Pola oznaczone * są wymagane.</p>
       <div className="field">
-        <label htmlFor={ids.rating}>Twoja ocena (od 1 do 5)</label>
-        <select id={ids.rating} name="rating" defaultValue="5">
+        <label htmlFor={ids.rating}>
+          Twoja ocena (od 1 do 5)<span aria-hidden="true"> *</span>
+        </label>
+        <select
+          id={ids.rating}
+          name="rating"
+          defaultValue="5"
+          aria-invalid={fields.rating ? true : undefined}
+          aria-describedby={fields.rating ? ids.ratingError : undefined}
+        >
           {[5, 4, 3, 2, 1].map((value) => (
             <option key={value} value={value}>
               {value}
             </option>
           ))}
         </select>
+        {fields.rating ? (
+          <p id={ids.ratingError} className="field-error">
+            {fields.rating}
+          </p>
+        ) : null}
       </div>
       <div className="field">
         <label htmlFor={ids.year}>Rok szkolny</label>
@@ -198,22 +233,66 @@ function ReviewForm({ slug, onClose }: { readonly slug: string; readonly onClose
         </select>
       </div>
       <div className="field">
-        <label htmlFor={ids.title}>Tytuł</label>
-        <input id={ids.title} name="title" type="text" maxLength={TITLE_MAX} required />
+        <label htmlFor={ids.title}>
+          Tytuł<span aria-hidden="true"> *</span>
+        </label>
+        <input
+          id={ids.title}
+          name="title"
+          type="text"
+          maxLength={TITLE_MAX}
+          required
+          aria-invalid={fields.title ? true : undefined}
+          aria-describedby={fields.title ? ids.titleError : undefined}
+        />
+        {fields.title ? (
+          <p id={ids.titleError} className="field-error">
+            {fields.title}
+          </p>
+        ) : null}
       </div>
       <div className="field">
-        <label htmlFor={ids.body}>Treść opinii (od {BODY_MIN} do {BODY_MAX} znaków)</label>
-        <textarea id={ids.body} name="body" rows={6} minLength={BODY_MIN} maxLength={BODY_MAX} required />
+        <label htmlFor={ids.body}>
+          Treść opinii (od {BODY_MIN} do {BODY_MAX} znaków)<span aria-hidden="true"> *</span>
+        </label>
+        <textarea
+          id={ids.body}
+          name="body"
+          rows={6}
+          minLength={BODY_MIN}
+          maxLength={BODY_MAX}
+          required
+          aria-invalid={fields.body ? true : undefined}
+          aria-describedby={fields.body ? ids.bodyError : undefined}
+        />
+        {fields.body ? (
+          <p id={ids.bodyError} className="field-error">
+            {fields.body}
+          </p>
+        ) : null}
       </div>
       <div className="field field--check">
-        <input id={ids.terms} name="acceptTerms" type="checkbox" required />
+        <input
+          id={ids.terms}
+          name="acceptTerms"
+          type="checkbox"
+          required
+          aria-invalid={fields.terms ? true : undefined}
+          aria-describedby={fields.terms ? ids.termsError : undefined}
+        />
         <label htmlFor={ids.terms}>
           Akceptuję zasady pisania opinii (<Link href="/regulamin">regulamin</Link>).
+          <span aria-hidden="true"> *</span>
           {termsVersion === null ? " Wersja regulaminu jest chwilowo niedostępna." : ""}
         </label>
+        {fields.terms ? (
+          <p id={ids.termsError} className="field-error">
+            {fields.terms}
+          </p>
+        ) : null}
       </div>
       <div className="school-actions">
-        <button type="submit" className="button" disabled={sending || termsVersion === null}>
+        <button type="submit" className="button" aria-disabled={sending || termsVersion === null ? true : undefined}>
           {sending ? "Wysyłanie…" : "Wyślij opinię"}
         </button>{" "}
         <button type="button" className="link-button" onClick={onClose}>
@@ -223,13 +302,6 @@ function ReviewForm({ slug, onClose }: { readonly slug: string; readonly onClose
       {feedback !== null ? (
         <div role={feedback.kind === "error" ? "alert" : "status"} className="notice">
           <p>{feedback.text}</p>
-          {feedback.details.length > 0 ? (
-            <ul>
-              {feedback.details.map((detail) => (
-                <li key={detail}>{detail}</li>
-              ))}
-            </ul>
-          ) : null}
         </div>
       ) : null}
     </form>

@@ -1,5 +1,6 @@
 "use client";
 
+import "@/app/styles/forms.css";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState, type FormEvent } from "react";
@@ -16,22 +17,34 @@ const MESSAGES: Record<string, string> = {
   rate_limited: "Zbyt wiele prób logowania. Spróbuj ponownie później.",
 };
 
+type FieldErrors = { email?: string; password?: string };
+
 export function LoginForm() {
-  const ids = { email: useId(), password: useId() };
+  const ids = { email: useId(), emailError: useId(), password: useId(), passwordError: useId() };
   const router = useRouter();
   const [sending, setSending] = useState(false);
+  const [fields, setFields] = useState<FieldErrors>({});
   const [message, setMessage] = useState<string | null>(null);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (sending) return;
     const data = new FormData(event.currentTarget);
     const email = String(data.get("email") ?? "").trim();
     const password = String(data.get("password") ?? "");
-    if (email === "" || password === "") {
-      setMessage("Podaj adres e-mail i hasło.");
+
+    const missing: FieldErrors = {};
+    if (email === "") missing.email = "Podaj adres e-mail.";
+    if (password === "") missing.password = "Podaj hasło.";
+    if (missing.email !== undefined || missing.password !== undefined) {
+      setFields(missing);
+      setMessage(null);
+      document.getElementById(missing.email !== undefined ? ids.email : ids.password)?.focus();
       return;
     }
+
     setSending(true);
+    setFields({});
     setMessage(null);
     const response = await bffRequest("/api/auth/login", { method: "POST", body: { email, password } });
     setSending(false);
@@ -55,22 +68,48 @@ export function LoginForm() {
 
   return (
     <form onSubmit={onSubmit} noValidate>
-      <p className="field-hint">
-        Pola oznaczone * są wymagane.
-      </p>
+      <p className="field-hint">Pola oznaczone * są wymagane.</p>
       <div className="field">
         <label htmlFor={ids.email}>
           Adres e-mail<span aria-hidden="true"> *</span>
         </label>
-        <input id={ids.email} name="email" type="email" autoComplete="email" maxLength={200} required />
+        <input
+          id={ids.email}
+          name="email"
+          type="email"
+          autoComplete="email"
+          maxLength={200}
+          required
+          aria-invalid={fields.email ? true : undefined}
+          aria-describedby={fields.email ? ids.emailError : undefined}
+        />
+        {fields.email ? (
+          <p id={ids.emailError} className="field-error">
+            {fields.email}
+          </p>
+        ) : null}
       </div>
       <div className="field">
         <label htmlFor={ids.password}>
           Hasło<span aria-hidden="true"> *</span>
         </label>
-        <input id={ids.password} name="password" type="password" autoComplete="current-password" maxLength={200} required />
+        <input
+          id={ids.password}
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          maxLength={200}
+          required
+          aria-invalid={fields.password ? true : undefined}
+          aria-describedby={fields.password ? ids.passwordError : undefined}
+        />
+        {fields.password ? (
+          <p id={ids.passwordError} className="field-error">
+            {fields.password}
+          </p>
+        ) : null}
       </div>
-      <button type="submit" className="button" disabled={sending}>
+      <button type="submit" className="button" aria-disabled={sending ? true : undefined}>
         {sending ? "Logowanie…" : "Zaloguj się"}
       </button>
       {message !== null ? (

@@ -2,8 +2,16 @@ import type { GminaItem } from "@/lib/api";
 
 /**
  * Address lookup as a plain GET form (no client JavaScript): the result is a shareable URL.
- * Gmina options come from /gminas; the label is the gmina name, or its TERYT code when the name is unknown.
+ * Gmina options come from /gminas; the label is the gmina name, or "Nieznana gmina" with its code when the name is unknown.
  */
+/**
+ * House number: digits, an optional letter, and an optional second part after a slash (5, 5A, 12/4B).
+ * Shared by the form (HTML pattern, which the browser checks) and the page (server check, which always runs).
+ */
+export const HOUSE_NUMBER_SOURCE = "\\d{1,4}[A-Za-z]?(?:/\\d{1,4}[A-Za-z]?)?";
+export const HOUSE_NUMBER_PATTERN = new RegExp(`^${HOUSE_NUMBER_SOURCE}$`);
+export const HOUSE_NUMBER_MESSAGE = "Numer domu podaj cyframi, na przykład 5 lub 5A.";
+
 export interface AddressFormValues {
   readonly gmina?: string;
   readonly street?: string;
@@ -22,7 +30,7 @@ export function AddressForm({ gminas, values }: { gminas: readonly GminaItem[]; 
           <option value="">Wybierz gminę</option>
           {sorted.map((gmina) => (
             <option key={gmina.teryt} value={gmina.teryt}>
-              {gmina.name ?? `TERYT ${gmina.teryt}`}
+              {gmina.name ?? `Nieznana gmina (kod ${gmina.teryt})`}
             </option>
           ))}
         </select>
@@ -47,6 +55,8 @@ export function AddressForm({ gminas, values }: { gminas: readonly GminaItem[]; 
           name="numer"
           type="text"
           inputMode="numeric"
+          pattern={HOUSE_NUMBER_SOURCE}
+          title={HOUSE_NUMBER_MESSAGE}
           maxLength={20}
           autoComplete="address-line2"
           defaultValue={values.number ?? ""}
