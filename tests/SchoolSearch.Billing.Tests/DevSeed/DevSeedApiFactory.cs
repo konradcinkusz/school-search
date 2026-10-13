@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SchoolSearch.Billing.Auth;
 using SchoolSearch.Billing.Data;
 using SchoolSearch.Billing.DevSeed;
+using SchoolSearch.Billing.Subscriptions;
 
 namespace SchoolSearch.Billing.Tests.DevSeed;
 

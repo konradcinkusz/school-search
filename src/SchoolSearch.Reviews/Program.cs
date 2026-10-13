@@ -1,6 +1,7 @@
 using SchoolSearch.Reviews.Ai;
 using SchoolSearch.Reviews.Auth;
 using SchoolSearch.Reviews.Data;
+using SchoolSearch.Reviews.DevSeed;
 using SchoolSearch.Reviews.Dsa;
 using SchoolSearch.Reviews.Endpoints;
 using SchoolSearch.Reviews.Extensions;
@@ -15,6 +16,7 @@ builder.Services.AddAuthServiceAuthentication(builder.Configuration, builder.Env
 builder.Services.AddReviewsServices(builder.Configuration);
 builder.Services.AddDsaServices(builder.Configuration);
 builder.Services.AddReviewTriage(builder.Configuration);
+builder.Services.AddDevSeed(builder.Configuration);
 
 var app = builder.Build();
 
@@ -22,6 +24,7 @@ app.MapDefaultEndpoints();
 app.UseReviewsPipeline();
 app.MapReviewEndpoints();
 app.MapDsaEndpoints();
+app.MapDevSeedEndpoints();
 
 app.Run();
 

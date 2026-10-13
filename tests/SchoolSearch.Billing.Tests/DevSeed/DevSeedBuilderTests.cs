@@ -15,10 +15,12 @@ public sealed class DevSeedBuilderTests
     {
         var rows = DevSeedBuilder.Build("owner-hash", "moderator-hash", Now);
 
-        Assert.Equal(2, rows.Claims.Count);
+        var claimCount = rows.Claims.Count;
+        var leadCount = rows.Leads.Count;
+        Assert.Equal(2, claimCount);
         Assert.Single(rows.Subscriptions);
         Assert.Single(rows.Profiles);
-        Assert.Equal(4, rows.Leads.Count);
+        Assert.Equal(4, leadCount);
     }
 
     [Fact]
@@ -97,7 +99,8 @@ public sealed class DevSeedBuilderTests
         Assert.All(rows.Leads, lead => Assert.Equal(lead.CreatedAt.AddDays(LeadRules.RetentionDays), lead.ExpiresAt));
 
         Assert.Single(rows.Leads, lead => lead.Status == LeadStatuses.Read);
-        Assert.Equal(3, rows.Leads.Count(lead => lead.Status == LeadStatuses.New));
+        var newCount = rows.Leads.Count(lead => lead.Status == LeadStatuses.New);
+        Assert.Equal(3, newCount);
     }
 
     [Fact]
