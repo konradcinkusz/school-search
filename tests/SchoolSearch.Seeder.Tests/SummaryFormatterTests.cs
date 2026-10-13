@@ -17,12 +17,15 @@ public sealed class SummaryFormatterTests
     }
 
     [Fact]
-    public void Password_is_printed_with_a_per_run_note_when_generated()
+    public void Password_is_printed_with_a_stored_local_note_when_generated()
     {
         string text = SummaryFormatter.Format(SeedAccount.TestAccounts, Password, passwordGenerated: true);
 
         Assert.Contains(Password, text);
-        Assert.Contains("per-run local password", text);
+        Assert.Contains("Local test password", text);
+        Assert.Contains(".local/seed-secrets.json", text);
+        Assert.Contains("reused on every run", text);
+        Assert.Contains("Seed:TestPassword", text);
     }
 
     [Fact]

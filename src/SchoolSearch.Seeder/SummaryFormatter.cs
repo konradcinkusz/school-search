@@ -5,7 +5,7 @@ using System.Text;
 namespace SchoolSearch.Seeder;
 
 /// <summary>
-/// The final table. The password appears only when it was generated for this run (SEED_PASSWORD_GENERATED=true);
+/// The final table. The password appears only when the AppHost generated or stored it (SEED_PASSWORD_GENERATED=true);
 /// a password the operator set is never printed.
 /// </summary>
 public static class SummaryFormatter
@@ -35,7 +35,8 @@ public static class SummaryFormatter
         {
             text.AppendLine();
             text.AppendLine("Password for every account above: " + password);
-            text.AppendLine("This is a per-run local password, generated for this run only. It is not stored in any file.");
+            text.AppendLine("Local test password; stored in .local/seed-secrets.json (gitignored) and reused on every run.");
+            text.AppendLine("Set Seed:TestPassword in user-secrets to choose your own.");
         }
         else
         {

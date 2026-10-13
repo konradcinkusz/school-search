@@ -286,7 +286,7 @@ public sealed class SeedRunnerTests
 
         string text = built.Output.ToString();
         Assert.Contains(SeedFixtures.TestPassword, text);
-        Assert.Contains("per-run local password", text);
+        Assert.Contains("Local test password", text);
     }
 
     [Fact]

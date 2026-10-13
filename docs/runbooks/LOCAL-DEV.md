@@ -72,8 +72,9 @@ nothing new. Each service recognises its demo rows by fixed ids.
 **Catalog** (`src/SchoolSearch.Api/Demo`, flag `SCHOOLSEARCH_DEMO_SEED=true`, which the AppHost sets from `SeedDemo`):
 
 - the gmina **Przykładowo** (TERYT `9999999`), with a street rule set for the street *Przykladowa*;
-- schools `demo-sp-1` to `demo-sp-14` (for example `demo-sp-1` is published, `demo-sp-3` has too few pupils to
-  publish a score, `demo-sp-6` has no exam data);
+- schools `demo-sp-1` to `demo-sp-14` (for example `demo-sp-1` is published with a score, `demo-sp-3` has 8 pupils
+  so it is the "limited" profile: no score and no rank, only the line `Dla tej grupy nie publikujemy wyniku ani miejsca
+  w zestawieniu.`, and `demo-sp-6` has no exam data);
 - five demonstration preschools (`przedszkole-demonstracyjne-nr-1` to `-nr-5`).
 
 Try `/?gmina=9999999&ulica=Przykladowa&numer=5` for a catchment result, `/szkoly/demo-sp-1` for a school page,
@@ -312,7 +313,7 @@ the details of the mock, see `tests/e2e/visual/README.md`.
 | Sign-in fails with the password you expect, or the seeder says `already exists but signing in failed` | the password in the local store (or `Seed:TestPassword`) is not the one the authservice database holds. Typical causes: `Seed:TestPassword` was changed after the first run, the store file was deleted or restored from another clone, or the database is from an earlier run | put the value back (remove the changed `Seed:TestPassword`, or restore the file), or reset both the store and the volume (section 7) |
 | The startup banner says `Seeder: skipped` | `SeedDemo` is on but authservice is not included (`IncludeAuthservice=false`), so the test accounts cannot be created. No demo data is written to Reviews or Billing either, because only the seeder calls their seed endpoints | unset `IncludeAuthservice` or set it to `true`, or set `SeedDemo=false` |
 | Reviews or Billing answer `404` on `/dev/seed` | `DevSeed__Enabled` is off, the key does not match, or the environment is Production | run the AppHost locally; never run the seed in Production |
-| Seeder reports a Reviews or Billing error after a first run | the Reviews seed stores its base rows before the moderation steps, so a failed moderation step leaves some demo rows missing. A rerun then finds the marker and writes nothing | reset both the store and the volume (section 7) |
+| Seeder reports a Reviews or Billing error after a first run | the Reviews seed stores its base rows before the moderation steps, so a failed moderation step leaves some demo rows missing. A rerun checks each step's fixed ids and completes the missing rows (on a relational provider the whole seed runs in one transaction). `alreadySeeded` in the response means that this call wrote nothing | rerun the seeder; if it still fails, reset both the store and the volume (section 7) |
 | Tokens stop working after a restart | the signing key changed: the local store was deleted, or `Authservice:JwtPrivateKeyPem` changed | sign in again |
 | Scores or pupil counts look different from the demo notes | the import job wrote real data to `catalogdb` | reset the volume (section 7) and do not run the import against the demo database |
 
@@ -363,7 +364,7 @@ Written without a .NET SDK and without Docker. Nothing below has been run from t
   Do not share a dashboard screenshot.
 - **No "answered" enquiry state.** The Billing enquiry states are `new` and `read` only. The demo has no answered
   enquiry.
-- **A partial Reviews seed is not repaired by a rerun** (section 11).
+- **A partial Reviews seed is repaired by a rerun** only when the failing step can now succeed (section 11).
 
 Owner action: the first real run (`dotnet run --project src/SchoolSearch.AppHost`) and the walk through section 5
 are the checks. Record what fails in the ADR (`docs/adr/0019-local-seeding-and-test-accounts.md`), not here.
