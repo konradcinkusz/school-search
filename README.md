@@ -45,19 +45,30 @@ The metric rules are in [`docs/methodology/RANKING-METHODOLOGY.md`](docs/methodo
 
 ## Run it
 
-Prerequisites: the .NET 10 SDK, Node.js with pnpm (for the web app), and optionally a container
-runtime (Aspire starts Postgres as a container when `DATABASE_PROVIDER=postgres`).
+Prerequisites: the .NET 10 SDK, Docker (Aspire starts Postgres as a container), and Node.js with pnpm
+(for the web app).
 
 ```bash
 ./scripts/setup.sh && dotnet run --project src/SchoolSearch.AppHost
 ```
 
-On Windows, use `scripts\setup.ps1` in place of `setup.sh`. No cloud credential is needed to start.
-Optional integrations are listed as `degraded` or `disabled` in `GET /health` and in the startup
-banner. Every variable and what degrades without it is in [`scripts/README.md`](scripts/README.md)
-and [`secrets.env.example`](secrets.env.example).
+On Windows, use `scripts\setup.ps1` in place of `setup.sh`. Setup is optional for a seeded run.
 
-The web app is in `web/` (a pnpm workspace). Run it with `pnpm -C web/app dev` once the API is up.
+The AppHost seeds a local environment by default (`SeedDemo=true`): the demo catalog (gmina Przykładowo, schools,
+preschools), reviews, DSA notices and moderation data, sponsored profiles and enquiries, and five test accounts
+(parent, parent2, owner, moderator, admin) signed in through a local authservice on `http://localhost:8090`. The
+generated demo values are kept in the gitignored `.local/seed-secrets.json`, so logins survive restarts. The seeder
+prints the test password in its log in the Aspire dashboard. To reset, delete `.local/seed-secrets.json` and the
+Docker volume `school-search-postgres-data` together. Set `SeedDemo=false` to start without seeding. Every account,
+flag and reset step is in [`docs/runbooks/LOCAL-DEV.md`](docs/runbooks/LOCAL-DEV.md). The seed is refused in
+Production and all data is synthetic and labelled DEMO (ADR-0019).
+
+No cloud credential is needed to start. Optional integrations are listed as `degraded` or `disabled` in
+`GET /health` and in the startup banner. Every variable and what degrades without it is in
+[`scripts/README.md`](scripts/README.md) and [`secrets.env.example`](secrets.env.example).
+
+The web app is in `web/` (a pnpm workspace). Run it with `pnpm -C web/app dev` once the API is up. To browse the
+UI without Docker, use the mock services in `tests/e2e/visual` (no accounts; see the runbook).
 
 Run the tests with `dotnet test SchoolSearch.sln`. The end-to-end journey is in `tests/e2e`
 (Playwright).
@@ -66,7 +77,7 @@ Run the tests with `dotnet test SchoolSearch.sln`. The end-to-end journey is in 
 
 | Path | What it is |
 |---|---|
-| `src/SchoolSearch.AppHost` | Aspire composition root. Development only; not the production topology. |
+| `src/SchoolSearch.AppHost` | Aspire composition root. Development only; not the production topology. Starts the local stack and, with `SeedDemo` and authservice on, the seeder (`docs/runbooks/LOCAL-DEV.md`). |
 | `src/SchoolSearch.ServiceDefaults` | Shared plumbing kernel: telemetry, health, resilience, CORS, database provider. No entity types. Size is checked in CI. |
 | `src/SchoolSearch.Contracts` | DTOs that cross a service boundary. |
 | `src/SchoolSearch.Catalog.Data` | Catalog persistence: `CatalogDbContext` and the school entity. Owns the `catalogdb` schema. |
@@ -76,6 +87,9 @@ Run the tests with `dotnet test SchoolSearch.sln`. The end-to-end journey is in 
 | `src/SchoolSearch.Reviews` | Reviews service (Phase E, in review): user-generated opinions, DSA notices, statements of reasons, moderation. Owns `reviewsdb`. Validates authservice tokens; mints none. Listens on 8080. |
 | `src/SchoolSearch.Reviews/Dsa` | DSA machinery (art. 11, 12, 14, 16, 17, 20): notices, statements of reasons, complaints, contact point, transparency counts (Phase E). See `docs/legal/DSA.md`. |
 | `tests/SchoolSearch.Reviews.Tests` | Reviews service tests, InMemory database and a test authentication scheme (Phase E, not yet run in CI). |
+| `src/SchoolSearch.Seeder` | Local seeder console app (Phase L, ADR-0019): creates the test accounts through authservice's public API and calls the Reviews and Billing `/dev/seed` endpoints. Run once by the AppHost after the services are healthy, only when `SeedDemo` and authservice are on. Never deployed. |
+| `tests/SchoolSearch.Seeder.Tests` | Seeder tests: JWT `sub` parsing, retry and backoff, request building, summary output. No network. In the solution, so `dotnet test SchoolSearch.sln` runs them (Phase L; first run not yet observed). |
+| `tests/SchoolSearch.Evals.Tests` | Evals of the AI features: dataset validity and grader tests run offline; the live model evals run only with `EVALS_LIVE=1` and `ANTHROPIC_API_KEY` set, and CI skips them (ADR-0011, ADR-0017). |
 | `src/SchoolSearch.Billing` | Billing service (Phase F, in review): sponsored school profiles, parent enquiries and subscription entitlements. Owns `billingdb`. Provider-neutral webhook; no provider chosen (ADR-0016). Validates authservice tokens; mints none. Listens on 8080. |
 | `tests/SchoolSearch.Billing.Tests` | Billing service tests, InMemory database and a test authentication scheme (Phase F, not yet run in CI). |
 | `tests/SchoolSearch.Mcp.Tests` | Protocol-level tests of the MCP server, raw JSON-RPC over HTTP against a stub catalog (PR 4, not yet run in CI). |
@@ -104,6 +118,7 @@ catalog context (ADR-0007).
 - [`docs/proposals/MCP-SURFACE.md`](docs/proposals/MCP-SURFACE.md): a draft for the standards repository on exposing metrics through MCP. Not filed.
 - [`docs/data/SOURCES.md`](docs/data/SOURCES.md): data sources and the open questions about them.
 - [`docs/runbooks/AUTHSERVICE.md`](docs/runbooks/AUTHSERVICE.md): the identity provider: keys, databases, deploy, rotation, post-deploy assertions.
+- [`docs/runbooks/LOCAL-DEV.md`](docs/runbooks/LOCAL-DEV.md): the local run with seeded demo data and test accounts, resets, troubleshooting.
 - [`docs/legal/DSA.md`](docs/legal/DSA.md): the DSA mapping for reviews, what is not implemented, and what the owner must supply. Terms and privacy notice drafts: `docs/legal/`.
 - [`docs/security/SECURITY-REVIEW-PHASE-E.md`](docs/security/SECURITY-REVIEW-PHASE-E.md): the Phase E threat model and verification record.
 - [`docs/security/SECURITY-REVIEW-PHASE-F.md`](docs/security/SECURITY-REVIEW-PHASE-F.md): the Phase F threat model (webhook, claims, enquiries, sponsored text) and what was not run.

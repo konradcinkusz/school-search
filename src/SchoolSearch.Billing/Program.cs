@@ -1,6 +1,7 @@
 using SchoolSearch.Billing.Auth;
 using SchoolSearch.Billing.Ai;
 using SchoolSearch.Billing.Data;
+using SchoolSearch.Billing.DevSeed;
 using SchoolSearch.Billing.Extensions;
 using SchoolSearch.Billing.Leads;
 using SchoolSearch.Billing.Payments;
@@ -20,6 +21,8 @@ builder.Services.AddPaymentServices(builder.Configuration);
 builder.Services.AddLeadServices(builder.Configuration);
 // WIRING-AI
 builder.Services.AddProfileDraftAssistant(builder.Configuration);
+// WIRING-DEVSEED
+builder.Services.AddDevSeedServices();
 
 var app = builder.Build();
 
@@ -32,6 +35,8 @@ app.MapPaymentEndpoints();
 app.MapLeadEndpoints();
 // WIRING-AI
 app.MapProfileDraftEndpoints();
+// WIRING-DEVSEED
+app.MapDevSeedEndpoints();
 
 app.Run();
 

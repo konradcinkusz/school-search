@@ -115,8 +115,16 @@ dotnet run --project src/SchoolSearch.AppHost
 ```
 
 authservice then listens on `http://localhost:8090`. Its issuer and audience are `school-search`. The local database
-`authservicedb` is created by Aspire in the local Postgres container. Without a key, the AppHost stops with a message
-that names the missing secret, because an HS256 authservice would publish an empty JWKS.
+`authservicedb` is created by Aspire in the local Postgres container.
+
+Key resolution depends on `SeedDemo`:
+- **SeedDemo on (the default):** the AppHost takes the key from `Authservice:JwtPrivateKeyPem` when it is set. Otherwise
+  it reuses the key stored in `.local/seed-secrets.json` (gitignored), or generates one there on the first run. No
+  manual key is needed.
+- **SeedDemo off:** there is no local store, so the AppHost needs `Authservice:JwtPrivateKeyPem`. Without it the AppHost
+  stops with a message that names the missing secret, because an HS256 authservice would publish an empty JWKS.
+
+The demo secrets, including this key, are described in [LOCAL-DEV.md](LOCAL-DEV.md) (sections 6 and 7).
 
 HTTPS is not used locally (`Development`). Production-only checks such as `RequireHttpsMetadata` are not exercised
 here. **Login and registration against a real authservice are NOT RUN in CI.**

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>SchoolSearch.Seeder</RootNamespace>
+    <AssemblyName>SchoolSearch.Seeder</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    Local/dev one-shot seeder, run by the AppHost after authservice, reviews and billing are healthy.
+    Never active in Production: the dev seed endpoints it calls are refused there.
+    BCL only (HttpClient, System.Text.Json): no package references, no kernel (ServiceDefaults) reference.
+  -->
+
+</Project>

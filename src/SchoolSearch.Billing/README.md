@@ -63,6 +63,15 @@ No price, VAT rate, invoicing rule or provider name is set in code. Prices stay 
 - Premium is granted only by the entitlement rule above. Amounts and client flags are never inputs to it.
 - Expiry never deletes. A lock carries a reason and a renewal unlocks it.
 
+## Local development seed
+
+`POST /dev/seed` writes the synthetic billing demo data (mock mode: an approved and a pending claim on `demo-sp-1` and
+`demo-sp-2`, an active mock subscription, a sponsored profile labelled DEMO, and parent enquiries). The route exists only
+when `DevSeed:Enabled` is `true`, `DevSeed:Key` is set and the environment is not Production; otherwise it answers 404. The
+header `X-Dev-Seed-Key` must match (401 otherwise). A repeat call writes nothing. The endpoint, its gate and its contents
+are in [`docs/runbooks/BILLING.md`](../../docs/runbooks/BILLING.md) section 9; the local run is in
+[`docs/runbooks/LOCAL-DEV.md`](../../docs/runbooks/LOCAL-DEV.md).
+
 ## Verification
 
 Hand-written Npgsql migration `20261027000000_Billing_Initial` (no model snapshot yet, see the migration folder).
