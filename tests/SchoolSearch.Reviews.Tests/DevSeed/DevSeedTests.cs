@@ -91,7 +91,18 @@ public sealed class DevSeedTests
 
         var response = await client.SendAsync(SeedRequest(DevSeedFactory.ConfiguredKey, AllSubjects()));
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        // The gate (DevSeedOptions.IsEnabled, unit-tested in DevSeedOptionsTests) answers 404. On the InMemory test host the
+        // Reviews storage guard runs earlier in the pipeline and answers 503 storage_unavailable for any non-read request,
+        // so that refusal is accepted too. The guarantee under test is that Production never executes the seed: neither
+        // answer may be OK or Unauthorized, and nothing may be stored.
+        Assert.NotEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Contains(response.StatusCode, new[] { HttpStatusCode.NotFound, HttpStatusCode.ServiceUnavailable });
+        if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
+        {
+            Assert.Equal("storage_unavailable", await JsonTestHelpers.ErrorCodeAsync(response));
+        }
+
         Assert.Equal(EmptyCounts, await factory.CountAllAsync());
     }
 

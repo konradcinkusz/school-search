@@ -93,7 +93,7 @@ public sealed class DevSeedBuilderTests
         var rows = DevSeedBuilder.Build("owner-hash", "moderator-hash", Now);
 
         Assert.All(rows.Leads, lead => Assert.Equal(DevSeedContent.OwnedSchool, lead.SchoolSlug));
-        Assert.All(rows.Leads, lead => Assert.EndsWith(".example.test", lead.ParentEmail, StringComparison.Ordinal));
+        Assert.All(rows.Leads, lead => Assert.EndsWith("@example.test", lead.ParentEmail, StringComparison.Ordinal));
         Assert.All(rows.Leads, lead => Assert.Equal(LeadConsent.Version, lead.ConsentVersion));
         Assert.All(rows.Leads, lead => Assert.True(lead.ExpiresAt > Now));
         Assert.All(rows.Leads, lead => Assert.Equal(lead.CreatedAt.AddDays(LeadRules.RetentionDays), lead.ExpiresAt));
