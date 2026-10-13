@@ -34,6 +34,11 @@ public sealed record DevSeedResponse(int Reviews, int Notices, int OwnerReplies,
 /// POST /dev/seed. The route is mapped only when DevSeed:Enabled is true, DevSeed:Key is set and the environment is not
 /// Production. Otherwise no route exists and the service answers 404. The header X-Dev-Seed-Key is compared in constant time.
 /// </summary>
+/// <remarks>
+/// Never enable this outside local development. The demo acknowledgement tokens written by the seed are fixed and therefore
+/// guessable, so anyone who can reach the route can open the demo notices and the complaint. The Production gate above is
+/// the control that keeps the route off; do not weaken it, and do not set DevSeed__Enabled on a deployed environment.
+/// </remarks>
 public static class DevSeedEndpoints
 {
     public const string Route = "/dev/seed";

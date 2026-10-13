@@ -55,11 +55,13 @@ Prerequisites: the .NET 10 SDK, Docker (Aspire starts Postgres as a container), 
 On Windows, use `scripts\setup.ps1` in place of `setup.sh`. Setup is optional for a seeded run.
 
 The AppHost seeds a local environment by default (`SeedDemo=true`): the demo catalog (gmina Przykładowo, schools,
-preschools), reviews, DSA notices and moderation data, sponsored profiles and enquiries, and four test accounts
-(parent, owner, moderator, admin) signed in through a local authservice on `http://localhost:8090`. The seeder
-prints the generated password once, in its log in the Aspire dashboard. Set `SeedDemo=false` to start without
-seeding. Every account, flag and reset step is in [`docs/runbooks/LOCAL-DEV.md`](docs/runbooks/LOCAL-DEV.md).
-The seed is refused in Production and all data is synthetic and labelled DEMO (ADR-0019).
+preschools), reviews, DSA notices and moderation data, sponsored profiles and enquiries, and five test accounts
+(parent, parent2, owner, moderator, admin) signed in through a local authservice on `http://localhost:8090`. The
+generated demo values are kept in the gitignored `.local/seed-secrets.json`, so logins survive restarts. The seeder
+prints the test password in its log in the Aspire dashboard. To reset, delete `.local/seed-secrets.json` and the
+Docker volume `school-search-postgres-data` together. Set `SeedDemo=false` to start without seeding. Every account,
+flag and reset step is in [`docs/runbooks/LOCAL-DEV.md`](docs/runbooks/LOCAL-DEV.md). The seed is refused in
+Production and all data is synthetic and labelled DEMO (ADR-0019).
 
 No cloud credential is needed to start. Optional integrations are listed as `degraded` or `disabled` in
 `GET /health` and in the startup banner. Every variable and what degrades without it is in
@@ -75,7 +77,7 @@ Run the tests with `dotnet test SchoolSearch.sln`. The end-to-end journey is in 
 
 | Path | What it is |
 |---|---|
-| `src/SchoolSearch.AppHost` | Aspire composition root. Development only; not the production topology. Starts the local stack and, with `SeedDemo=true`, the seeder (`docs/runbooks/LOCAL-DEV.md`). |
+| `src/SchoolSearch.AppHost` | Aspire composition root. Development only; not the production topology. Starts the local stack and, with `SeedDemo` and authservice on, the seeder (`docs/runbooks/LOCAL-DEV.md`). |
 | `src/SchoolSearch.ServiceDefaults` | Shared plumbing kernel: telemetry, health, resilience, CORS, database provider. No entity types. Size is checked in CI. |
 | `src/SchoolSearch.Contracts` | DTOs that cross a service boundary. |
 | `src/SchoolSearch.Catalog.Data` | Catalog persistence: `CatalogDbContext` and the school entity. Owns the `catalogdb` schema. |
@@ -85,8 +87,9 @@ Run the tests with `dotnet test SchoolSearch.sln`. The end-to-end journey is in 
 | `src/SchoolSearch.Reviews` | Reviews service (Phase E, in review): user-generated opinions, DSA notices, statements of reasons, moderation. Owns `reviewsdb`. Validates authservice tokens; mints none. Listens on 8080. |
 | `src/SchoolSearch.Reviews/Dsa` | DSA machinery (art. 11, 12, 14, 16, 17, 20): notices, statements of reasons, complaints, contact point, transparency counts (Phase E). See `docs/legal/DSA.md`. |
 | `tests/SchoolSearch.Reviews.Tests` | Reviews service tests, InMemory database and a test authentication scheme (Phase E, not yet run in CI). |
-| `src/SchoolSearch.Seeder` | Local seeder console app (Phase L, ADR-0019): creates the test accounts through authservice's public API and calls the Reviews and Billing `/dev/seed` endpoints. Run once by the AppHost after the services are healthy, only when `SeedDemo=true`. Never deployed. |
-| `tests/SchoolSearch.Seeder.Tests` | Seeder tests: JWT `sub` parsing, retry and backoff, request building. No network (Phase L, not yet run in CI). |
+| `src/SchoolSearch.Seeder` | Local seeder console app (Phase L, ADR-0019): creates the test accounts through authservice's public API and calls the Reviews and Billing `/dev/seed` endpoints. Run once by the AppHost after the services are healthy, only when `SeedDemo` and authservice are on. Never deployed. |
+| `tests/SchoolSearch.Seeder.Tests` | Seeder tests: JWT `sub` parsing, retry and backoff, request building, summary output. No network. In the solution, so `dotnet test SchoolSearch.sln` runs them (Phase L; first run not yet observed). |
+| `tests/SchoolSearch.Evals.Tests` | Evals of the AI features: dataset validity and grader tests run offline; the live model evals run only with `EVALS_LIVE=1` and `ANTHROPIC_API_KEY` set, and CI skips them (ADR-0011, ADR-0017). |
 | `src/SchoolSearch.Billing` | Billing service (Phase F, in review): sponsored school profiles, parent enquiries and subscription entitlements. Owns `billingdb`. Provider-neutral webhook; no provider chosen (ADR-0016). Validates authservice tokens; mints none. Listens on 8080. |
 | `tests/SchoolSearch.Billing.Tests` | Billing service tests, InMemory database and a test authentication scheme (Phase F, not yet run in CI). |
 | `tests/SchoolSearch.Mcp.Tests` | Protocol-level tests of the MCP server, raw JSON-RPC over HTTP against a stub catalog (PR 4, not yet run in CI). |

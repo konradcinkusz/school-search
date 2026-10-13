@@ -183,7 +183,16 @@ public sealed class SeedRunner
                 return subject;
             }
 
-            // A success without a session (for example, verification required) falls through to sign-in.
+            if (registered.StatusCode == 202)
+            {
+                // authservice answers 202 with no tokens when email confirmation is required. The local run has no
+                // email provider, so this means the local authservice was started with confirmation enforced.
+                throw new SeedFailureException(
+                    $"Registering {account.Email} needs email verification, so no session was issued. " +
+                    "The local authservice must not require a confirmed email (Auth:RequireConfirmedEmail=false, no SendGrid key).");
+            }
+
+            // Any other success without a session falls through to sign-in.
         }
         else if (!IsDuplicate(registered))
         {

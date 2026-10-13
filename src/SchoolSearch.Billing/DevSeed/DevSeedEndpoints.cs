@@ -12,6 +12,12 @@ namespace SchoolSearch.Billing.DevSeed;
 /// <c>POST /dev/seed</c>: the local and dev seed of the billing data (ADR-0016 mock mode). Anonymous by design: the gate
 /// is configuration plus the key header, and the route answers 404 unless <see cref="DevSeedGate"/> allows it.
 /// </summary>
+/// <remarks>
+/// Never enable this outside local development. The seeded rows use fixed ids and a mock provider reference, so they are
+/// predictable. The Production check in <see cref="DevSeedGate.Decide"/> is the control that keeps the route off; the key
+/// header is a second factor, not the reason it is safe. This endpoint does not read Billing:MockMode, so mock mode alone
+/// does not protect it. Do not set DevSeed__Enabled on a deployed environment.
+/// </remarks>
 public static class DevSeedEndpoints
 {
     public const int MaxSubjectLength = 200;

@@ -152,3 +152,29 @@ Do not call the simulate or checkout endpoints against Production to test them. 
 | B6 | Controller, legal basis and consent withdrawal for enquiries | Section 5, `ENQUIRY-PRIVACY-DRAFT.pl.md` | Enquiries stay off |
 | B7 | Replay window of the provider's signed events | Provider documentation | Replays are accepted only as duplicates |
 | B8 | Minimum machines: Billing is pinned to one machine because the school page reads it in-request | Owner's cost decision (`flyio/billing.fly.toml`) | Billing and Reviews each keep one machine running |
+
+## 9. Local development seed
+
+For a local run, the AppHost seeds this service through `POST /dev/seed`. The full picture (the AppHost, the seeder and the
+accounts) is in [`LOCAL-DEV.md`](LOCAL-DEV.md). This section covers only the endpoint.
+
+- **Route:** `POST /dev/seed` on the Billing service. Anonymous, with the key header below.
+- **Gate:** the route exists only when all three hold: `DevSeed:Enabled` is `true` (env `DevSeed__Enabled`), `DevSeed:Key`
+  is non-empty (env `DevSeed__Key`), and the environment is not Production. Otherwise the answer is `404`.
+- **Key:** header `X-Dev-Seed-Key: <key>`, compared in constant time. A missing or wrong key answers `401` and writes nothing.
+  The AppHost generates the key for each run. Never put it in a file, a commit or a log.
+- **Request:** `{"subjects": {"owner": "<sub>", "moderator": "<sub>"}}`. `owner` is required (`400` without it). `moderator`
+  is optional: without it the approved claim has no `decidedBy`. Subjects are at most 200 characters. The service hashes them
+  with its own pepper, as normal writes do.
+- **Response:** `200` with `{"claims", "subscriptions", "profiles", "enquiries", "alreadySeeded"}`.
+- **What it seeds (all synthetic, labelled DEMO, reserved `.test` and `.invalid` domains, no real school or person):**
+  - an approved claim by the owner on `demo-sp-1`, with an active subscription and a published sponsored profile (plain
+    text, marked as sponsored content);
+  - a pending claim by the owner on `demo-sp-2`, for the moderator queue;
+  - several synthetic parent enquiries in the owner's inbox, one of them already answered.
+- **Mock mode only:** the subscription row carries the provider reference `mock-demo-seed` and no provider is called. The
+  endpoint does not read `Billing:MockMode`; the gate above is what keeps it off. Never enable it on a deployed environment.
+- **Plan code:** the subscription shows the plan code `demo-plan`. It is not an entry of `Billing:Plans`, because no plan code
+  is configured in the repository. The owner sees it as-is. Entitlement does not read it.
+- **Idempotent:** the approved claim with its fixed id is the marker. A repeat call writes nothing and answers
+  `alreadySeeded: true`. The seed is one `SaveChanges`, so a failure stores nothing.

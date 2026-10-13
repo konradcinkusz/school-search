@@ -37,6 +37,16 @@ Every error uses `{"error":{"code","message","traceId"}}`. Auth-gated endpoints 
 Author identifiers are stored only as hashes, and no e-mail address is stored. Reviews are never aggregated into a
 school score.
 
+## Local development seed
+
+`POST /dev/seed` writes the synthetic demo data (reviews on `demo-sp-1` to `demo-sp-3`, a pending review, a review removed
+by a moderation decision with its statement of reasons, DSA notices, a complaint, an owner reply and triage labels). The
+route exists only when `DevSeed:Enabled` is `true`, `DevSeed:Key` is set and the environment is not Production; otherwise it
+answers 404. The header `X-Dev-Seed-Key` must match the key (401 otherwise). A rerun writes only the rows that are missing,
+so a seed that failed part-way is completed by the next call. The demo acknowledgement tokens are fixed and guessable: never
+enable the route outside local development. The full procedure is in [`docs/runbooks/LOCAL-DEV.md`](../../docs/runbooks/LOCAL-DEV.md)
+and the endpoint in [`docs/runbooks/BILLING.md`](../../docs/runbooks/BILLING.md) is for Billing only.
+
 ## Verification
 
 Hand-written Npgsql migration `20261020000000_Reviews_Initial` (no model snapshot yet, see the migration folder).

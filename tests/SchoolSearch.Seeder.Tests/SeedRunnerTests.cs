@@ -99,6 +99,22 @@ public sealed class SeedRunnerTests
     }
 
     [Fact]
+    public async Task Registration_pending_verification_fails_with_a_clear_message()
+    {
+        FakeSeedServer server = SeedFixtures.HappyServer();
+        server.Route(
+            "POST auth.test/api/v1/auth/register",
+            new Reply(202, "{\"userId\":\"sub-parent\",\"email\":\"parent@school-search.test\",\"message\":\"Check your email.\"}"));
+        var built = SeedFixtures.BuildRunner(server);
+
+        SeedFailureException ex = await Assert.ThrowsAsync<SeedFailureException>(
+            () => built.Runner.RunAsync(SeedFixtures.Options(), CancellationToken.None));
+
+        Assert.Contains("needs email verification", ex.Message);
+        Assert.DoesNotContain(server.Requests, r => r.Key == LoginKey && SeedFixtures.FieldOf(r.Body, "email") == "parent@school-search.test");
+    }
+
+    [Fact]
     public async Task Rate_limited_sign_in_waits_for_retry_after_and_then_succeeds()
     {
         FakeSeedServer server = SeedFixtures.HappyServer();
@@ -187,6 +203,22 @@ public sealed class SeedRunnerTests
         Assert.DoesNotContain(SeedFixtures.DevSeedKey, ex.Message);
         Assert.DoesNotContain(SeedFixtures.DevSeedKey, built.Output.ToString());
         Assert.DoesNotContain(server.Requests, r => r.Key == "POST billing.test/dev/seed");
+    }
+
+    [Fact]
+    public async Task Reviews_error_envelope_message_is_reported()
+    {
+        FakeSeedServer server = SeedFixtures.HappyServer();
+        server.Route(
+            "POST reviews.test/dev/seed",
+            new Reply(400, "{\"error\":{\"code\":\"validation_failed\",\"message\":\"Request body is required.\",\"traceId\":\"\"}}"));
+        var built = SeedFixtures.BuildRunner(server);
+
+        SeedFailureException ex = await Assert.ThrowsAsync<SeedFailureException>(
+            () => built.Runner.RunAsync(SeedFixtures.Options(), CancellationToken.None));
+
+        Assert.Contains("reviews /dev/seed failed", ex.Message);
+        Assert.Contains("Request body is required.", ex.Message);
     }
 
     [Fact]

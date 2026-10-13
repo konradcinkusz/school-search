@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using SchoolSearch.Reviews.Data;
 using SchoolSearch.Reviews.DevSeed;
 
@@ -155,7 +156,7 @@ public sealed class DevSeedTests
     }
 
     [Fact]
-    public async Task Without_a_moderator_the_moderated_rows_are_skipped_and_the_marker_still_holds()
+    public async Task Without_a_moderator_the_moderated_rows_are_skipped_and_a_later_call_completes_the_seed()
     {
         using var factory = new DevSeedFactory();
         using var client = factory.CreateClient();
@@ -171,12 +172,63 @@ public sealed class DevSeedTests
         Assert.False(body.GetProperty("alreadySeeded").GetBoolean());
         Assert.Equal(new TableCounts(3, 0, 1, 0, 0, 2), await factory.CountAllAsync());
 
-        // The marker is in place, so a later call with every subject writes nothing new.
+        // A later call with every subject is not a no-op: it writes the rows the first call had no subjects for.
         var later = await client.SendAsync(SeedRequest(DevSeedFactory.ConfiguredKey, AllSubjects()));
         var laterBody = await JsonTestHelpers.ReadJsonAsync(later);
-        Assert.True(laterBody.GetProperty("alreadySeeded").GetBoolean());
-        Assert.Equal(3, laterBody.GetProperty("reviews").GetInt32());
-        Assert.Equal(new TableCounts(3, 0, 1, 0, 0, 2), await factory.CountAllAsync());
+        Assert.False(laterBody.GetProperty("alreadySeeded").GetBoolean());
+        Assert.Equal(6, laterBody.GetProperty("reviews").GetInt32());
+        Assert.Equal(3, laterBody.GetProperty("notices").GetInt32());
+        Assert.Equal(1, laterBody.GetProperty("ownerReplies").GetInt32());
+        Assert.Equal(new TableCounts(6, 1, 3, 2, 1, 2), await factory.CountAllAsync());
+
+        // Complete now: a further call writes nothing.
+        var last = await client.SendAsync(SeedRequest(DevSeedFactory.ConfiguredKey, AllSubjects()));
+        var lastBody = await JsonTestHelpers.ReadJsonAsync(last);
+        Assert.True(lastBody.GetProperty("alreadySeeded").GetBoolean());
+        Assert.Equal(new TableCounts(6, 1, 3, 2, 1, 2), await factory.CountAllAsync());
+    }
+
+    [Fact]
+    public async Task Seed_that_fails_midway_is_completed_by_a_rerun()
+    {
+        using var factory = new DevSeedFactory();
+        using var client = factory.CreateClient();
+        var subjects = new DevSeedSubjects(ParentSub, Parent2Sub, OwnerSub, ModeratorSub);
+        factory.ComplaintFault.Arm();
+
+        // The first run stops at the complaint write. The content and the removal decision are already saved, the
+        // complaint and the keep decision are not. The store is in that partial state when the rerun starts.
+        using (var scope = factory.Services.CreateScope())
+        {
+            var seeder = scope.ServiceProvider.GetRequiredService<DevSeeder>();
+            await Assert.ThrowsAsync<SeedFaultInjectedException>(() => seeder.SeedAsync(subjects, CancellationToken.None));
+        }
+
+        Assert.Equal(new TableCounts(6, 1, 3, 1, 0, 2), await factory.CountAllAsync());
+
+        // The rerun is not told "already seeded": it completes the seed and writes only what was missing.
+        var rerun = await client.SendAsync(SeedRequest(DevSeedFactory.ConfiguredKey, AllSubjects()));
+        Assert.Equal(HttpStatusCode.OK, rerun.StatusCode);
+        var rerunBody = await JsonTestHelpers.ReadJsonAsync(rerun);
+        Assert.False(rerunBody.GetProperty("alreadySeeded").GetBoolean());
+        Assert.Equal(6, rerunBody.GetProperty("reviews").GetInt32());
+        Assert.Equal(3, rerunBody.GetProperty("notices").GetInt32());
+        Assert.Equal(1, rerunBody.GetProperty("ownerReplies").GetInt32());
+        Assert.Equal(2, rerunBody.GetProperty("triage").GetInt32());
+        Assert.Equal(new TableCounts(6, 1, 3, 2, 1, 2), await factory.CountAllAsync());
+
+        // Each decision and the complaint exist once, and the complaint appeals the one removal decision.
+        var removal = await factory.WithDbAsync(db => db.ModerationDecisions.AsNoTracking()
+            .SingleAsync(d => d.Action == ModerationActions.Remove));
+        var complaint = await factory.WithDbAsync(db => db.Complaints.AsNoTracking().SingleAsync());
+        Assert.Equal(removal.Id, complaint.DecisionId);
+        Assert.Equal("received", complaint.Status);
+
+        // Now complete: the next call writes nothing and says so.
+        var last = await client.SendAsync(SeedRequest(DevSeedFactory.ConfiguredKey, AllSubjects()));
+        var lastBody = await JsonTestHelpers.ReadJsonAsync(last);
+        Assert.True(lastBody.GetProperty("alreadySeeded").GetBoolean());
+        Assert.Equal(new TableCounts(6, 1, 3, 2, 1, 2), await factory.CountAllAsync());
     }
 
     [Fact]

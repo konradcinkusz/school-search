@@ -322,32 +322,40 @@ if (includeAuthservice)
 }
 
 // The demo seeder (src/SchoolSearch.Seeder): a one-shot console app. It creates the test accounts through authservice,
-// then calls the dev seed endpoints of reviews and billing. It is added only once its project exists (the same rule as
-// Billing and MCP). The path overload is used because this AppHost does not reference the Seeder project. Nothing waits
+// then calls the dev seed endpoints of reviews and billing. It runs only when SeedDemo is on AND authservice is included:
+// the test accounts live in authservice. An explicit IncludeAuthservice=false with SeedDemo is skipped with a banner
+// line, not an error. The path overload is used because this AppHost does not reference the Seeder project. Nothing waits
 // for the seeder, so the web app still browses when seeding fails. The seeder exits after its run.
 var seederProject = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "SchoolSearch.Seeder", "SchoolSearch.Seeder.csproj"));
-if (seedDemo && File.Exists(seederProject))
+string seederBanner;
+if (!seedDemo)
 {
-    var seeder = builder.AddProject("seeder", seederProject)
+    seederBanner = "  Seeder: off (SeedDemo is off).";
+}
+else if (!includeAuthservice)
+{
+    seederBanner = "  Seeder: skipped. SeedDemo is on but authservice is not included (IncludeAuthservice=false), so the test "
+        + "accounts cannot be created. Unset IncludeAuthservice or set it to true to seed, or set SeedDemo=false.";
+}
+else if (authservice is null || billing is null || !File.Exists(seederProject))
+{
+    seederBanner = "  Seeder: skipped. A required project or resource is missing (authservice, billing or the Seeder project).";
+}
+else
+{
+    // authservice, billing and reviews are all non-null here. The seeder waits for them; its own probes wait for readiness.
+    builder.AddProject("seeder", seederProject)
         .WithEnvironment("AUTH_BASE_URL", AuthBaseUrl)
         .WithEnvironment("REVIEWS_BASE_URL", reviews.GetEndpoint("http"))
+        .WithEnvironment("BILLING_BASE_URL", billing.GetEndpoint("http"))
         .WithEnvironment("DEV_SEED_KEY", devSeedKey)
         .WithEnvironment("SEED_ADMIN_EMAIL", seedAdminEmail)
         .WithEnvironment("SEED_TEST_PASSWORD", seedTestPassword)
         .WithEnvironment("SEED_PASSWORD_GENERATED", seedPasswordSource == "configuration" ? "false" : "true")
-        .WaitFor(reviews);
-
-    if (billing is not null)
-    {
-        seeder = seeder
-            .WithEnvironment("BILLING_BASE_URL", billing.GetEndpoint("http"))
-            .WaitFor(billing);
-    }
-
-    if (authservice is not null)
-    {
-        seeder = seeder.WaitFor(authservice);
-    }
+        .WaitFor(reviews)
+        .WaitFor(billing)
+        .WaitFor(authservice);
+    seederBanner = "  Seeder: on. It runs once after authservice, reviews and billing are ready; its resource log shows the summary.";
 }
 
 // Startup banner: what is enabled and where the credentials come from. It prints no secret value.
@@ -362,6 +370,7 @@ if (includeAuthservice)
 
 if (seedDemo)
 {
+    Console.WriteLine(seederBanner);
     Console.WriteLine($"  Admin account: {seedAdminEmail}");
     Console.WriteLine(seedPasswordSource switch
     {

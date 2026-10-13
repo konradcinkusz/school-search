@@ -18,7 +18,12 @@ public static class DevSeedContent
     /// <summary>Opaque provider reference of the seeded subscription. Marks it as a mock row.</summary>
     public const string ProviderRef = "mock-demo-seed";
 
-    /// <summary>Plan code of the seeded subscription. Informational only; entitlement never reads it.</summary>
+    /// <summary>
+    /// Plan code of the seeded subscription. It is NOT an entry of Billing:Plans: the repository configures no plan code
+    /// (the catalogue is empty by default, see appsettings.json), so there is no real code to reuse. The value is shown
+    /// as-is to the owner (GET /api/v1/claims/mine, and the owner UI "plan ..."). Entitlement never reads it, and the
+    /// webhook path only resolves an interval for it. Replace it with a configured code when a plan is set up.
+    /// </summary>
     public const string PlanCode = "demo-plan";
 
     /// <summary>Provenance and moderator-internal note carried by the seeded rows.</summary>

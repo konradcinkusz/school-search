@@ -72,6 +72,15 @@ public static class JsonFields
         {
             messages.Add(single);
         }
+        else if (TryGet(obj, "error", out JsonElement nested) && nested.ValueKind == JsonValueKind.Object)
+        {
+            // Reviews and Billing answer { "error": { "code", "message", "traceId" } }.
+            string? nestedMessage = GetString(nested, "message");
+            if (nestedMessage is not null)
+            {
+                messages.Add(nestedMessage);
+            }
+        }
 
         if (TryGet(obj, "errors", out JsonElement errors))
         {

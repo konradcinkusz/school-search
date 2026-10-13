@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using SchoolSearch.Reviews.Auth;
 using SchoolSearch.Reviews.Data;
@@ -10,6 +11,43 @@ namespace SchoolSearch.Reviews.Tests;
 
 /// <summary>Row counts of every reviews table, to prove that a repeat seed writes nothing.</summary>
 public sealed record TableCounts(int Reviews, int Replies, int Notices, int Decisions, int Complaints, int Triage);
+
+/// <summary>The failure the fault switch injects. A distinct type, so a test cannot pass on an unrelated error.</summary>
+public sealed class SeedFaultInjectedException : Exception
+{
+    public SeedFaultInjectedException()
+        : base("Injected failure: complaint write.")
+    {
+    }
+}
+
+/// <summary>
+/// Makes the next save that adds a <see cref="Complaint"/> fail, once. It runs in the EF pipeline of the test host, so the
+/// seed stops part-way through a real database write, with no hook in production code. Disarmed after it fires.
+/// </summary>
+public sealed class ComplaintWriteFault : SaveChangesInterceptor
+{
+    private bool armed;
+
+    public void Arm() => armed = true;
+
+    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+        DbContextEventData eventData,
+        InterceptionResult<int> result,
+        CancellationToken cancellationToken = default)
+    {
+        var addsComplaint = eventData.Context is { } context
+            && context.ChangeTracker.Entries<Complaint>().Any(entry => entry.State == EntityState.Added);
+
+        if (armed && addsComplaint)
+        {
+            armed = false;
+            throw new SeedFaultInjectedException();
+        }
+
+        return base.SavingChangesAsync(eventData, result, cancellationToken);
+    }
+}
 
 /// <summary>
 /// Hosts the Reviews service with the dev seed configured per test: enabled flag, key and environment. Same InMemory store
@@ -24,6 +62,9 @@ public sealed class DevSeedFactory : WebApplicationFactory<Program>
     private readonly string seedKey;
     private readonly string environmentName;
     private readonly string databaseName = "devseed-test-" + Guid.NewGuid().ToString("N");
+
+    /// <summary>Arm it before the first request to make the next complaint write fail once.</summary>
+    public ComplaintWriteFault ComplaintFault { get; } = new();
 
     /// <summary>Enabled with the test key outside Production.</summary>
     public DevSeedFactory() : this(true, ConfiguredKey, "Testing")
@@ -61,7 +102,10 @@ public sealed class DevSeedFactory : WebApplicationFactory<Program>
                 services.Remove(registration);
             }
 
-            services.AddDbContext<ReviewsDbContext>(options => options.UseInMemoryDatabase(databaseName));
+            var fault = ComplaintFault;
+            services.AddDbContext<ReviewsDbContext>(options => options
+                .UseInMemoryDatabase(databaseName)
+                .AddInterceptors(fault));
 
             // Test auth scheme, as in ReviewsApiFactory. Production code never sees it.
             services.AddAuthentication(options => options.DefaultAuthenticateScheme = TestAuthHandler.SchemeName)

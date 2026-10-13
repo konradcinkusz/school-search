@@ -30,8 +30,51 @@ internal static class LocalSeedSupport
     // Random pepper for the subject hashes (32 bytes as 64 hex characters), used when no pepper is configured or stored.
     public static string CreatePepper() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 
+    // Minimum length of the authservice password rules (RequiredLength = 8).
+    public const int AuthservicePasswordMinimumLength = 8;
+
+    // Pure check of the authservice Identity password options (src/AuthService/Program.cs, AddIdentity in the
+    // authservice repository): RequiredLength 8, RequireDigit, RequireLowercase, RequireUppercase and
+    // RequireNonAlphanumeric. RequiredUniqueChars keeps the ASP.NET default of 1, so it adds no rule. Used by
+    // CreatePassword as a guard, so a generated value that would be refused by InitialAdmin never reaches the store.
+    public static bool MeetsAuthservicePasswordRules(string? password)
+    {
+        if (password is null || password.Length < AuthservicePasswordMinimumLength || password.Length > 100)
+        {
+            return false;
+        }
+
+        var hasUpper = false;
+        var hasLower = false;
+        var hasDigit = false;
+        var hasNonAlphanumeric = false;
+        foreach (var c in password)
+        {
+            if (c >= 'A' && c <= 'Z')
+            {
+                hasUpper = true;
+            }
+            else if (c >= 'a' && c <= 'z')
+            {
+                hasLower = true;
+            }
+            else if (c >= '0' && c <= '9')
+            {
+                hasDigit = true;
+            }
+            else
+            {
+                hasNonAlphanumeric = true;
+            }
+        }
+
+        return hasUpper && hasLower && hasDigit && hasNonAlphanumeric;
+    }
+
     // Random test password: at least one upper case letter, one lower case letter, one digit and one symbol, shuffled.
-    // The symbols are a conservative set that needs no shell or URL escaping.
+    // The symbols are a conservative set that needs no shell or URL escaping, and none of them needs JSON or
+    // environment-variable escaping (no quote, backslash, space or control character). Checked against
+    // MeetsAuthservicePasswordRules before it is returned.
     public static string CreatePassword(int length = 24)
     {
         var chars = new char[length];
@@ -51,7 +94,13 @@ internal static class LocalSeedSupport
             (chars[i], chars[j]) = (chars[j], chars[i]);
         }
 
-        return new string(chars);
+        var password = new string(chars);
+        if (!MeetsAuthservicePasswordRules(password))
+        {
+            throw new InvalidOperationException("The generated test password does not meet the authservice password rules.");
+        }
+
+        return password;
     }
 
     // Passes the AI settings through to a resource. Only called when ANTHROPIC_API_KEY is configured (P8).
