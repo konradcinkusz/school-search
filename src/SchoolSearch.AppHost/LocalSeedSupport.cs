@@ -1,5 +1,5 @@
-// Helpers for the local demo seed (Phase L) used by Program.cs. Local and dev only.
-// Every generated value lives for one run of the AppHost: nothing is written to disk, logged or committed.
+// Generators for the local demo seed (Phase L) used by Program.cs. Local and dev only.
+// Generated values are kept only in the gitignored local store (LocalSeedStore.cs); they are never logged or committed.
 using System.Security.Cryptography;
 using Aspire.Hosting.ApplicationModel;
 
@@ -24,8 +24,11 @@ internal static class LocalSeedSupport
         return pem.Replace("\r\n", "\n").Replace("\n", "\\n");
     }
 
-    // Random per run: 32 bytes as 64 hex characters. Keys the dev seed endpoints of reviews and billing.
+    // Random: 32 bytes as 64 hex characters. Keys the dev seed endpoints of reviews and billing.
     public static string CreateDevSeedKey() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+
+    // Random pepper for the subject hashes (32 bytes as 64 hex characters), used when no pepper is configured or stored.
+    public static string CreatePepper() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 
     // Random test password: at least one upper case letter, one lower case letter, one digit and one symbol, shuffled.
     // The symbols are a conservative set that needs no shell or URL escaping.

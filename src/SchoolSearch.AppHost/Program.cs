@@ -24,16 +24,97 @@ var includeAuthservice = string.IsNullOrWhiteSpace(includeAuthserviceSetting)
     ? seedDemo
     : bool.TryParse(includeAuthserviceSetting, out var include) && include;
 
-// Demo seed values. The test password is the user secret Seed:TestPassword when set (reused, not printed); otherwise a
-// random one is generated per run and the seeder prints it once. Empty or unused when SeedDemo is off.
+// Demo seed values, resolved per value in this order: explicit configuration (user-secrets), then the local store
+// .local/seed-secrets.json, then generated and written to that store. The Postgres volume persists across runs, so the
+// stored values must come back on the next run. Nothing here is logged; the seeder prints the password when it is not
+// configured. Everything below is set only when SeedDemo is on, except the peppers, which keep their per-run default.
 var seedAdminEmail = LocalSeedSupport.OrDefault(builder.Configuration["Seed:AdminEmail"], "admin@school-search.test");
-var configuredTestPassword = LocalSeedSupport.NonBlank(builder.Configuration["Seed:TestPassword"]);
-var seedPasswordGenerated = seedDemo && configuredTestPassword is null;
-var seedTestPassword = !seedDemo ? string.Empty : configuredTestPassword ?? LocalSeedSupport.CreatePassword();
-var devSeedKey = seedDemo ? LocalSeedSupport.CreateDevSeedKey() : string.Empty;
-
-// The RS256 key of authservice, when it is set as a user secret. Otherwise see the authservice block below.
+var seedStorePath = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "..", ".local", "seed-secrets.json"));
 var configuredJwtKey = LocalSeedSupport.NonBlank(builder.Configuration["Authservice:JwtPrivateKeyPem"]);
+var configuredReviewsPepper = LocalSeedSupport.NonBlank(builder.Configuration["Reviews:SubjectPepper"]);
+var configuredBillingPepper = LocalSeedSupport.NonBlank(builder.Configuration["Billing:SubjectPepper"]);
+var configuredTestPassword = LocalSeedSupport.NonBlank(builder.Configuration["Seed:TestPassword"]);
+
+var seedTestPassword = string.Empty;
+var seedPasswordSource = "none"; // "configuration", "store" or "generated"
+var devSeedKey = string.Empty;
+var jwtKey = configuredJwtKey;
+var jwtKeySource = configuredJwtKey is null ? "none" : "configuration";
+string reviewsPepper;
+string billingPepper;
+string? seedStoreProblem = null;
+
+if (seedDemo)
+{
+    var store = LocalSeedStore.Open(seedStorePath);
+    var secrets = store.Data;
+
+    if (configuredTestPassword is not null)
+    {
+        seedTestPassword = configuredTestPassword;
+        seedPasswordSource = "configuration";
+    }
+    else if (secrets.TestPassword is not null)
+    {
+        seedTestPassword = secrets.TestPassword;
+        seedPasswordSource = "store";
+    }
+    else
+    {
+        seedTestPassword = LocalSeedSupport.CreatePassword();
+        secrets.TestPassword = seedTestPassword;
+        store.Changed = true;
+        seedPasswordSource = "generated";
+    }
+
+    var storedDevSeedKey = secrets.DevSeedKey ?? LocalSeedSupport.CreateDevSeedKey();
+    if (secrets.DevSeedKey is null)
+    {
+        secrets.DevSeedKey = storedDevSeedKey;
+        store.Changed = true;
+    }
+
+    devSeedKey = storedDevSeedKey;
+
+    reviewsPepper = configuredReviewsPepper ?? secrets.ReviewsPepper ?? LocalSeedSupport.CreatePepper();
+    if (configuredReviewsPepper is null && secrets.ReviewsPepper is null)
+    {
+        secrets.ReviewsPepper = reviewsPepper;
+        store.Changed = true;
+    }
+
+    billingPepper = configuredBillingPepper ?? secrets.BillingPepper ?? LocalSeedSupport.CreatePepper();
+    if (configuredBillingPepper is null && secrets.BillingPepper is null)
+    {
+        secrets.BillingPepper = billingPepper;
+        store.Changed = true;
+    }
+
+    // The authservice RS256 key is needed only when authservice is included. Configuration wins over the store.
+    if (jwtKey is null && includeAuthservice)
+    {
+        if (secrets.JwtPrivateKeyPem is not null)
+        {
+            jwtKey = secrets.JwtPrivateKeyPem;
+            jwtKeySource = "store";
+        }
+        else
+        {
+            jwtKey = LocalSeedSupport.CreateJwtPrivateKeyPem();
+            secrets.JwtPrivateKeyPem = jwtKey;
+            store.Changed = true;
+            jwtKeySource = "generated";
+        }
+    }
+
+    seedStoreProblem = store.TrySave();
+}
+else
+{
+    // Without SeedDemo the peppers keep their per-run default, as before.
+    reviewsPepper = configuredReviewsPepper ?? LocalSeedSupport.CreatePepper();
+    billingPepper = configuredBillingPepper ?? LocalSeedSupport.CreatePepper();
+}
 
 // AI passthrough (P8): set only when configured. Without ANTHROPIC_API_KEY the AI features degrade.
 var anthropicApiKey = LocalSeedSupport.NonBlank(builder.Configuration["ANTHROPIC_API_KEY"]);
@@ -69,14 +150,10 @@ if (anthropicApiKey is not null)
     api = LocalSeedSupport.WithAiSettings(api, anthropicApiKey, aiEnabled);
 }
 
-// The Reviews service owns reviewsdb (database per service). Its subject pepper keys the author hashes. Set
-// Reviews:SubjectPepper in user-secrets to keep hashes stable across runs; otherwise a random pepper is generated
-// per run, which is acceptable for local data only.
-var subjectPepper = builder.Configuration["Reviews:SubjectPepper"]
-    ?? Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-
+// The Reviews service owns reviewsdb (database per service). Its subject pepper keys the author hashes. It comes from
+// Reviews:SubjectPepper (user-secrets), else the local store when SeedDemo is on, else a random pepper per run.
 var reviews = builder.AddProject<Projects.SchoolSearch_Reviews>("reviews")
-    .WithEnvironment("Reviews__SubjectPepper", subjectPepper)
+    .WithEnvironment("Reviews__SubjectPepper", reviewsPepper)
     .WithReference(reviewsDb)
     .WaitFor(reviewsDb)
     .WithHttpHealthCheck("/health");
@@ -105,10 +182,7 @@ if (File.Exists(billingProject))
 {
     var billingDb = postgres.AddDatabase("billingdb");
 
-    // Keys the subject hash of claims and subscriptions. A per-run random pepper is acceptable for local data only.
-    var billingPepper = builder.Configuration["Billing:SubjectPepper"]
-        ?? Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-
+    // Keys the subject hash of claims and subscriptions (configuration, else the local store with SeedDemo, else per run).
     billing = builder.AddProject("billing", billingProject)
         .WithEnvironment("Billing__MockMode", "true")
         .WithEnvironment("Billing__SubjectPepper", billingPepper)
@@ -144,9 +218,8 @@ if (includeAuthservice)
 {
     var authDb = postgres.AddDatabase("authservicedb");
 
-    // With SeedDemo and no user secret, an ephemeral RS256 key is generated for this run only.
-    var jwtKey = configuredJwtKey
-        ?? (seedDemo ? LocalSeedSupport.CreateJwtPrivateKeyPem() : null)
+    // The key comes from configuration, else the local store or a generated one when SeedDemo is on (resolved above).
+    var jwtPemForAuthservice = jwtKey
         ?? throw new InvalidOperationException(
             "IncludeAuthservice=true needs the user secret Authservice:JwtPrivateKeyPem (RS256 PEM). See docs/runbooks/AUTHSERVICE.md section 5.");
 
@@ -159,7 +232,7 @@ if (includeAuthservice)
         .WithEnvironment("Jwt__Issuer", AuthIssuer)
         .WithEnvironment("Jwt__Audience", AuthAudience)
         .WithEnvironment("Jwt__PublicBaseUrl", AuthBaseUrl)
-        .WithEnvironment("Jwt__PrivateKeyPem", jwtKey)
+        .WithEnvironment("Jwt__PrivateKeyPem", jwtPemForAuthservice)
         .WithEnvironment("Database__SchemaMode", "Migrate")
         .WithEnvironment("Database__MigrationsAssembly", "AuthService.Migrations.PostgreSQL")
         .WithEnvironment("ConnectionStrings__DefaultConnection", authDb.Resource.ConnectionStringExpression)
@@ -261,7 +334,7 @@ if (seedDemo && File.Exists(seederProject))
         .WithEnvironment("DEV_SEED_KEY", devSeedKey)
         .WithEnvironment("SEED_ADMIN_EMAIL", seedAdminEmail)
         .WithEnvironment("SEED_TEST_PASSWORD", seedTestPassword)
-        .WithEnvironment("SEED_PASSWORD_GENERATED", seedPasswordGenerated ? "true" : "false")
+        .WithEnvironment("SEED_PASSWORD_GENERATED", seedPasswordSource == "configuration" ? "false" : "true")
         .WaitFor(reviews);
 
     if (billing is not null)
@@ -284,17 +357,36 @@ Console.WriteLine($"  Authservice container: {(includeAuthservice ? "on" : "off"
 Console.WriteLine($"  AI (ANTHROPIC_API_KEY): {(anthropicApiKey is not null ? "on" : "off, AI features degrade")}");
 if (includeAuthservice)
 {
-    Console.WriteLine(configuredJwtKey is not null
-        ? "  Authservice JWT key: user secret Authservice:JwtPrivateKeyPem."
-        : "  Authservice JWT key: generated for this run, never written to disk.");
+    Console.WriteLine($"  Authservice JWT key: {DescribeKeySource(jwtKeySource, seedStoreProblem is null)}.");
 }
 
 if (seedDemo)
 {
     Console.WriteLine($"  Admin account: {seedAdminEmail}");
-    Console.WriteLine(seedPasswordGenerated
-        ? "  Test password: generated for this run; see the seeder resource log in the Aspire dashboard for the generated test password."
-        : "  Test password: user secret Seed:TestPassword (not printed).");
+    Console.WriteLine(seedPasswordSource switch
+    {
+        "configuration" => "  Test password: user secret Seed:TestPassword (not printed).",
+        "store" => "  Test password: stored in .local/seed-secrets.json; the seeder resource log in the Aspire dashboard shows it.",
+        _ => seedStoreProblem is null
+            ? "  Test password: generated and stored in .local/seed-secrets.json; the seeder resource log in the Aspire dashboard shows it."
+            : "  Test password: generated for this run only; the seeder resource log in the Aspire dashboard shows it.",
+    });
+    if (seedStoreProblem is not null)
+    {
+        Console.WriteLine($"  WARNING: .local/seed-secrets.json was not updated: {seedStoreProblem}.");
+        Console.WriteLine("  Values generated on this run last for this run only; set Seed:TestPassword in user-secrets to keep a stable login.");
+    }
+
+    Console.WriteLine("  To reset the local data, delete .local/seed-secrets.json AND the Docker volume school-search-postgres-data together;");
+    Console.WriteLine("  deleting only one of them breaks login.");
 }
 
 builder.Build().Run();
+
+static string DescribeKeySource(string source, bool saved) => source switch
+{
+    "configuration" => "user secret Authservice:JwtPrivateKeyPem",
+    "store" => "stored in .local/seed-secrets.json",
+    "generated" => saved ? "generated and stored in .local/seed-secrets.json" : "generated for this run only (not stored)",
+    _ => "not set",
+};
