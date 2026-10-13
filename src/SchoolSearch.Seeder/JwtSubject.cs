@@ -57,7 +57,7 @@ public static class JwtSubject
     }
 
     /// <summary>Base64url without padding (RFC 7515) to bytes. Throws <see cref="FormatException"/> on bad input.</summary>
-    internal static byte[] DecodeBase64Url(string input)
+    public static byte[] DecodeBase64Url(string input)
     {
         string standard = input.Replace('-', '+').Replace('_', '/');
         int padding = (4 - (standard.Length % 4)) % 4;
