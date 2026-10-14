@@ -39,7 +39,10 @@ primary_region = "waw"
   #   Billing__Plans__*          plan catalogue, public; empty means the pricing page says "Cennik w przygotowaniu."
   # Secrets (never here): ConnectionStrings__billingdb, Billing__SubjectPepper, Billing__WebhookSecret (flyio/SECRETS.md).
   # ANTHROPIC_API_KEY (profile-copy assistant, F6) is a Fly secret pushed by flyio.yml when the GitHub secret exists.
-  # Setting AI_ENABLED="false" is the kill switch for the assistant (P8, docs/runbooks/AI-OPERATIONS.md).
+  # AI_ENABLED is the kill switch for the assistant (P8, docs/runbooks/AI-OPERATIONS.md). Stated explicitly because the
+  # code default is ON when a key exists; flyio/check-config.sh enforces that the line is present.
+  AI_ENABLED = "false"
+  # BFF_SHARED_SECRET (Fly secret, same value as api, reviews and web) lets the BFF vouch for the visitor address (LeadRules).
 
 [http_service]
   internal_port = 8080

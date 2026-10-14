@@ -22,6 +22,8 @@ primary_region = "waw"
   # (docs/runbooks/AI-OPERATIONS.md); run the Phase G eval gate (docs/ai/AI-EVALS.md) before launch.
   # Total tokens per UTC day for the agent, process-wide (the cost guard; in memory, resets on restart, ADR-0017).
   AI_DAILY_TOKEN_BUDGET = "100000"
+  # Stated explicitly so the deployed switch is visible in git; flyio/check-config.sh enforces that the line is present.
+  AI_ENABLED = "false"
 
 [http_service]
   internal_port = 8080

@@ -26,6 +26,10 @@ primary_region = "waw"
   # Phase G (ADR-0017): the "Doradca wyboru szkoły" page (/doradca) calls the agent in the MCP service server-side, through
   # the BFF route /api/agent. Public URL, same reason as REVIEWS_BASE_URL. Unset means the page shows its degraded state (P8).
   AGENT_BASE_URL = "https://school-search-mcp-dev.fly.dev"
+  # Secrets (never here; flyio/SECRETS.md): SESSION_SECRET, BFF_SHARED_SECRET (same value as api, reviews and billing) and,
+  # optional, GOOGLE_MAPS_API_KEY. The map key is read at RUNTIME (never NEXT_PUBLIC_*) and handed to the browser through
+  # /api/config; a browser key is public by nature, so it is restricted by HTTP referrer in the Google Cloud console
+  # (docs/adr/0022-map-search-google-maps.md). Unset means /mapa shows its list fallback (P8).
 
 [http_service]
   internal_port = 3000              # must equal PORT
