@@ -33,6 +33,7 @@ async function signInOk(page: Page, email: string): Promise<void> {
 }
 
 test.describe("local sign-in with the seeded accounts", () => {
+  test.describe.configure({ mode: "serial" });
   test.skip(!AUTH_ENABLED, "Needs a local authservice: run with E2E_AUTH=1 (never in CI).");
   test.skip(AUTH_ENABLED && PASSWORD === "", "Set E2E_TEST_PASSWORD to the seeded test password.");
 
