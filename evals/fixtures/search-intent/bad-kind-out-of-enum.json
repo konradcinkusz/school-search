@@ -1,0 +1,27 @@
+{
+  "caseId": "search-intent-164",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": null,
+        "q": null,
+        "publicOnly": null,
+        "maxDistanceKm": null,
+        "type": null,
+        "notes": [],
+        "kind": "nursery",
+        "maxTuitionPln": null,
+        "hasFreePlaces": null,
+        "place": null
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": [
+        "Żłobki nie są jeszcze obsługiwane. Możesz szukać szkół i przedszkoli."
+      ]
+    }
+  },
+  "note": "Intended: kind-in-enum. nursery is not a kind value."
+}

@@ -1,0 +1,26 @@
+{
+  "caseId": "search-intent-139",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": null,
+        "q": null,
+        "publicOnly": null,
+        "maxDistanceKm": null,
+        "type": null,
+        "notes": [],
+        "kind": null,
+        "maxTuitionPln": null,
+        "hasFreePlaces": null,
+        "place": "Plac Wolności, jan.test@example.invalid"
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": []
+    }
+  },
+  "note": "Intended: place-no-personal-data. An e-mail-shaped place (invented address).",
+  "synthetic_pii": true
+}

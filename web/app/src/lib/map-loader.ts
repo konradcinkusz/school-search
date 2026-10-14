@@ -5,6 +5,7 @@
  */
 type MapsLibraries = {
   readonly maps: google.maps.MapsLibrary;
+  readonly marker: google.maps.MarkerLibrary;
   readonly geocoding: google.maps.GeocodingLibrary | null;
 };
 
@@ -31,19 +32,20 @@ function injectScript(key: string): Promise<void> {
   });
 }
 
-/** Resolves with the Maps library (and the geocoding library when it can be had). Rejects when the script is blocked. */
+/** Resolves with the Maps and Marker libraries (and the geocoding library when it can be had). Rejects when the script is blocked. */
 export function loadGoogleMaps(key: string): Promise<MapsLibraries> {
   if (pending === null) {
     pending = injectScript(key)
       .then(async () => {
         const maps = (await google.maps.importLibrary("maps")) as google.maps.MapsLibrary;
+        const marker = (await google.maps.importLibrary("marker")) as google.maps.MarkerLibrary;
         let geocoding: google.maps.GeocodingLibrary | null = null;
         try {
           geocoding = (await google.maps.importLibrary("geocoding")) as google.maps.GeocodingLibrary;
         } catch {
           geocoding = null;
         }
-        return { maps, geocoding };
+        return { maps, marker, geocoding };
       })
       .catch((error: unknown) => {
         pending = null;

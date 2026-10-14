@@ -1,0 +1,25 @@
+{
+  "caseId": "search-intent-128",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": "9999999",
+        "q": null,
+        "publicOnly": null,
+        "maxDistanceKm": null,
+        "type": "preschool",
+        "notes": [],
+        "kind": "preschool",
+        "maxTuitionPln": null,
+        "hasFreePlaces": null,
+        "place": null
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": []
+    }
+  },
+  "note": "Kind and type both say preschool; the grader requires kind only."
+}

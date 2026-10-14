@@ -13,6 +13,7 @@ import { useEffect, useId, useState } from "react";
 const LINKS: ReadonlyArray<{ readonly href: string; readonly label: string; readonly section: string }> = [
   { href: "/ranking/country", label: "Ranking", section: "/ranking" },
   { href: "/przedszkola", label: "Przedszkola", section: "/przedszkola" },
+  { href: "/mapa", label: "Mapa", section: "/mapa" },
   { href: "/porownaj", label: "Porównaj", section: "/porownaj" },
   { href: "/doradca", label: "Doradca", section: "/doradca" },
   { href: "/metodologia", label: "Metodologia", section: "/metodologia" },

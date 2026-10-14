@@ -1,24 +1,46 @@
 name: flyio
 
-# Tag-driven build and ordered deploy (FLY-IO-DEPLOYMENT §10-§11).
+# Tag-driven build and ordered deploy (FLY-IO-DEPLOYMENT section 10-11). Runbook for the owner: docs/runbooks/FLY-DEPLOY.md.
 # Rules implemented here:
-#   - trigger on a tag, diff against the previous tag
-#   - a service whose Fly app does not exist is always selected
-#   - kernel/contracts changes invalidate every image
-#   - one image per changed service, pushed to GHCR, then deployed by reference
+#   - trigger on a `v*` tag (diff against the previous `v*` tag) or by hand (workflow_dispatch: one service, or all, at a ref)
+#   - a service whose Fly app does not exist is always selected, so a cold estate comes up from one tag
+#   - kernel/contracts changes invalidate every .NET image; web is invalidated by web/ only. SchoolSearch.Seeder, AppHost,
+#     tests and docs (except docs/methodology, which the Api embeds) never trigger a deploy and are never built here
+#   - one image per changed service, pushed to GHCR once, then deployed by reference (never rebuilt in a deploy job)
 #   - import (ghcr.io/konradcinkusz/school-search-import) is built and pushed only; it is never deployed
-#   - order: postgres -> authservice (Phase E, gated) -> reviews (Phase E) -> billing (Phase F, gated) -> api -> web -> mcp
-#   - billing (Phase F) exists only once src/SchoolSearch.Billing/Dockerfile and flyio/billing.fly.toml both exist (like MCP and Reviews)
-#   - every gate accepts success || skipped from its upstream
-#   - app and volume creation is idempotent and lives here, not in a shell
-#   - secrets reach flyctl on stdin (`flyctl secrets import --stage`), never on the command line (flyio/SECRETS.md §2)
-#   - ANTHROPIC_API_KEY (Phase G, optional) reaches api, reviews, billing and mcp the same way, and only when the GitHub
-#     secret is set. It enables nothing by itself: each service's AI_ENABLED kill switch in flyio/*.fly.toml stays false (ADR-0011)
-#   - post-deploy /health check; authservice assertions (non-empty JWKS, issuer) via scripts/assert-authservice.sh
+#   - order: postgres -> databases -> authservice -> api -> reviews -> billing -> mcp -> web. Every deploy job checks ALL its
+#     upstream results (success || skipped), so a failure upstream can never be mistaken for "unchanged"
+#   - app and volume creation is idempotent and lives here, not in a shell; the four logical databases are created here too
+#   - secrets reach flyctl on stdin (`flyctl secrets import --stage`), never on the command line (flyio/SECRETS.md section 2)
+#   - ANTHROPIC_API_KEY is optional and reaches api, reviews, billing and mcp only when the GitHub secret is set. It enables
+#     nothing by itself: every service's AI_ENABLED kill switch in flyio/*.fly.toml stays false (ADR-0011)
+#   - DevSeed__* and SCHOOLSEARCH_DEMO_SEED are never set on a Fly app (flyio/check-config.sh refuses them); Billing__MockMode is false
+#   - post-deploy: flyio/smoke.sh per service (beyond /health), scripts/assert-authservice.sh for the identity provider
+# Nothing here was executed by the agent that wrote it: it runs for the first time on the owner's first tag.
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Hotfix or re-run: which service to build and deploy. `all` re-runs every service at the ref (postgres only if its app is missing)."
+        type: choice
+        required: true
+        default: api
+        options:
+          - api
+          - reviews
+          - billing
+          - mcp
+          - web
+          - authservice
+          - all
+      ref:
+        description: "A v* tag, or a commit that is on main. Empty: the commit this run was started from (must be on main)."
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -35,12 +57,71 @@ env:
   POSTGRES_USER: schoolsearch
 
 jobs:
+  resolve:
+    name: resolve ref
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      mode: ${{ steps.ref.outputs.mode }}
+      sha: ${{ steps.ref.outputs.sha }}
+      release_tag: ${{ steps.ref.outputs.release_tag }}
+      service: ${{ steps.ref.outputs.service }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Resolve what is being released
+        id: ref
+        env:
+          INPUT_SERVICE: ${{ inputs.service }}
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::resolve: $*" >&2; exit 1; }
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            MODE=tag
+            SERVICE=changed
+            SHA="$GITHUB_SHA"
+            RELEASE_TAG="$GITHUB_REF_NAME"
+          else
+            MODE=manual
+            SERVICE="$INPUT_SERVICE"
+            REF="${INPUT_REF:-$GITHUB_SHA}"
+            [[ "$REF" =~ ^[A-Za-z0-9._/-]{1,100}$ ]] || fail "the ref input contains characters that are not allowed"
+            if git rev-parse -q --verify "refs/tags/${REF}^{commit}" > /dev/null; then
+              case "$REF" in
+                v*) ;;
+                *) fail "only v* tags may be deployed by hand (got tag '$REF')" ;;
+              esac
+              SHA="$(git rev-parse "refs/tags/${REF}^{commit}")"
+            else
+              SHA="$(git rev-parse -q --verify "${REF}^{commit}")" || fail "ref '$REF' is not a tag or a commit of this repository"
+              git merge-base --is-ancestor "$SHA" origin/main \
+                || fail "commit $SHA is not on main. Deploy a v* tag or a commit that is on main"
+            fi
+            # Never reuse a release tag for a rebuilt image: a manual build gets its own immutable-by-convention tag.
+            RELEASE_TAG="manual-${SERVICE}-${SHA:0:7}"
+          fi
+          {
+            echo "mode=$MODE"
+            echo "sha=$SHA"
+            echo "release_tag=$RELEASE_TAG"
+            echo "service=$SERVICE"
+          } >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE service=$SERVICE sha=$SHA image tag=$RELEASE_TAG"
+
   test:
     name: test
+    needs: [resolve]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+      - name: Static guards over flyio/*.fly.toml (no seed switches, MockMode false, AI switches stated, no secrets in env)
+        run: bash flyio/check-config.sh
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
@@ -51,15 +132,21 @@ jobs:
 
   detect-changes:
     name: detect changes
+    needs: [resolve]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: dev
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       AUTHSERVICE_ENABLED: ${{ vars.AUTHSERVICE_ENABLED }}
+      # Set the repository variable MCP_ENABLED=false to leave mcp undeployed until agent traffic exists (ADR-0020).
+      MCP_ENABLED: ${{ vars.MCP_ENABLED }}
+      MODE: ${{ needs.resolve.outputs.mode }}
+      SELECTED: ${{ needs.resolve.outputs.service }}
     outputs:
       build_matrix: ${{ steps.select.outputs.build_matrix }}
       deploy_postgres: ${{ steps.select.outputs.deploy_postgres }}
+      ensure_databases: ${{ steps.select.outputs.ensure_databases }}
       deploy_authservice: ${{ steps.select.outputs.deploy_authservice }}
       deploy_reviews: ${{ steps.select.outputs.deploy_reviews }}
       deploy_billing: ${{ steps.select.outputs.deploy_billing }}
@@ -69,6 +156,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ needs.resolve.outputs.sha }}
           fetch-depth: 0
           fetch-tags: true
       - uses: superfly/flyctl-actions/setup-flyctl@v1
@@ -76,72 +164,112 @@ jobs:
         id: select
         run: |
           set -euo pipefail
-          TAG="$GITHUB_REF_NAME"
-          PREV="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
-          if [ -n "$PREV" ]; then
-            CHANGED="$(git diff --name-only "$PREV" "$TAG")"
-            echo "Diffing $PREV..$TAG"
-          else
-            CHANGED="$(git ls-tree -r --name-only "$TAG")"
-            echo "No earlier tag: every file counts as changed"
-          fi
-
-          hit() { grep -Eq "$1" <<< "$CHANGED"; }
-
-          # Kernel or contracts change invalidates every image that compiles them.
-          KERNEL=false
-          if hit '^(src/SchoolSearch\.(ServiceDefaults|Contracts)/|Directory\.(Build|Packages)\.props$|global\.json$)'; then
-            KERNEL=true
-          fi
-
           APPS_JSON="$(flyctl apps list --json)"
           exists() { jq -e --arg a "$1" '(. // []) | any(.[]; (.Name // .name) == $a)' <<< "$APPS_JSON" >/dev/null; }
-          # want_missing_or_changed <path-regex> <app>: selected when its paths changed or its Fly app is missing
-          want_missing_or_changed() { hit "$1" || ! exists "$2"; }
+
+          # A service can be deployed only once its Dockerfile and its fly.toml exist (Reviews, Billing and MCP arrived in later phases).
+          buildable() { [ -f "src/SchoolSearch.$1/Dockerfile" ] && [ -f "flyio/$2.fly.toml" ]; }
 
           DEPLOY_POSTGRES=false
-          if want_missing_or_changed '^flyio/postgres\.fly\.toml$' school-search-postgres; then DEPLOY_POSTGRES=true; fi
-
           DEPLOY_API=false
-          if [ "$KERNEL" = true ] || want_missing_or_changed '^(src/SchoolSearch\.(Api|Catalog\.Data)/|flyio/api\.fly\.toml$)' school-search-api-dev; then DEPLOY_API=true; fi
-
           DEPLOY_WEB=false
-          if [ "$KERNEL" = true ] || want_missing_or_changed '^(web/|flyio/web\.fly\.toml$)' school-search-web-dev; then DEPLOY_WEB=true; fi
-
-          # MCP exists only from Phase D: needs both its Dockerfile and its fly.toml.
           DEPLOY_MCP=false
-          if [ -f src/SchoolSearch.Mcp/Dockerfile ] && [ -f flyio/mcp.fly.toml ]; then
-            if [ "$KERNEL" = true ] || want_missing_or_changed '^(src/SchoolSearch\.Mcp/|flyio/mcp\.fly\.toml$)' school-search-mcp-dev; then DEPLOY_MCP=true; fi
-          fi
-
-          # Reviews is Phase E: needs its Dockerfile and its fly.toml, like MCP.
           DEPLOY_REVIEWS=false
-          if [ -f src/SchoolSearch.Reviews/Dockerfile ] && [ -f flyio/reviews.fly.toml ]; then
-            if [ "$KERNEL" = true ] || want_missing_or_changed '^(src/SchoolSearch\.Reviews/|flyio/reviews\.fly\.toml$)' school-search-reviews-dev; then DEPLOY_REVIEWS=true; fi
-          fi
-
-          # Billing is Phase F: needs its Dockerfile and its fly.toml, like Reviews and MCP.
           DEPLOY_BILLING=false
-          if [ -f src/SchoolSearch.Billing/Dockerfile ] && [ -f flyio/billing.fly.toml ]; then
-            if [ "$KERNEL" = true ] || want_missing_or_changed '^(src/SchoolSearch\.Billing/|flyio/billing\.fly\.toml$)' school-search-billing-dev; then DEPLOY_BILLING=true; fi
-          fi
-
-          # authservice is Phase E: skipped unless the file exists AND the repo variable enables it.
-          # Its image comes from the authservice repository; this repo never builds it.
           DEPLOY_AUTHSERVICE=false
-          if [ -f flyio/authservice.fly.toml ] && [ "$AUTHSERVICE_ENABLED" = "true" ]; then
-            if want_missing_or_changed '^flyio/authservice\.fly\.toml$' school-search-authservice-dev; then DEPLOY_AUTHSERVICE=true; fi
+          BUILD_IMPORT=false
+          AUTH_ON=false
+          if [ "${AUTHSERVICE_ENABLED:-}" = "true" ] && [ -f flyio/authservice.fly.toml ]; then AUTH_ON=true; fi
+
+          if [ "$MODE" = "manual" ]; then
+            echo "Manual run: service=$SELECTED"
+            pick() { [ "$SELECTED" = "$1" ] || [ "$SELECTED" = "all" ]; }
+            if pick api; then DEPLOY_API=true; fi
+            if pick web; then DEPLOY_WEB=true; fi
+            if buildable Mcp mcp && { [ "$SELECTED" = "mcp" ] || { [ "$SELECTED" = "all" ] && [ "${MCP_ENABLED:-true}" != "false" ]; }; }; then DEPLOY_MCP=true; fi
+            if pick reviews && buildable Reviews reviews; then DEPLOY_REVIEWS=true; fi
+            if pick billing && buildable Billing billing; then DEPLOY_BILLING=true; fi
+            if pick authservice; then
+              if [ "$AUTH_ON" = true ]; then
+                DEPLOY_AUTHSERVICE=true
+              elif [ "$SELECTED" = "authservice" ]; then
+                echo "::error::authservice was selected but the repository variable AUTHSERVICE_ENABLED is not 'true' (or flyio/authservice.fly.toml is missing)" >&2
+                exit 1
+              fi
+            fi
+            # Postgres is never redeployed by hand (a redeploy restarts it): only created when its app is missing.
+            if ! exists school-search-postgres; then DEPLOY_POSTGRES=true; fi
+          else
+            TAG="$GITHUB_REF_NAME"
+            PREV="$(git describe --tags --abbrev=0 --match 'v*' "${TAG}^" 2>/dev/null || true)"
+            if [ -n "$PREV" ]; then
+              CHANGED="$(git diff --name-only "$PREV" "$TAG")"
+              echo "Diffing $PREV..$TAG"
+            else
+              CHANGED="$(git ls-tree -r --name-only "$TAG")"
+              echo "No earlier v* tag: every file counts as changed"
+            fi
+            hit() { grep -Eq "$1" <<< "$CHANGED"; }
+
+            # .NET kernel or contracts change invalidates every image that compiles them. Web compiles none of it.
+            # SchoolSearch.Seeder, SchoolSearch.AppHost, tests/ and docs/ (except docs/methodology) match nothing below on purpose.
+            DOTNET_KERNEL=false
+            if hit '^(src/SchoolSearch\.(ServiceDefaults|Contracts)/|Directory\.(Build|Packages)\.props$|global\.json$)'; then
+              DOTNET_KERNEL=true
+            fi
+            # Build context rules apply to every image.
+            COMMON=false
+            if hit '^\.dockerignore$'; then COMMON=true; fi
+            net() { [ "$DOTNET_KERNEL" = true ] || [ "$COMMON" = true ]; }
+            # want_missing_or_changed <path-regex> <app>: selected when its paths changed or its Fly app is missing
+            want_missing_or_changed() { hit "$1" || ! exists "$2"; }
+
+            if want_missing_or_changed '^flyio/postgres\.fly\.toml$' school-search-postgres; then DEPLOY_POSTGRES=true; fi
+
+            # The Api image also embeds docs/methodology (src/SchoolSearch.Api/Dockerfile).
+            if net || want_missing_or_changed '^(src/SchoolSearch\.(Api|Catalog\.Data)/|docs/methodology/|flyio/api\.fly\.toml$)' school-search-api-dev; then DEPLOY_API=true; fi
+
+            if [ "$COMMON" = true ] || want_missing_or_changed '^(web/|flyio/web\.fly\.toml$)' school-search-web-dev; then DEPLOY_WEB=true; fi
+
+            if buildable Mcp mcp && [ "${MCP_ENABLED:-true}" != "false" ]; then
+              if net || want_missing_or_changed '^(src/SchoolSearch\.Mcp/|flyio/mcp\.fly\.toml$)' school-search-mcp-dev; then DEPLOY_MCP=true; fi
+            fi
+            if buildable Reviews reviews; then
+              if net || want_missing_or_changed '^(src/SchoolSearch\.Reviews/|flyio/reviews\.fly\.toml$)' school-search-reviews-dev; then DEPLOY_REVIEWS=true; fi
+            fi
+            if buildable Billing billing; then
+              if net || want_missing_or_changed '^(src/SchoolSearch\.Billing/|flyio/billing\.fly\.toml$)' school-search-billing-dev; then DEPLOY_BILLING=true; fi
+            fi
+
+            # authservice is Phase E: skipped unless the file exists AND the repository variable enables it.
+            # Its image comes from the authservice repository (pinned by AUTHSERVICE_IMAGE); this repo never builds it.
+            # It is redeployed when its fly.toml changes, when its app is missing, or when the pin changes (edit the variable, then run `authservice` by hand).
+            if [ "$AUTH_ON" = true ]; then
+              if want_missing_or_changed '^flyio/authservice\.fly\.toml$' school-search-authservice-dev; then DEPLOY_AUTHSERVICE=true; fi
+            fi
+
+            # Import is a one-shot console job (no Fly app, never deployed): its image is built and pushed when its code or
+            # the catalog model it compiles against changes, and no deploy job consumes it.
+            if [ -f src/SchoolSearch.Import/Dockerfile ]; then
+              if net || hit '^src/SchoolSearch\.(Import|Catalog\.Data|Contracts)/'; then BUILD_IMPORT=true; fi
+            fi
           fi
 
-          # Import is a one-shot console job (no Fly app, never deployed): its image is built and pushed
-          # when its code or the catalog model it compiles against changes, and no deploy job consumes it.
-          BUILD_IMPORT=false
-          if [ -f src/SchoolSearch.Import/Dockerfile ]; then
-            if [ "$KERNEL" = true ] || hit '^src/SchoolSearch\.(Import|Catalog\.Data|Contracts)/'; then BUILD_IMPORT=true; fi
+          if [ "$AUTH_ON" != true ]; then
+            echo "::warning::AUTHSERVICE_ENABLED is not 'true': authservice is not deployed and account, review and billing routes degrade (P8)"
+          fi
+
+          # The four logical databases (catalogdb, reviewsdb, billingdb, authservicedb) must exist before any service that owns one.
+          ENSURE_DATABASES=false
+          if [ "$DEPLOY_AUTHSERVICE" = true ] || [ "$DEPLOY_API" = true ] || [ "$DEPLOY_REVIEWS" = true ] || [ "$DEPLOY_BILLING" = true ]; then
+            ENSURE_DATABASES=true
           fi
 
           MATRIX='[]'
-          add_build() { MATRIX="$(jq -c --arg s "$1" --arg d "$2" '. + [{service: $s, dockerfile: $d}]' <<< "$MATRIX")"; }
+          add_build() {
+            [ -f "$2" ] || { echo "::error::Dockerfile $2 for '$1' does not exist" >&2; exit 1; }
+            MATRIX="$(jq -c --arg s "$1" --arg d "$2" '. + [{service: $s, dockerfile: $d}]' <<< "$MATRIX")"
+          }
           if [ "$DEPLOY_API" = true ]; then add_build api src/SchoolSearch.Api/Dockerfile; fi
           if [ "$DEPLOY_WEB" = true ]; then add_build web web/app/Dockerfile; fi
           if [ "$DEPLOY_MCP" = true ]; then add_build mcp src/SchoolSearch.Mcp/Dockerfile; fi
@@ -152,6 +280,7 @@ jobs:
           {
             echo "build_matrix=$MATRIX"
             echo "deploy_postgres=$DEPLOY_POSTGRES"
+            echo "ensure_databases=$ENSURE_DATABASES"
             echo "deploy_authservice=$DEPLOY_AUTHSERVICE"
             echo "deploy_reviews=$DEPLOY_REVIEWS"
             echo "deploy_billing=$DEPLOY_BILLING"
@@ -160,11 +289,11 @@ jobs:
             echo "deploy_mcp=$DEPLOY_MCP"
           } >> "$GITHUB_OUTPUT"
           echo "Build matrix: $MATRIX"
-          echo "postgres=$DEPLOY_POSTGRES authservice=$DEPLOY_AUTHSERVICE reviews=$DEPLOY_REVIEWS billing=$DEPLOY_BILLING api=$DEPLOY_API web=$DEPLOY_WEB mcp=$DEPLOY_MCP"
+          echo "postgres=$DEPLOY_POSTGRES databases=$ENSURE_DATABASES authservice=$DEPLOY_AUTHSERVICE api=$DEPLOY_API reviews=$DEPLOY_REVIEWS billing=$DEPLOY_BILLING mcp=$DEPLOY_MCP web=$DEPLOY_WEB"
 
   build:
     name: build ${{ matrix.service }}
-    needs: [detect-changes]
+    needs: [resolve, detect-changes]
     if: needs.detect-changes.outputs.build_matrix != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -177,6 +306,8 @@ jobs:
         include: ${{ fromJSON(needs.detect-changes.outputs.build_matrix) }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -190,19 +321,21 @@ jobs:
           file: ${{ matrix.dockerfile }}
           push: true
           tags: |
-            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.ref_name }}
-            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:sha-${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ needs.resolve.outputs.release_tag }}
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:sha-${{ needs.resolve.outputs.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ needs.resolve.outputs.sha }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
   deploy_postgres:
     name: deploy postgres
-    needs: [detect-changes, test]
+    needs: [resolve, detect-changes, test]
     if: >-
       always() && !cancelled()
       && needs.test.result == 'success'
+      && needs.resolve.result == 'success'
       && needs.detect-changes.result == 'success'
       && needs.detect-changes.outputs.deploy_postgres == 'true'
     runs-on: ubuntu-latest
@@ -215,6 +348,8 @@ jobs:
       APP: school-search-postgres
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
       - uses: superfly/flyctl-actions/setup-flyctl@v1
       - name: Ensure app, volume and secret (idempotent)
         env:
@@ -243,42 +378,114 @@ jobs:
           ensure_volume "$APP" school_search_pgdata 10
           : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set in the dev environment}"
           printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD" | flyctl secrets import --stage --app "$APP"
+      - name: Snapshot the data volume before restarting the database (best effort)
+        # A redeploy restarts Postgres. Take a restore point first. A failure here warns and does not block the deploy.
+        run: |
+          set -uo pipefail
+          VOL_ID="$(flyctl volumes list --app "$APP" --json 2>/dev/null | jq -r '(. // []) | map(select((.name // .Name) == "school_search_pgdata")) | .[0] | (.id // .ID // empty)' || true)"
+          if [ -n "$VOL_ID" ]; then
+            flyctl volumes snapshots create "$VOL_ID" || echo "::warning::could not create a volume snapshot before the deploy (flyctl volumes snapshots create). Check flyctl volumes snapshots list --app $APP"
+          else
+            echo "No volume yet (first deploy): nothing to snapshot"
+          fi
       - name: Deploy (private network only, single machine)
         run: flyctl deploy --config flyio/postgres.fly.toml --app school-search-postgres --ha=false --yes
       - name: Status
         run: flyctl status --app school-search-postgres
 
+  ensure_databases:
+    name: ensure databases
+    # One Postgres instance, four LOGICAL databases (ADR-0020). Created here, idempotently, so a cold estate comes up from one tag.
+    # Set the repository variable SKIP_DB_BOOTSTRAP=true to skip this job when the databases were created by hand (runbooks).
+    needs: [resolve, detect-changes, test, deploy_postgres]
+    if: >-
+      always() && !cancelled()
+      && vars.SKIP_DB_BOOTSTRAP != 'true'
+      && needs.test.result == 'success'
+      && needs.resolve.result == 'success'
+      && needs.detect-changes.result == 'success'
+      && (needs.deploy_postgres.result == 'success' || needs.deploy_postgres.result == 'skipped')
+      && needs.detect-changes.outputs.ensure_databases == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: dev
+    permissions:
+      contents: read
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      APP: school-search-postgres
+    steps:
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - name: Create the logical databases that do not exist yet
+        # Runs psql inside the Postgres machine over the local socket (trust for local connections in the official image),
+        # so no password is needed and nothing secret is on any command line. The script travels base64-encoded to avoid quoting.
+        run: |
+          set -euo pipefail
+          REMOTE="$(cat <<'REMOTE_SCRIPT'
+          set -eu
+          for db in catalogdb reviewsdb billingdb authservicedb; do
+            found="$(psql -U "$PGU" -d catalogdb -tAc "SELECT 1 FROM pg_database WHERE datname = '$db'")"
+            if [ "$found" = "1" ]; then
+              echo "database $db exists"
+            else
+              psql -U "$PGU" -d catalogdb -v ON_ERROR_STOP=1 -c "CREATE DATABASE $db"
+              echo "database $db created"
+            fi
+          done
+          REMOTE_SCRIPT
+          )"
+          SCRIPT="$(printf 'PGU=%s\n%s\n' "$POSTGRES_USER" "$REMOTE")"
+          B64="$(printf '%s' "$SCRIPT" | base64 -w0)"
+          for attempt in 1 2 3 4 5 6; do
+            if flyctl ssh console --app "$APP" --command "sh -c 'echo $B64 | base64 -d | sh'"; then
+              exit 0
+            fi
+            echo "attempt $attempt failed; waiting for the machine"
+            sleep 10
+          done
+          echo "::error::could not create the databases over flyctl ssh. Create them by hand (docs/runbooks/FLY-DEPLOY.md section 3) and set the repository variable SKIP_DB_BOOTSTRAP=true" >&2
+          exit 1
+
   deploy_authservice:
     name: deploy authservice (Phase E)
-    needs: [detect-changes, test, deploy_postgres]
+    needs: [resolve, detect-changes, test, deploy_postgres, ensure_databases]
     if: >-
       always() && !cancelled()
       && needs.test.result == 'success'
+      && needs.resolve.result == 'success'
       && needs.detect-changes.result == 'success'
       && (needs.deploy_postgres.result == 'success' || needs.deploy_postgres.result == 'skipped')
+      && (needs.ensure_databases.result == 'success' || needs.ensure_databases.result == 'skipped')
       && needs.detect-changes.outputs.deploy_authservice == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: dev
     permissions:
       contents: read
+      packages: read
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       APP: school-search-authservice-dev
       DB_NAME: authservicedb
       # Pinned tag, set as a repository variable: ghcr.io/konradcinkusz/authservice:v0.3.4 (never :latest).
       AUTHSERVICE_IMAGE: ${{ vars.AUTHSERVICE_IMAGE }}
+      FLY_REGISTRY_MIRROR: ${{ vars.FLY_REGISTRY_MIRROR }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
       - uses: superfly/flyctl-actions/setup-flyctl@v1
       - uses: docker/login-action@v3
+        # Only needed to copy a private image to registry.fly.io (FLY_REGISTRY_MIRROR=true). The authservice package belongs
+        # to another repository: GITHUB_TOKEN cannot read it while private, so set GHCR_PULL_TOKEN (read:packages) in that case.
+        if: vars.FLY_REGISTRY_MIRROR == 'true'
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ vars.GHCR_USER || github.actor }}
+          password: ${{ secrets.GHCR_PULL_TOKEN || secrets.GITHUB_TOKEN }}
       - name: Ensure app and secrets (idempotent, staged)
-        # The PEM is one line with literal \n escapes; authservice normalises them (brief §1, VERIFIED).
-        # The database authservicedb is created once by hand (docs/runbooks/AUTHSERVICE.md §2): CI does not create databases.
+        # The PEM is one line with literal \n escapes; authservice normalises them (brief section 1, VERIFIED).
+        # The database authservicedb is created by the ensure_databases job.
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           JWT_PRIVATE_KEY_PEM: ${{ secrets.AUTHSERVICE_JWT_PRIVATE_KEY_PEM }}
@@ -289,6 +496,12 @@ jobs:
             flyctl apps create "$APP" --org "$FLY_ORG" --yes
           fi
           : "${AUTHSERVICE_IMAGE:?set the AUTHSERVICE_IMAGE repository variable to the pinned tag}"
+          case "$AUTHSERVICE_IMAGE" in
+            *@*) echo "::error::AUTHSERVICE_IMAGE must be a tag (ghcr.io/<owner>/<name>:<tag>), not a digest reference" >&2; exit 1 ;;
+            ghcr.io/*:latest) echo "::error::AUTHSERVICE_IMAGE must be a pinned tag, never :latest" >&2; exit 1 ;;
+            ghcr.io/*:*) ;;
+            *) echo "::error::AUTHSERVICE_IMAGE must look like ghcr.io/<owner>/<name>:<tag>" >&2; exit 1 ;;
+          esac
           : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set in the dev environment}"
           : "${JWT_PRIVATE_KEY_PEM:?AUTHSERVICE_JWT_PRIVATE_KEY_PEM is not set in the dev environment}"
           {
@@ -296,25 +509,102 @@ jobs:
               "$DB_NAME" "$POSTGRES_USER" "$POSTGRES_PASSWORD"
             printf 'Jwt__PrivateKeyPem=%s\n' "$JWT_PRIVATE_KEY_PEM"
           } | flyctl secrets import --stage --app "$APP"
+      - name: Warn when the image is not anonymously pullable
+        run: bash flyio/ghcr-probe.sh "$AUTHSERVICE_IMAGE"
       - name: Deploy (pinned image, no rebuild)
-        run: flyctl deploy --config flyio/authservice.fly.toml --app school-search-authservice-dev --image "$AUTHSERVICE_IMAGE" --yes
+        run: |
+          set -euo pipefail
+          IMG="$(bash flyio/resolve-image.sh "$APP" "$AUTHSERVICE_IMAGE")"
+          flyctl deploy --config flyio/authservice.fly.toml --app "$APP" --image "$IMG" --yes
       - name: Post-deploy assertions (health, issuer, non-empty JWKS)
         # Health cannot see an empty key set: scripts/assert-authservice.sh checks discovery, JWKS and the 401 on /me.
-        env:
-          # Must equal Jwt__Issuer in flyio/authservice.fly.toml.
-          AUTH_ISSUER: school-search
-        run: bash scripts/assert-authservice.sh "https://${APP}.fly.dev" "$AUTH_ISSUER"
+        # The expected issuer is read from the committed fly.toml, the single source of truth shared with the consumers.
+        run: |
+          set -euo pipefail
+          AUTH_ISSUER="$(sed -n 's/^[[:space:]]*Jwt__Issuer[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' flyio/authservice.fly.toml | head -n 1)"
+          : "${AUTH_ISSUER:?Jwt__Issuer not found in flyio/authservice.fly.toml}"
+          bash scripts/assert-authservice.sh "https://${APP}.fly.dev" "$AUTH_ISSUER"
 
-  deploy_reviews:
-    name: deploy reviews (Phase E)
-    needs: [detect-changes, test, build, deploy_postgres, deploy_authservice]
+  deploy_api:
+    name: deploy api
+    needs: [resolve, detect-changes, test, build, deploy_postgres, ensure_databases, deploy_authservice]
     if: >-
       always() && !cancelled()
       && needs.test.result == 'success'
+      && needs.resolve.result == 'success'
       && needs.detect-changes.result == 'success'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
       && (needs.deploy_postgres.result == 'success' || needs.deploy_postgres.result == 'skipped')
+      && (needs.ensure_databases.result == 'success' || needs.ensure_databases.result == 'skipped')
       && (needs.deploy_authservice.result == 'success' || needs.deploy_authservice.result == 'skipped')
+      && needs.detect-changes.outputs.deploy_api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: dev
+    permissions:
+      contents: read
+      packages: read
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      APP: school-search-api-dev
+      IMAGE: ghcr.io/konradcinkusz/school-search-api:${{ needs.resolve.outputs.release_tag }}
+      FLY_REGISTRY_MIRROR: ${{ vars.FLY_REGISTRY_MIRROR }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - uses: docker/login-action@v3
+        if: vars.FLY_REGISTRY_MIRROR == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ vars.GHCR_USER || github.actor }}
+          password: ${{ secrets.GHCR_PULL_TOKEN || secrets.GITHUB_TOKEN }}
+      - name: Ensure app and secrets (idempotent, staged)
+        # ANTHROPIC_API_KEY is optional (ADR-0011): pushed only when the GitHub secret exists, never echoed.
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          BFF_SHARED_SECRET: ${{ secrets.BFF_SHARED_SECRET }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -euo pipefail
+          apps="$(flyctl apps list --json)"
+          if ! jq -e --arg a "$APP" '(. // []) | any(.[]; (.Name // .name) == $a)' <<< "$apps" >/dev/null; then
+            flyctl apps create "$APP" --org "$FLY_ORG" --yes
+          fi
+          : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set in the dev environment}"
+          : "${BFF_SHARED_SECRET:?BFF_SHARED_SECRET is not set in the dev environment (the same value goes to web, api, reviews and billing)}"
+          {
+            printf 'ConnectionStrings__catalogdb=Host=school-search-postgres.internal;Port=5432;Database=catalogdb;Username=%s;Password=%s\n' \
+              "$POSTGRES_USER" "$POSTGRES_PASSWORD"
+            printf 'BFF_SHARED_SECRET=%s\n' "$BFF_SHARED_SECRET"
+            if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+              printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY"
+            fi
+          } | flyctl secrets import --stage --app "$APP"
+      - name: Warn when the image is not anonymously pullable
+        run: bash flyio/ghcr-probe.sh "$IMAGE"
+      - name: Deploy the built image (no rebuild)
+        run: |
+          set -euo pipefail
+          IMG="$(bash flyio/resolve-image.sh "$APP" "$IMAGE")"
+          flyctl deploy --config flyio/api.fly.toml --app "$APP" --image "$IMG" --yes
+      - name: Post-deploy smoke test
+        run: bash flyio/smoke.sh api "https://${APP}.fly.dev"
+
+  deploy_reviews:
+    name: deploy reviews (Phase E)
+    needs: [resolve, detect-changes, test, build, deploy_postgres, ensure_databases, deploy_authservice, deploy_api]
+    if: >-
+      always() && !cancelled()
+      && needs.test.result == 'success'
+      && needs.resolve.result == 'success'
+      && needs.detect-changes.result == 'success'
+      && (needs.build.result == 'success' || needs.build.result == 'skipped')
+      && (needs.deploy_postgres.result == 'success' || needs.deploy_postgres.result == 'skipped')
+      && (needs.ensure_databases.result == 'success' || needs.ensure_databases.result == 'skipped')
+      && (needs.deploy_authservice.result == 'success' || needs.deploy_authservice.result == 'skipped')
+      && (needs.deploy_api.result == 'success' || needs.deploy_api.result == 'skipped')
       && needs.detect-changes.outputs.deploy_reviews == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -326,18 +616,22 @@ jobs:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       APP: school-search-reviews-dev
       DB_NAME: reviewsdb
-      IMAGE: ghcr.io/konradcinkusz/school-search-reviews:${{ github.ref_name }}
+      IMAGE: ghcr.io/konradcinkusz/school-search-reviews:${{ needs.resolve.outputs.release_tag }}
+      FLY_REGISTRY_MIRROR: ${{ vars.FLY_REGISTRY_MIRROR }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
       - uses: superfly/flyctl-actions/setup-flyctl@v1
       - uses: docker/login-action@v3
+        if: vars.FLY_REGISTRY_MIRROR == 'true'
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ vars.GHCR_USER || github.actor }}
+          password: ${{ secrets.GHCR_PULL_TOKEN || secrets.GITHUB_TOKEN }}
       - name: Ensure app and secrets (idempotent, staged)
         # The subject pepper must never change: it keys every stored author hash (one review per author and school).
-        # The database reviewsdb is created once by hand (docs/runbooks/AUTHSERVICE.md §2).
+        # The database reviewsdb is created by the ensure_databases job.
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           SUBJECT_PEPPER: ${{ secrets.REVIEWS_SUBJECT_PEPPER }}
@@ -352,36 +646,41 @@ jobs:
           fi
           : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set in the dev environment}"
           : "${SUBJECT_PEPPER:?REVIEWS_SUBJECT_PEPPER is not set in the dev environment}"
+          : "${BFF_SHARED_SECRET:?BFF_SHARED_SECRET is not set in the dev environment (the same value goes to web, api, reviews and billing)}"
           {
             printf 'ConnectionStrings__reviewsdb=Host=school-search-postgres.internal;Port=5432;Database=%s;Username=%s;Password=%s\n' \
               "$DB_NAME" "$POSTGRES_USER" "$POSTGRES_PASSWORD"
             printf 'Reviews__SubjectPepper=%s\n' "$SUBJECT_PEPPER"
-            # Optional: without it the BFF cannot attach its shared secret, and the service keeps the anonymous bucket.
-            if [ -n "${BFF_SHARED_SECRET:-}" ]; then
-              printf 'BFF_SHARED_SECRET=%s\n' "$BFF_SHARED_SECRET"
-            else
-              echo "BFF_SHARED_SECRET is not set in the dev environment: reviews rate limits fall back to the proxy address" >&2
-            fi
+            printf 'BFF_SHARED_SECRET=%s\n' "$BFF_SHARED_SECRET"
             if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
               printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY"
             fi
           } | flyctl secrets import --stage --app "$APP"
+      - name: Warn when the image is not anonymously pullable
+        run: bash flyio/ghcr-probe.sh "$IMAGE"
       - name: Deploy the built image (no rebuild)
-        run: flyctl deploy --config flyio/reviews.fly.toml --app school-search-reviews-dev --image "$IMAGE" --yes
-      - name: Post-deploy health check
-        run: curl --fail --silent --show-error --retry 20 --retry-delay 5 --retry-all-errors "https://${APP}.fly.dev/health"
+        run: |
+          set -euo pipefail
+          IMG="$(bash flyio/resolve-image.sh "$APP" "$IMAGE")"
+          flyctl deploy --config flyio/reviews.fly.toml --app "$APP" --image "$IMG" --yes
+      - name: Post-deploy smoke test
+        run: bash flyio/smoke.sh reviews "https://${APP}.fly.dev"
 
   deploy_billing:
     name: deploy billing (Phase F)
     # Billing validates authservice tokens, so it waits for authservice. Web (the BFF caller) waits for it below.
-    needs: [detect-changes, test, build, deploy_postgres, deploy_authservice]
+    needs: [resolve, detect-changes, test, build, deploy_postgres, ensure_databases, deploy_authservice, deploy_api, deploy_reviews]
     if: >-
       always() && !cancelled()
       && needs.test.result == 'success'
+      && needs.resolve.result == 'success'
       && needs.detect-changes.result == 'success'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
       && (needs.deploy_postgres.result == 'success' || needs.deploy_postgres.result == 'skipped')
+      && (needs.ensure_databases.result == 'success' || needs.ensure_databases.result == 'skipped')
       && (needs.deploy_authservice.result == 'success' || needs.deploy_authservice.result == 'skipped')
+      && (needs.deploy_api.result == 'success' || needs.deploy_api.result == 'skipped')
+      && (needs.deploy_reviews.result == 'success' || needs.deploy_reviews.result == 'skipped')
       && needs.detect-changes.outputs.deploy_billing == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -393,24 +692,30 @@ jobs:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       APP: school-search-billing-dev
       DB_NAME: billingdb
-      IMAGE: ghcr.io/konradcinkusz/school-search-billing:${{ github.ref_name }}
+      IMAGE: ghcr.io/konradcinkusz/school-search-billing:${{ needs.resolve.outputs.release_tag }}
+      FLY_REGISTRY_MIRROR: ${{ vars.FLY_REGISTRY_MIRROR }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
       - uses: superfly/flyctl-actions/setup-flyctl@v1
       - uses: docker/login-action@v3
+        if: vars.FLY_REGISTRY_MIRROR == 'true'
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ vars.GHCR_USER || github.actor }}
+          password: ${{ secrets.GHCR_PULL_TOKEN || secrets.GITHUB_TOKEN }}
       - name: Ensure app and secrets (idempotent, staged)
         # The subject pepper must never change: it keys every stored subject hash (claims and subscriptions).
-        # The database billingdb is created once by hand (docs/runbooks/BILLING.md section 2).
+        # The database billingdb is created by the ensure_databases job.
         # The webhook secret is optional until a payment provider is chosen (ADR-0016). Without it every webhook is
         # rejected in Production, which is the correct failure (never accept unsigned requests).
         env:
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           SUBJECT_PEPPER: ${{ secrets.BILLING_SUBJECT_PEPPER }}
+          REVIEWS_PEPPER: ${{ secrets.REVIEWS_SUBJECT_PEPPER }}
           WEBHOOK_SECRET: ${{ secrets.BILLING_WEBHOOK_SECRET }}
+          BFF_SHARED_SECRET: ${{ secrets.BFF_SHARED_SECRET }}
           # Optional (ADR-0011, F6): pushed only when set. The assistant stays off while AI_ENABLED is false in flyio/billing.fly.toml.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
@@ -421,10 +726,16 @@ jobs:
           fi
           : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set in the dev environment}"
           : "${SUBJECT_PEPPER:?BILLING_SUBJECT_PEPPER is not set in the dev environment}"
+          : "${BFF_SHARED_SECRET:?BFF_SHARED_SECRET is not set in the dev environment (the same value goes to web, api, reviews and billing)}"
+          if [ -n "${REVIEWS_PEPPER:-}" ] && [ "$SUBJECT_PEPPER" = "$REVIEWS_PEPPER" ]; then
+            echo "::error::BILLING_SUBJECT_PEPPER equals REVIEWS_SUBJECT_PEPPER. The two peppers must be different values (flyio/SECRETS.md)." >&2
+            exit 1
+          fi
           {
             printf 'ConnectionStrings__billingdb=Host=school-search-postgres.internal;Port=5432;Database=%s;Username=%s;Password=%s\n' \
               "$DB_NAME" "$POSTGRES_USER" "$POSTGRES_PASSWORD"
             printf 'Billing__SubjectPepper=%s\n' "$SUBJECT_PEPPER"
+            printf 'BFF_SHARED_SECRET=%s\n' "$BFF_SHARED_SECRET"
             if [ -n "${WEBHOOK_SECRET:-}" ]; then
               printf 'Billing__WebhookSecret=%s\n' "$WEBHOOK_SECRET"
             else
@@ -434,135 +745,31 @@ jobs:
               printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY"
             fi
           } | flyctl secrets import --stage --app "$APP"
+      - name: Warn when the image is not anonymously pullable
+        run: bash flyio/ghcr-probe.sh "$IMAGE"
       - name: Deploy the built image (no rebuild)
-        run: flyctl deploy --config flyio/billing.fly.toml --app school-search-billing-dev --image "$IMAGE" --yes
-      - name: Post-deploy health check
-        run: curl --fail --silent --show-error --retry 20 --retry-delay 5 --retry-all-errors "https://${APP}.fly.dev/health"
-
-  deploy_api:
-    name: deploy api
-    needs: [detect-changes, test, build, deploy_postgres, deploy_authservice]
-    if: >-
-      always() && !cancelled()
-      && needs.test.result == 'success'
-      && needs.detect-changes.result == 'success'
-      && (needs.build.result == 'success' || needs.build.result == 'skipped')
-      && (needs.deploy_postgres.result == 'success' || needs.deploy_postgres.result == 'skipped')
-      && (needs.deploy_authservice.result == 'success' || needs.deploy_authservice.result == 'skipped')
-      && needs.detect-changes.outputs.deploy_api == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment: dev
-    permissions:
-      contents: read
-      packages: read
-    env:
-      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-      APP: school-search-api-dev
-      IMAGE: ghcr.io/konradcinkusz/school-search-api:${{ github.ref_name }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@v1
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Ensure app and database connection secret (idempotent, staged)
-        # ANTHROPIC_API_KEY is optional (ADR-0011): pushed only when the GitHub secret exists, never echoed.
-        env:
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          BFF_SHARED_SECRET: ${{ secrets.BFF_SHARED_SECRET }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
-          apps="$(flyctl apps list --json)"
-          if ! jq -e --arg a "$APP" '(. // []) | any(.[]; (.Name // .name) == $a)' <<< "$apps" >/dev/null; then
-            flyctl apps create "$APP" --org "$FLY_ORG" --yes
-          fi
-          : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set in the dev environment}"
-          {
-            printf 'ConnectionStrings__catalogdb=Host=school-search-postgres.internal;Port=5432;Database=catalogdb;Username=%s;Password=%s\n' \
-              "$POSTGRES_USER" "$POSTGRES_PASSWORD"
-            if [ -n "${BFF_SHARED_SECRET:-}" ]; then
-              printf 'BFF_SHARED_SECRET=%s\n' "$BFF_SHARED_SECRET"
-            fi
-            if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-              printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY"
-            fi
-          } | flyctl secrets import --stage --app "$APP"
-      - name: Deploy the built image (no rebuild)
-        run: flyctl deploy --config flyio/api.fly.toml --app school-search-api-dev --image "$IMAGE" --yes
-      - name: Post-deploy health check
-        run: curl --fail --silent --show-error --retry 20 --retry-delay 5 --retry-all-errors "https://${APP}.fly.dev/health"
-
-  deploy_web:
-    name: deploy web
-    needs: [detect-changes, test, build, deploy_postgres, deploy_authservice, deploy_reviews, deploy_billing, deploy_api]
-    if: >-
-      always() && !cancelled()
-      && needs.test.result == 'success'
-      && needs.detect-changes.result == 'success'
-      && (needs.build.result == 'success' || needs.build.result == 'skipped')
-      && (needs.deploy_postgres.result == 'success' || needs.deploy_postgres.result == 'skipped')
-      && (needs.deploy_authservice.result == 'success' || needs.deploy_authservice.result == 'skipped')
-      && (needs.deploy_reviews.result == 'success' || needs.deploy_reviews.result == 'skipped')
-      && (needs.deploy_billing.result == 'success' || needs.deploy_billing.result == 'skipped')
-      && (needs.deploy_api.result == 'success' || needs.deploy_api.result == 'skipped')
-      && needs.detect-changes.outputs.deploy_web == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment: dev
-    permissions:
-      contents: read
-      packages: read
-    env:
-      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-      APP: school-search-web-dev
-      IMAGE: ghcr.io/konradcinkusz/school-search-web:${{ github.ref_name }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@v1
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Ensure app and runtime secrets (idempotent, staged)
-        # SESSION_SECRET seals the BFF session cookie (AES-256-GCM, at least 32 bytes). Required from Phase E.
-        env:
-          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
-          BFF_SHARED_SECRET: ${{ secrets.BFF_SHARED_SECRET }}
-        run: |
-          set -euo pipefail
-          apps="$(flyctl apps list --json)"
-          if ! jq -e --arg a "$APP" '(. // []) | any(.[]; (.Name // .name) == $a)' <<< "$apps" >/dev/null; then
-            flyctl apps create "$APP" --org "$FLY_ORG" --yes
-          fi
-          : "${SESSION_SECRET:?SESSION_SECRET is not set in the dev environment}"
-          {
-            printf 'SESSION_SECRET=%s\n' "$SESSION_SECRET"
-            if [ -n "${BFF_SHARED_SECRET:-}" ]; then
-              printf 'BFF_SHARED_SECRET=%s\n' "$BFF_SHARED_SECRET"
-            fi
-          } | flyctl secrets import --stage --app "$APP"
-      - name: Deploy the built image (no rebuild)
-        run: flyctl deploy --config flyio/web.fly.toml --app school-search-web-dev --image "$IMAGE" --yes
-      - name: Post-deploy health check
-        run: curl --fail --silent --show-error --retry 20 --retry-delay 5 --retry-all-errors "https://${APP}.fly.dev/health"
+          IMG="$(bash flyio/resolve-image.sh "$APP" "$IMAGE")"
+          flyctl deploy --config flyio/billing.fly.toml --app "$APP" --image "$IMG" --yes
+      - name: Post-deploy smoke test (simulate closed, dev seed off)
+        run: bash flyio/smoke.sh billing "https://${APP}.fly.dev"
 
   deploy_mcp:
     name: deploy mcp (Phase D)
-    needs: [detect-changes, test, build, deploy_postgres, deploy_authservice, deploy_api, deploy_web]
+    needs: [resolve, detect-changes, test, build, deploy_postgres, ensure_databases, deploy_authservice, deploy_api, deploy_reviews, deploy_billing]
     if: >-
       always() && !cancelled()
       && needs.test.result == 'success'
+      && needs.resolve.result == 'success'
       && needs.detect-changes.result == 'success'
       && (needs.build.result == 'success' || needs.build.result == 'skipped')
       && (needs.deploy_postgres.result == 'success' || needs.deploy_postgres.result == 'skipped')
+      && (needs.ensure_databases.result == 'success' || needs.ensure_databases.result == 'skipped')
       && (needs.deploy_authservice.result == 'success' || needs.deploy_authservice.result == 'skipped')
       && (needs.deploy_api.result == 'success' || needs.deploy_api.result == 'skipped')
-      && (needs.deploy_web.result == 'success' || needs.deploy_web.result == 'skipped')
+      && (needs.deploy_reviews.result == 'success' || needs.deploy_reviews.result == 'skipped')
+      && (needs.deploy_billing.result == 'success' || needs.deploy_billing.result == 'skipped')
       && needs.detect-changes.outputs.deploy_mcp == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -573,20 +780,26 @@ jobs:
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       APP: school-search-mcp-dev
-      IMAGE: ghcr.io/konradcinkusz/school-search-mcp:${{ github.ref_name }}
+      IMAGE: ghcr.io/konradcinkusz/school-search-mcp:${{ needs.resolve.outputs.release_tag }}
+      FLY_REGISTRY_MIRROR: ${{ vars.FLY_REGISTRY_MIRROR }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
       - uses: superfly/flyctl-actions/setup-flyctl@v1
       - uses: docker/login-action@v3
+        if: vars.FLY_REGISTRY_MIRROR == 'true'
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Ensure app, MCP key and agent key (idempotent)
-        # Both values are optional (flyio/SECRETS.md). The agent (ADR-0017) answers 503 ai_unavailable without the key.
+          username: ${{ vars.GHCR_USER || github.actor }}
+          password: ${{ secrets.GHCR_PULL_TOKEN || secrets.GITHUB_TOKEN }}
+      - name: Ensure app and optional keys (idempotent, staged)
+        # All three values are optional (flyio/SECRETS.md). The agent (ADR-0017) answers 503 ai_unavailable without the key.
+        # BFF_SHARED_SECRET lets the MCP service vouch for the caller's address towards Reviews (same value as reviews).
         env:
           MCP_API_KEY: ${{ secrets.MCP_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BFF_SHARED_SECRET: ${{ secrets.BFF_SHARED_SECRET }}
         run: |
           set -euo pipefail
           apps="$(flyctl apps list --json)"
@@ -597,8 +810,8 @@ jobs:
           if [ -z "${MCP_API_KEY:-}" ]; then
             echo "MCP_API_KEY is not set in the dev environment: MCP runs with the anonymous rate bucket"
           fi
-          # Values on stdin, never on the command line (SECRETS.md section 2). An empty pair imports nothing.
-          if [ -n "${MCP_API_KEY:-}" ] || [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+          # Values on stdin, never on the command line (SECRETS.md section 2). An empty set imports nothing.
+          if [ -n "${MCP_API_KEY:-}" ] || [ -n "${ANTHROPIC_API_KEY:-}" ] || [ -n "${BFF_SHARED_SECRET:-}" ]; then
             {
               if [ -n "${MCP_API_KEY:-}" ]; then
                 printf 'MCP_API_KEY=%s\n' "$MCP_API_KEY"
@@ -606,9 +819,96 @@ jobs:
               if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
                 printf 'ANTHROPIC_API_KEY=%s\n' "$ANTHROPIC_API_KEY"
               fi
+              if [ -n "${BFF_SHARED_SECRET:-}" ]; then
+                printf 'BFF_SHARED_SECRET=%s\n' "$BFF_SHARED_SECRET"
+              fi
             } | flyctl secrets import --stage --app "$APP"
           fi
+      - name: Warn when the image is not anonymously pullable
+        run: bash flyio/ghcr-probe.sh "$IMAGE"
       - name: Deploy the built image (no rebuild)
-        run: flyctl deploy --config flyio/mcp.fly.toml --app school-search-mcp-dev --image "$IMAGE" --yes
-      - name: Post-deploy health check
-        run: curl --fail --silent --show-error --retry 20 --retry-delay 5 --retry-all-errors "https://${APP}.fly.dev/health"
+        run: |
+          set -euo pipefail
+          IMG="$(bash flyio/resolve-image.sh "$APP" "$IMAGE")"
+          flyctl deploy --config flyio/mcp.fly.toml --app "$APP" --image "$IMG" --yes
+      - name: Post-deploy smoke test
+        run: bash flyio/smoke.sh mcp "https://${APP}.fly.dev"
+
+  deploy_web:
+    name: deploy web
+    needs: [resolve, detect-changes, test, build, deploy_postgres, ensure_databases, deploy_authservice, deploy_api, deploy_reviews, deploy_billing, deploy_mcp]
+    if: >-
+      always() && !cancelled()
+      && needs.test.result == 'success'
+      && needs.resolve.result == 'success'
+      && needs.detect-changes.result == 'success'
+      && (needs.build.result == 'success' || needs.build.result == 'skipped')
+      && (needs.deploy_postgres.result == 'success' || needs.deploy_postgres.result == 'skipped')
+      && (needs.ensure_databases.result == 'success' || needs.ensure_databases.result == 'skipped')
+      && (needs.deploy_authservice.result == 'success' || needs.deploy_authservice.result == 'skipped')
+      && (needs.deploy_api.result == 'success' || needs.deploy_api.result == 'skipped')
+      && (needs.deploy_reviews.result == 'success' || needs.deploy_reviews.result == 'skipped')
+      && (needs.deploy_billing.result == 'success' || needs.deploy_billing.result == 'skipped')
+      && (needs.deploy_mcp.result == 'success' || needs.deploy_mcp.result == 'skipped')
+      && needs.detect-changes.outputs.deploy_web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: dev
+    permissions:
+      contents: read
+      packages: read
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      APP: school-search-web-dev
+      IMAGE: ghcr.io/konradcinkusz/school-search-web:${{ needs.resolve.outputs.release_tag }}
+      FLY_REGISTRY_MIRROR: ${{ vars.FLY_REGISTRY_MIRROR }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - uses: docker/login-action@v3
+        if: vars.FLY_REGISTRY_MIRROR == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ vars.GHCR_USER || github.actor }}
+          password: ${{ secrets.GHCR_PULL_TOKEN || secrets.GITHUB_TOKEN }}
+      - name: Ensure app and runtime secrets (idempotent, staged)
+        # SESSION_SECRET seals the BFF session cookie (AES-256-GCM, at least 32 bytes). BFF_SHARED_SECRET must be the SAME
+        # value as on api, reviews and billing (one GitHub secret feeds all four, so they cannot diverge).
+        # GOOGLE_MAPS_API_KEY is optional and read at RUNTIME by the web app (handed to the browser through /api/config).
+        # It is a browser key: restrict it by HTTP referrer in the Google Cloud console. Unset means /mapa shows its list fallback.
+        env:
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          BFF_SHARED_SECRET: ${{ secrets.BFF_SHARED_SECRET }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          set -euo pipefail
+          apps="$(flyctl apps list --json)"
+          if ! jq -e --arg a "$APP" '(. // []) | any(.[]; (.Name // .name) == $a)' <<< "$apps" >/dev/null; then
+            flyctl apps create "$APP" --org "$FLY_ORG" --yes
+          fi
+          : "${SESSION_SECRET:?SESSION_SECRET is not set in the dev environment}"
+          if [ "${#SESSION_SECRET}" -lt 32 ]; then
+            echo "::error::SESSION_SECRET is shorter than 32 characters: the BFF would refuse to seal sessions. Generate with: openssl rand -base64 48" >&2
+            exit 1
+          fi
+          : "${BFF_SHARED_SECRET:?BFF_SHARED_SECRET is not set in the dev environment (the same value goes to web, api, reviews and billing)}"
+          {
+            printf 'SESSION_SECRET=%s\n' "$SESSION_SECRET"
+            printf 'BFF_SHARED_SECRET=%s\n' "$BFF_SHARED_SECRET"
+            if [ -n "${GOOGLE_MAPS_API_KEY:-}" ]; then
+              printf 'GOOGLE_MAPS_API_KEY=%s\n' "$GOOGLE_MAPS_API_KEY"
+            else
+              echo "GOOGLE_MAPS_API_KEY is not set in the dev environment: /mapa renders its list fallback (P8)"
+            fi
+          } | flyctl secrets import --stage --app "$APP"
+      - name: Warn when the image is not anonymously pullable
+        run: bash flyio/ghcr-probe.sh "$IMAGE"
+      - name: Deploy the built image (no rebuild)
+        run: |
+          set -euo pipefail
+          IMG="$(bash flyio/resolve-image.sh "$APP" "$IMAGE")"
+          flyctl deploy --config flyio/web.fly.toml --app "$APP" --image "$IMG" --yes
+      - name: Post-deploy smoke test (web reaches the api through the BFF)
+        run: bash flyio/smoke.sh web "https://${APP}.fly.dev"

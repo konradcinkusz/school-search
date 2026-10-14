@@ -1,0 +1,27 @@
+{
+  "caseId": "search-intent-155",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": "9999999",
+        "q": null,
+        "publicOnly": null,
+        "maxDistanceKm": null,
+        "type": null,
+        "notes": [],
+        "kind": null,
+        "maxTuitionPln": null,
+        "hasFreePlaces": null,
+        "place": null
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": [
+        "Żłobki nie są jeszcze obsługiwane. Możesz szukać szkół i przedszkoli."
+      ]
+    }
+  },
+  "note": "Nursery: kind is null, the nursery message is given."
+}

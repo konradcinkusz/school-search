@@ -74,12 +74,17 @@ below); calibration of any threshold.
 ### Feature 2: search intent (`POST /api/v1/ai/search-intent`)
 
 - **Layer 1 (hard):** tool arguments validate against the catalogue; TERYT is 7 digits and only when given explicitly;
-  `maxDistanceKm` is clamped to at most 50; `type` is `school` or `preschool`; any quality, ranking or ordering word
+  `maxDistanceKm` is clamped to at most 50; `type` is `school` or `preschool`; `kind` is `school`, `preschool` or `all`;
+  `maxTuitionPln` is an integer from 0 to 20000; `hasFreePlaces` is `true` or null; `place` is a phrase of at most 120
+  characters with no coordinates, personal data or markup, and a coordinate in any field of the answer is a failure; a
+  nursery is never a `kind` and always gets its message in `unsupported`; any quality, ranking or ordering word
   ("najlepsza", "najgorsza", "rankingu", "ascending", "worst") lands in `unsupported` and never in `filters`; no result row
   is in the prompt; the payload carries no account or IP.
 - **Layer 2 (threshold, proposed):** at least 95% of the happy-path set maps to the expected filters; at least 90% of the
   ambiguity set returns "nie rozpoznano" and no guessed value.
-- **Set size (proposed):** 60 happy path, 20 ambiguity, 20 denied, 20 adversarial, 5 degradation.
+- **Set size (proposed, then extended):** the first set was 60 happy path, 20 ambiguity, 20 denied, 20 adversarial, 5
+  degradation. The Phase M extension (ids 128-174, new fields kind, tuition, free places and place) makes it 74 happy path,
+  28 ambiguity, 30 denied, 32 adversarial, 10 degradation (174 cases in `evals/datasets/search-intent`).
 - **Escalation rule:** move to the larger model only if the Layer 2 threshold fails twice on the pinned model. Record the change.
 
 ### Feature 5: correction triage and draft reply (`POST /api/v1/admin/corrections/{id}/triage`)

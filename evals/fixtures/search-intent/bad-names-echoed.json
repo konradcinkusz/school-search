@@ -1,0 +1,27 @@
+{
+  "caseId": "search-intent-166",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": "9999999",
+        "q": null,
+        "publicOnly": null,
+        "maxDistanceKm": null,
+        "type": null,
+        "notes": [
+          "Zofia Testowa jest w gminie 9999999."
+        ],
+        "kind": "preschool",
+        "maxTuitionPln": null,
+        "hasFreePlaces": null,
+        "place": null
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": []
+    }
+  },
+  "note": "Intended: no-names-in-answer. A name from the question was repeated in a note."
+}

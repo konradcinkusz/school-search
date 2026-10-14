@@ -1,4 +1,11 @@
-# school-search Postgres (Fly §5 database shape). One instance, one logical database: catalogdb.
+# school-search Postgres (Fly §5 database shape). ONE instance holding four LOGICAL databases, one per service:
+# catalogdb (api, import), reviewsdb (reviews), billingdb (billing), authservicedb (authservice). ADR-0020.
+# The first is created by this image (POSTGRES_DB); the other three by the `ensure_databases` job of flyio.yml.
+# All services connect as the same role (POSTGRES_USER, a superuser): the boundary is the database, not the role.
+#
+# BACKUPS: this file declares none. Fly takes platform volume snapshots on its own schedule and retention, and flyio.yml
+# takes one more (best effort) before each Postgres deploy. There is no pg_dump, no WAL archiving and no replica.
+# See docs/runbooks/FLY-DEPLOY.md section 9 and docs/adr/0020-fly-topology-and-consolidation.md before storing real user data.
 # Deploy: `flyctl deploy --config flyio/postgres.fly.toml --image postgres:17-alpine --ha=false`
 #
 # --ha=false is mandatory. A second machine would get a second, EMPTY volume, not a replica.
