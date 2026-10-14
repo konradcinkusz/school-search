@@ -108,8 +108,9 @@ export function useGoogleMap({ apiKey, markers, selectedSlug, onSelect, onViewpo
         mapRef.current = map;
         setStatus("ready");
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (cancelled) return;
+        console.warn("[map] Google Maps could not start", error);
         setFailure("Nie udało się wczytać mapy Google. Wyniki są pokazane jako lista.");
         setStatus("error");
       });

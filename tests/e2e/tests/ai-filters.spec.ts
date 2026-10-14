@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { intentToSearchFilters, parseSearchIntent } from "../../../web/app/src/lib/ai-contract";
 import { listTarget } from "../../../web/app/src/components/filters/helpers";
@@ -240,4 +241,16 @@ test.describe("AI filter bar on the home page (stubbed intent endpoint)", () => 
     );
     expect(small).toEqual([]);
   });
+
+  for (const scheme of ["light", "dark"] as const) {
+    test(`axe finds no violations in the open bar (${scheme})`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.route(INTENT_URL, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(CANNED) }));
+      await openHome(page);
+      await ask(page, "Przedszkole do 1500 zł z wolnymi miejscami blisko Placu Wolności w Poznaniu");
+      await expect(page.locator("section.ai-search .filter-chip")).toHaveCount(5);
+      const results = await new AxeBuilder({ page }).include("section.ai-search").analyze();
+      expect(results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`)).toEqual([]);
+    });
+  }
 });

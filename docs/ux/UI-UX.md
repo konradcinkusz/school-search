@@ -107,6 +107,10 @@ Status column shows what Phase C delivered; open items are the ones still gated.
 | 15 | AI explanation panel ("Wyjaśnij ten wynik"): delimited box, label "Wygenerowano przez AI — to nie jest ocena szkoły", structured facts beside it, link to `/metodologia`, graceful messages for 503, 502 and 429 | Reader harm if the text reads as a verdict; the facts must stay next to it (ADR-0011 B6) | Playwright: label and facts visible; 503 and 502 messages; no HTML from the model | Built (`web/app/src/components/explain-panel.tsx`). `ai-surface.spec.ts` runs in the CI e2e job. No live model call in CI (no key). Needs O1 (retention) before public launch |
 | 16 | MCP connection page (`/mcp` docs) and the agent-facing wording of scores (score with interval, `n uczniów`, version) | Agents repeat numbers without context; the wording is the only guard they see | Protocol test on tool descriptions; review of the example conversation in `docs/mcp/MCP.md` | Written at PR 4; no public page yet; MCP not deployed |
 
+## Filters
+
+One shared filter model (`web/app/src/lib/search-filters.ts`: kind, name, gmina, public only, tuition ceiling, free places, place, radius) feeds the list pages, the AI filter bar and the map. `components/filters/ai-filter-bar.tsx` turns "Opisz czego szukasz" into removable chips (labelled "Wygenerowano przez AI — to nie jest ocena szkoły") and a manual edit panel that works without AI; when AI is off only the AI part degrades. Parts of a question the portal cannot answer are shown as a neutral note ("Tego jeszcze nie obsługujemy: ..."), never as a filter. On list pages place and distance are not applied: the page says "zastosujemy na mapie" and links to `/mapa` with the same parameters. Filters never carry a score, rank or sort order, and the place box never decides a school catchment (ADR-0010). Tests: `tests/e2e/tests/ai-filters.spec.ts`.
+
 ## Rules for every screen
 
 - Anti-goal in the UI: no per-person view and no sort that orders schools by an individual's data.
