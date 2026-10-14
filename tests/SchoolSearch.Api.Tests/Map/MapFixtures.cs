@@ -28,24 +28,24 @@ internal static class MapFixtures
     public static Task ApplyAsync(CatalogDbContext db)
     {
         db.Schools.AddRange(
-            School(1, SchoolA, "Szkola Alfa", GminaOne, "Gmina testowa pierwsza", true, 52.00, 19.00),
-            School(2, SchoolC, "Szkola Gamma", GminaTwo, "Gmina testowa druga", false, 52.01, 19.01),
-            School(3, SchoolFar, "Szkola Daleka", GminaTwo, "Gmina testowa druga", true, 53.5, 20.5),
-            School(4, SchoolNoCoordinates, "Szkola Bez Wspolrzednych", GminaOne, "Gmina testowa pierwsza", true, null, null));
+            MakeSchool(1, SchoolA, "Szkola Alfa", GminaOne, "Gmina testowa pierwsza", true, 52.00, 19.00),
+            MakeSchool(2, SchoolC, "Szkola Gamma", GminaTwo, "Gmina testowa druga", false, 52.01, 19.01),
+            MakeSchool(3, SchoolFar, "Szkola Daleka", GminaTwo, "Gmina testowa druga", true, 53.5, 20.5),
+            MakeSchool(4, SchoolNoCoordinates, "Szkola Bez Wspolrzednych", GminaOne, "Gmina testowa pierwsza", true, null, null));
 
         db.Preschools.AddRange(
-            Preschool(11, PreschoolB, "Przedszkole Beta", GminaOne, "Gmina testowa pierwsza", true, 52.002, 19.002,
+            MakePreschool(11, PreschoolB, "Przedszkole Beta", GminaOne, "Gmina testowa pierwsza", true, 52.002, 19.002,
                 Facts(11, 200m, 300m, 2)),
-            Preschool(12, PreschoolD, "Przedszkole Delta", GminaTwo, "Gmina testowa druga", false, 52.003, 19.003,
+            MakePreschool(12, PreschoolD, "Przedszkole Delta", GminaTwo, "Gmina testowa druga", false, 52.003, 19.003,
                 Facts(12, 900m, 1200m, 0)),
-            Preschool(13, PreschoolE, "Przedszkole Epsilon", GminaOne, "Gmina testowa pierwsza", true, 52.004, 19.004, null),
-            Preschool(14, PreschoolFar, "Przedszkole Dalekie", GminaTwo, "Gmina testowa druga", true, 53.5, 20.5,
+            MakePreschool(13, PreschoolE, "Przedszkole Epsilon", GminaOne, "Gmina testowa pierwsza", true, 52.004, 19.004, null),
+            MakePreschool(14, PreschoolFar, "Przedszkole Dalekie", GminaTwo, "Gmina testowa druga", true, 53.5, 20.5,
                 Facts(14, 100m, 150m, 4)));
 
         return Task.CompletedTask;
     }
 
-    private static School School(long id, string slug, string name, string teryt, string gmina, bool isPublic, double? lat, double? lon) => new()
+    private static School MakeSchool(long id, string slug, string name, string teryt, string gmina, bool isPublic, double? lat, double? lon) => new()
     {
         IdPodmiot = id,
         Slug = slug,
@@ -58,7 +58,7 @@ internal static class MapFixtures
         Provenance = Prov("Synthetic register row"),
     };
 
-    private static Preschool Preschool(long id, string slug, string name, string teryt, string gmina, bool isPublic, double lat, double lon, PreschoolFacts? facts) => new()
+    private static Preschool MakePreschool(long id, string slug, string name, string teryt, string gmina, bool isPublic, double lat, double lon, PreschoolFacts? facts) => new()
     {
         IdPodmiot = id,
         Slug = slug,

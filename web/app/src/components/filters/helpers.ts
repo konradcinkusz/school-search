@@ -4,7 +4,7 @@ import {
   hasMapOnlyFilters,
   hasPreschoolOnlyFilters,
   type SearchFilters,
-} from "@/lib/search-filters";
+} from "../../lib/search-filters";
 
 export interface ListTarget {
   /** Results page the portal can apply the filters on today. */
@@ -60,5 +60,5 @@ export function listTarget(f: SearchFilters): ListTarget {
 export const UNSUPPORTED_PREFIX = "Tego jeszcze nie obsługujemy: ";
 
 export function unsupportedText(items: readonly string[]): string {
-  return `${UNSUPPORTED_PREFIX}${items.join("; ")}.`;
+  return `${UNSUPPORTED_PREFIX}${items.map((item) => item.replace(/[.\s]+$/, "")).join("; ")}.`;
 }

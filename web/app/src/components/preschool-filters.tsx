@@ -1,4 +1,5 @@
 import type { GminaItem } from "@/lib/api";
+import { filtersFromSearchParams, type SearchFilters } from "@/lib/search-filters";
 
 /**
  * Preschool search as a plain GET form (no client JavaScript): the result is a shareable URL.
@@ -12,7 +13,39 @@ export interface PreschoolFilterValues {
   readonly hasFreePlaces: boolean;
 }
 
-export function PreschoolFilters({ gminas, values }: { gminas: readonly GminaItem[]; values: PreschoolFilterValues }) {
+/** Form values from the shared model. The GET form's field names equal the shared URL parameters. */
+export function preschoolValuesFromFilters(filters: SearchFilters): PreschoolFilterValues {
+  return {
+    gmina: filters.gmina,
+    q: filters.q,
+    maxTuition: filters.maxTuitionPln !== undefined ? String(filters.maxTuitionPln) : undefined,
+    publicOnly: filters.publicOnly === true,
+    hasFreePlaces: filters.hasFreePlaces === true,
+  };
+}
+
+/** The shared model for the values of this form (kind is always preschool). Invalid input is dropped. */
+export function preschoolValuesToFilters(values: PreschoolFilterValues): SearchFilters {
+  const params = new URLSearchParams();
+  if (values.gmina) params.set("gmina", values.gmina);
+  if (values.q) params.set("q", values.q);
+  if (values.maxTuition) params.set("maxTuition", values.maxTuition);
+  if (values.publicOnly) params.set("publicOnly", "true");
+  if (values.hasFreePlaces) params.set("hasFreePlaces", "true");
+  return { ...filtersFromSearchParams(params), kind: "preschool" };
+}
+
+export function PreschoolFilters({
+  gminas,
+  values: valuesProp,
+  filters,
+}: {
+  gminas: readonly GminaItem[];
+  values: PreschoolFilterValues;
+  /** Optional shared-model input; when given it replaces `values`. */
+  filters?: SearchFilters;
+}) {
+  const values = filters !== undefined ? preschoolValuesFromFilters(filters) : valuesProp;
   const sorted = [...gminas].sort((a, b) => (a.name ?? a.teryt).localeCompare(b.name ?? b.teryt, "pl"));
   return (
     <form method="get" action="/przedszkola" className="form-grid form-grid--filters">

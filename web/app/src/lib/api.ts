@@ -256,6 +256,48 @@ export interface PreschoolPage {
 }
 
 // ---------------------------------------------------------------------------
+// Map markers (Phase M contract section 1). A marker never carries a score, rank or any quality field.
+// ---------------------------------------------------------------------------
+
+export type MapMarkerKind = "school" | "preschool";
+
+export interface MapMarker {
+  readonly kind: MapMarkerKind;
+  readonly slug: string;
+  readonly name: string;
+  readonly latitude: number;
+  readonly longitude: number;
+  readonly isPublic: boolean;
+  readonly gminaName: string | null;
+  /** Preschool only. */
+  readonly monthlyTuition: MoneyRange | null;
+  /** Preschool only. */
+  readonly freePlacesCount: number | null;
+}
+
+export interface MapMarkersResponse {
+  readonly items: readonly MapMarker[];
+  /** Count in the bounding box after filters. */
+  readonly total: number;
+  readonly truncated: boolean;
+  readonly limit: number;
+}
+
+export interface MapMarkersQuery {
+  readonly south: number;
+  readonly west: number;
+  readonly north: number;
+  readonly east: number;
+  readonly kind?: "school" | "preschool" | "all";
+  readonly q?: string;
+  readonly gmina?: string;
+  readonly publicOnly?: boolean;
+  readonly maxTuition?: number;
+  readonly hasFreePlaces?: boolean;
+  readonly limit?: number;
+}
+
+// ---------------------------------------------------------------------------
 // Result type. Pages render a service-unavailable state instead of throwing.
 // ---------------------------------------------------------------------------
 
@@ -492,6 +534,24 @@ export const catalog = {
       `/api/v1/preschools/${encodeURIComponent(slug)}`,
       null,
       CACHE_DEFAULT,
+    ),
+  mapMarkers: (query: MapMarkersQuery) =>
+    catalogGet<MapMarkersResponse>(
+      "/api/v1/map/markers",
+      toQuery({
+        south: query.south,
+        west: query.west,
+        north: query.north,
+        east: query.east,
+        kind: query.kind,
+        q: query.q,
+        gmina: query.gmina,
+        publicOnly: query.publicOnly,
+        maxTuition: query.maxTuition,
+        hasFreePlaces: query.hasFreePlaces,
+        limit: query.limit,
+      }),
+      CACHE_NONE,
     ),
 };
 
