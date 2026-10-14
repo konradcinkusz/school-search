@@ -329,6 +329,41 @@ public sealed class SearchIntentEndpointTests
         Assert.Equal(1, client.CallCount);
     }
 
+    [Fact]
+    public async Task New_filter_keys_are_present_and_null_when_unset()
+    {
+        using var factory = new SearchIntentApiFactory(new SearchIntentFakeClient());
+
+        var root = await JsonTestHelpers.ReadJsonAsync(await Post(factory, "Szkoła w Krakowie"));
+
+        var filters = root.GetProperty("filters");
+        foreach (var key in new[] { "gmina", "q", "publicOnly", "maxDistanceKm", "type", "kind", "maxTuitionPln", "hasFreePlaces", "place" })
+        {
+            Assert.Equal(JsonValueKind.Null, filters.GetProperty(key).ValueKind);
+        }
+
+        Assert.Equal(JsonValueKind.Array, filters.GetProperty("notes").ValueKind);
+    }
+
+    [Fact]
+    public async Task New_filter_keys_carry_validated_values_and_coordinates_are_dropped()
+    {
+        var client = new SearchIntentFakeClient
+        {
+            Respond = (_, _) => Completion("{\"kind\":\"preschool\",\"maxTuitionPln\":1500,\"hasFreePlaces\":true,\"place\":\"52.2297, 21.0122\",\"unsupportedKinds\":[]}"),
+        };
+        using var factory = new SearchIntentApiFactory(client);
+
+        var root = await JsonTestHelpers.ReadJsonAsync(await Post(factory, "Przedszkole do 1500 zł z wolnymi miejscami blisko centrum"));
+
+        var filters = root.GetProperty("filters");
+        Assert.Equal("preschool", filters.GetProperty("kind").GetString());
+        Assert.Equal(1500, filters.GetProperty("maxTuitionPln").GetInt32());
+        Assert.True(filters.GetProperty("hasFreePlaces").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, filters.GetProperty("place").ValueKind);
+        Assert.Single(Unsupported(root));
+    }
+
     private static async Task<HttpResponseMessage> Post(SearchIntentApiFactory factory, string question) =>
         await Post(factory.CreateClient(), question);
 

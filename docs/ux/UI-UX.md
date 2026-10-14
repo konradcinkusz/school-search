@@ -68,6 +68,16 @@ and 15).
    admin endpoint (ADR-0008).
 7. **Compare two schools (Phase C):** side by side, same cohort, same methodology version.
 
+## Levels
+
+The product is organised in levels of schooling, shown to the parent as a choice of stage, not as separate sites.
+Level 1 covers childcare: preschools now, nurseries (żłobki, ages 0 to 3) if the owner accepts ADR-0021. Level 1 shows
+practical facts only, each with its source and as-of date, and never a quality score, rank or "best" label. Level 2 covers
+primary schools and shows scores with their interval, cohort size and methodology version. A second edition for secondary
+students and university applicants is deferred and has no screens here. Its trigger and the open decisions are in
+[`docs/adr/0021-product-scope-levels-and-nurseries.md`](../adr/0021-product-scope-levels-and-nurseries.md) (status
+Proposed). Any new level is a new `kind` or `educationLevel` value in the catalog, not a new product.
+
 ## Ranked backlog
 
 Ranked by user harm if wrong first, then by how much the next phase depends on it. Each item states the gate it

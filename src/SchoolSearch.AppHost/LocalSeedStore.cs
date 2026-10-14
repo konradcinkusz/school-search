@@ -22,6 +22,15 @@ internal sealed class LocalSeedSecrets
 
     [JsonPropertyName("jwtPrivateKeyPem")]
     public string? JwtPrivateKeyPem { get; set; }
+
+    // Keys the sealed ss_session cookie of the web BFF (SESSION_SECRET). Added after the first release of the store:
+    // a file without this key still loads, and the value is generated on the next run that needs it.
+    [JsonPropertyName("sessionSecret")]
+    public string? SessionSecret { get; set; }
+
+    // Shared by the web BFF and api, reviews, billing and mcp (BFF_SHARED_SECRET). Same compatibility rule as above.
+    [JsonPropertyName("bffSharedSecret")]
+    public string? BffSharedSecret { get; set; }
 }
 
 internal sealed class LocalSeedStore

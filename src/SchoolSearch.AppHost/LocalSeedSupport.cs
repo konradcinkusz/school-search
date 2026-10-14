@@ -1,6 +1,7 @@
 // Generators for the local demo seed (Phase L) used by Program.cs. Local and dev only.
 // Generated values are kept only in the gitignored local store (LocalSeedStore.cs); they are never logged or committed.
 using System.Security.Cryptography;
+using System.Text;
 using Aspire.Hosting.ApplicationModel;
 
 internal static class LocalSeedSupport
@@ -29,6 +30,21 @@ internal static class LocalSeedSupport
 
     // Random pepper for the subject hashes (32 bytes as 64 hex characters), used when no pepper is configured or stored.
     public static string CreatePepper() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+
+    // Minimum size of SESSION_SECRET in bytes (web/app/src/lib/bff-config.ts, MIN_SESSION_SECRET_BYTES). A shorter value
+    // makes every account route of the web BFF answer 503.
+    public const int SessionSecretMinimumBytes = 32;
+
+    // Random key material for the sealed session cookie: 48 random bytes as 64 base64 characters (the same recipe as
+    // `openssl rand -base64 48` in flyio/SECRETS.md).
+    public static string CreateSessionSecret() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(48));
+
+    // Random secret shared by the web BFF and the services (BFF_SHARED_SECRET): 32 random bytes as 64 hex characters.
+    public static string CreateBffSharedSecret() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+
+    // True when the value is long enough to be used as SESSION_SECRET. Pure; used for configured and stored values.
+    public static bool IsUsableSessionSecret(string? value) =>
+        value is not null && Encoding.UTF8.GetByteCount(value) >= SessionSecretMinimumBytes;
 
     // Minimum length of the authservice password rules (RequiredLength = 8).
     public const int AuthservicePasswordMinimumLength = 8;

@@ -2,7 +2,11 @@
 // field by field, and anything unexpected is dropped rather than trusted. Text is rendered by React as plain text.
 // Backend shapes are coded against the spec; a missing optional field degrades the view, it never breaks the page.
 
+import { EMPTY_FILTERS, normalizeFilters, sanitizePlace, sanitizeTuition, type FacilityKind, type SearchFilters } from "./search-filters";
+
 export const AI_LABEL = "Wygenerowano przez AI";
+/** Label next to AI filter output (docs/ux/UI-UX.md row 15 wording). */
+export const AI_FILTER_LABEL = "Wygenerowano przez AI — to nie jest ocena szkoły";
 
 const TERYT_7 = /^[0-9]{7}$/;
 const MAX_LIST = 12;
@@ -38,6 +42,13 @@ export interface SearchIntentFilters {
   /** 0 < value <= 50. */
   readonly maxDistanceKm?: number;
   readonly type?: SchoolKind;
+  /** school | preschool | all. Absent when the API predates the field or the question did not name a kind. */
+  readonly kind?: FacilityKind;
+  /** 1..20000 PLN per month. */
+  readonly maxTuitionPln?: number;
+  readonly hasFreePlaces?: boolean;
+  /** Free-text place phrase, never coordinates. */
+  readonly place?: string;
 }
 
 export interface SearchIntentResult {
@@ -59,12 +70,37 @@ export function parseSearchIntent(payload: unknown): SearchIntentResult | null {
     filters.maxDistanceKm = Math.min(raw.maxDistanceKm, 50);
   }
   if (raw.type === "school" || raw.type === "preschool") filters.type = raw.type;
+  // Fields added in Phase M. The API may not send them yet: absent means unset. Invalid values are dropped, not guessed.
+  if (raw.kind === "school" || raw.kind === "preschool" || raw.kind === "all") filters.kind = raw.kind;
+  const tuition = sanitizeTuition(raw.maxTuitionPln);
+  if (typeof raw.maxTuitionPln === "number" && tuition !== undefined) filters.maxTuitionPln = tuition;
+  if (typeof raw.hasFreePlaces === "boolean") filters.hasFreePlaces = raw.hasFreePlaces;
+  const place = sanitizePlace(raw.place);
+  if (place !== undefined) filters.place = place;
   return {
     filters,
     notes: shortStrings(raw.notes ?? payload.notes, MAX_LIST, 300),
     unsupported: shortStrings(payload.unsupported, MAX_LIST, 300),
     aiLabel: labelOf(payload.aiLabel),
   };
+}
+
+/**
+ * Maps the API filter object onto the shared model. maxDistanceKm becomes radiusKm; `kind` wins over the older `type`.
+ * Only meaningful values are set (false booleans stay unset), so the result is safe to show as chips.
+ */
+export function intentToSearchFilters(filters: SearchIntentFilters): SearchFilters {
+  return normalizeFilters({
+    ...EMPTY_FILTERS,
+    kind: filters.kind ?? filters.type ?? "all",
+    q: filters.q,
+    gmina: filters.gmina,
+    publicOnly: filters.publicOnly,
+    maxTuitionPln: filters.maxTuitionPln,
+    hasFreePlaces: filters.hasFreePlaces,
+    place: filters.place,
+    radiusKm: filters.maxDistanceKm,
+  });
 }
 
 // ---------------------------------------------------------------------------

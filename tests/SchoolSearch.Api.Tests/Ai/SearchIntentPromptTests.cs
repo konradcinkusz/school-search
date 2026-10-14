@@ -35,4 +35,31 @@ public sealed class SearchIntentPromptTests
         Assert.DoesNotContain(question, prompt.System, StringComparison.Ordinal);
         Assert.Contains(question, prompt.User, StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData("kind")]
+    [InlineData("maxTuitionPln")]
+    [InlineData("hasFreePlaces")]
+    [InlineData("place")]
+    [InlineData("nursery")]
+    public void The_system_rules_describe_the_new_fields(string name)
+    {
+        var prompt = SearchIntentPromptBuilder.Build("Przedszkole do 1500 zł");
+
+        Assert.Contains(name, prompt.System, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_system_rules_forbid_coordinates_and_keep_every_refusal()
+    {
+        var prompt = SearchIntentPromptBuilder.Build("Szkoła");
+
+        Assert.Contains("Nigdy nie podawaj współrzędnych", prompt.System, StringComparison.Ordinal);
+        Assert.Contains("Żłobki nie są jeszcze obsługiwane", prompt.System, StringComparison.Ordinal);
+        Assert.Contains("Nie wybieraj i nie oceniaj szkół", prompt.System, StringComparison.Ordinal);
+        Assert.Contains("najlepsze, najgorsze", prompt.System, StringComparison.Ordinal);
+        Assert.Contains("sortowanie", prompt.System, StringComparison.Ordinal);
+        Assert.Contains("Nie dodawaj danych osobowych", prompt.System, StringComparison.Ordinal);
+        Assert.Contains("Plac Wolności, Poznań", prompt.System, StringComparison.Ordinal);
+    }
 }
