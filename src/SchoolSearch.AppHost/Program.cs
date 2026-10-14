@@ -35,6 +35,24 @@ var configuredReviewsPepper = LocalSeedSupport.NonBlank(builder.Configuration["R
 var configuredBillingPepper = LocalSeedSupport.NonBlank(builder.Configuration["Billing:SubjectPepper"]);
 var configuredTestPassword = LocalSeedSupport.NonBlank(builder.Configuration["Seed:TestPassword"]);
 
+// Web sign-in secrets (Phase M). SESSION_SECRET seals the ss_session cookie of the web BFF (at least 32 bytes, otherwise
+// every account route answers 503). BFF_SHARED_SECRET is the same value in web, api, reviews, billing and mcp: it lets
+// the services trust the visitor address the BFF forwards. Same resolution as the other seed secrets: configuration
+// (user-secrets or environment), then the local store, then generated. A configured SESSION_SECRET that is too short is
+// ignored with a warning in the banner, because passing it on would silently disable the account routes.
+var configuredSessionSecret = LocalSeedSupport.NonBlank(builder.Configuration["SESSION_SECRET"]);
+string? sessionSecretWarning = null;
+if (configuredSessionSecret is not null && !LocalSeedSupport.IsUsableSessionSecret(configuredSessionSecret))
+{
+    sessionSecretWarning = $"SESSION_SECRET in configuration is shorter than {LocalSeedSupport.SessionSecretMinimumBytes} bytes and is ignored.";
+    configuredSessionSecret = null;
+}
+
+var configuredBffSharedSecret = LocalSeedSupport.NonBlank(builder.Configuration["BFF_SHARED_SECRET"]);
+
+// Optional Google Maps key, passed to the web resource only when present (the map page reads it at runtime).
+var googleMapsApiKey = LocalSeedSupport.NonBlank(builder.Configuration["GOOGLE_MAPS_API_KEY"]);
+
 var seedTestPassword = string.Empty;
 var seedPasswordSource = "none"; // "configuration", "store" or "generated"
 var devSeedKey = string.Empty;
@@ -43,6 +61,9 @@ var jwtKeySource = configuredJwtKey is null ? "none" : "configuration";
 string reviewsPepper;
 string billingPepper;
 string? seedStoreProblem = null;
+string? sessionSecret = configuredSessionSecret;
+var sessionSecretSource = configuredSessionSecret is null ? "none" : "configuration"; // "store", "generated" or "per run" too
+string? bffSharedSecret = configuredBffSharedSecret;
 
 if (seedDemo)
 {
@@ -107,6 +128,38 @@ if (seedDemo)
         }
     }
 
+    // The session secret matters only when authservice is included (the web accounts need AUTH_BASE_URL as well).
+    // A stored value that is too short (a hand-edited file) is replaced by a generated one.
+    if (sessionSecret is null && includeAuthservice)
+    {
+        if (LocalSeedSupport.IsUsableSessionSecret(secrets.SessionSecret))
+        {
+            sessionSecret = secrets.SessionSecret;
+            sessionSecretSource = "store";
+        }
+        else
+        {
+            sessionSecret = LocalSeedSupport.CreateSessionSecret();
+            secrets.SessionSecret = sessionSecret;
+            store.Changed = true;
+            sessionSecretSource = "generated";
+        }
+    }
+
+    if (bffSharedSecret is null)
+    {
+        if (LocalSeedSupport.NonBlank(secrets.BffSharedSecret) is { } storedBffSecret)
+        {
+            bffSharedSecret = storedBffSecret;
+        }
+        else
+        {
+            bffSharedSecret = LocalSeedSupport.CreateBffSharedSecret();
+            secrets.BffSharedSecret = bffSharedSecret;
+            store.Changed = true;
+        }
+    }
+
     seedStoreProblem = store.TrySave();
 }
 else
@@ -114,6 +167,14 @@ else
     // Without SeedDemo the peppers keep their per-run default, as before.
     reviewsPepper = configuredReviewsPepper ?? LocalSeedSupport.CreatePepper();
     billingPepper = configuredBillingPepper ?? LocalSeedSupport.CreatePepper();
+
+    // An authservice started without SeedDemo still needs a session secret for the web sign-in. There is no store here,
+    // so it is random for each run (sessions end when the AppHost restarts). The shared secret stays unset unless configured.
+    if (sessionSecret is null && includeAuthservice)
+    {
+        sessionSecret = LocalSeedSupport.CreateSessionSecret();
+        sessionSecretSource = "per run";
+    }
 }
 
 // AI passthrough (P8): set only when configured. Without ANTHROPIC_API_KEY the AI features degrade.
@@ -288,6 +349,23 @@ if (File.Exists(mcpProject))
     }
 }
 
+// BFF_SHARED_SECRET: the same value in every service the web BFF calls, so the forwarded visitor address is trusted
+// (per-visitor rate limits). Optional for sign-in itself; set whenever a value exists (configuration or the local store).
+if (bffSharedSecret is not null)
+{
+    api = api.WithEnvironment("BFF_SHARED_SECRET", bffSharedSecret);
+    reviews = reviews.WithEnvironment("BFF_SHARED_SECRET", bffSharedSecret);
+    if (billing is not null)
+    {
+        billing = billing.WithEnvironment("BFF_SHARED_SECRET", bffSharedSecret);
+    }
+
+    if (mcp is not null)
+    {
+        mcp = mcp.WithEnvironment("BFF_SHARED_SECRET", bffSharedSecret);
+    }
+}
+
 // The product surface. It reads the API through its server-side proxy; the proxy's candidate
 // ladder picks up services__api__http__0, which WithReference injects.
 var webAppDirectory = Path.GetFullPath(Path.Combine(builder.AppHostDirectory, "..", "..", "web", "app"));
@@ -318,7 +396,26 @@ if (mcp is not null)
 
 if (includeAuthservice)
 {
-    web = web.WithEnvironment("AUTH_BASE_URL", AuthBaseUrl);
+    // Account routes need AUTH_BASE_URL and SESSION_SECRET (accountsConfigured in web/app/src/lib/bff-config.ts).
+    // NODE_ENV=development keeps the session cookie without the Secure flag (secureCookies), so it is stored over
+    // http://localhost; the `dev` script is the only way the web resource runs here.
+    web = web.WithEnvironment("AUTH_BASE_URL", AuthBaseUrl)
+        .WithEnvironment("NODE_ENV", "development");
+    if (sessionSecret is not null)
+    {
+        web = web.WithEnvironment("SESSION_SECRET", sessionSecret);
+    }
+}
+
+if (bffSharedSecret is not null)
+{
+    web = web.WithEnvironment("BFF_SHARED_SECRET", bffSharedSecret);
+}
+
+// Optional (P8): without a key the map page shows its list fallback. Read per request by the web app's runtime config.
+if (googleMapsApiKey is not null)
+{
+    web = web.WithEnvironment("GOOGLE_MAPS_API_KEY", googleMapsApiKey);
 }
 
 // The demo seeder (src/SchoolSearch.Seeder): a one-shot console app. It creates the test accounts through authservice,
@@ -363,9 +460,15 @@ Console.WriteLine("SchoolSearch local run");
 Console.WriteLine($"  SeedDemo (demo data and test accounts): {(seedDemo ? "on" : "off")}");
 Console.WriteLine($"  Authservice container: {(includeAuthservice ? "on" : "off")}");
 Console.WriteLine($"  AI (ANTHROPIC_API_KEY): {(anthropicApiKey is not null ? "on" : "off, AI features degrade")}");
+Console.WriteLine($"  Google Maps (GOOGLE_MAPS_API_KEY): {(googleMapsApiKey is not null ? "on" : "off, the map page shows a list")}");
 if (includeAuthservice)
 {
     Console.WriteLine($"  Authservice JWT key: {DescribeKeySource(jwtKeySource, seedStoreProblem is null)}.");
+    Console.WriteLine($"  Web sign-in (SESSION_SECRET): {DescribeSessionSecretSource(sessionSecretSource, seedStoreProblem is null)}.");
+    if (sessionSecretWarning is not null)
+    {
+        Console.WriteLine($"  WARNING: {sessionSecretWarning}");
+    }
 }
 
 if (seedDemo)
@@ -391,6 +494,15 @@ if (seedDemo)
 }
 
 builder.Build().Run();
+
+static string DescribeSessionSecretSource(string source, bool saved) => source switch
+{
+    "configuration" => "configuration",
+    "store" => "stored in .local/seed-secrets.json",
+    "generated" => saved ? "generated and stored in .local/seed-secrets.json" : "generated for this run only (not stored)",
+    "per run" => "generated for this run only (SeedDemo is off); sessions end when the AppHost restarts",
+    _ => "not set, account routes answer 503",
+};
 
 static string DescribeKeySource(string source, bool saved) => source switch
 {

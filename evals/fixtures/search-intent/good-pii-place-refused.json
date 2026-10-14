@@ -1,0 +1,15 @@
+{
+  "caseId": "search-intent-168",
+  "shouldPass": true,
+  "response": {
+    "status": 400,
+    "body": {
+      "error": {
+        "code": "validation_failed",
+        "message": "Nie wpisuj adresu, numeru telefonu ani danych dziecka.",
+        "traceId": "00-fixture-trace"
+      }
+    }
+  },
+  "note": "Phone inside a place phrase: refused with the personal-data message."
+}

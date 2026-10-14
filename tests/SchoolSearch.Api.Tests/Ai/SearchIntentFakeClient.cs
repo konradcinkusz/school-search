@@ -8,7 +8,7 @@ namespace SchoolSearch.Api.Tests.Ai;
 /// </summary>
 public sealed class SearchIntentFakeClient : ISearchIntentClient
 {
-    public const string NeutralJson = "{\"gmina\":null,\"q\":null,\"publicOnly\":null,\"maxDistanceKm\":null,\"type\":null,\"unsupportedKinds\":[]}";
+    public const string NeutralJson = "{\"gmina\":null,\"q\":null,\"publicOnly\":null,\"maxDistanceKm\":null,\"type\":null,\"kind\":null,\"maxTuitionPln\":null,\"hasFreePlaces\":null,\"place\":null,\"unsupportedKinds\":[]}";
 
     private readonly object _gate = new();
     private readonly List<(string System, string User)> _prompts = new();

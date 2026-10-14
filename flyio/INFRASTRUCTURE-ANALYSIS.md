@@ -16,7 +16,15 @@ cold-start number is a budget or an estimate until a real machine has been timed
 | `school-search-web-dev` | frontend | A | 0 | none | yes | browsers |
 | `school-search-mcp-dev` | HTTP service | later (MCP) | 0 | none | yes | external agents |
 | `school-search-import` (one-shot) | `fly machine run` | B | none (runs and exits) | none | none | run by CI, reads postgres |
-| `school-search-authservice-dev` | HTTP service | E | **1** | none | yes | api, reviews (JWKS, in-request) |
+| `school-search-authservice-dev` | HTTP service | E | **1** | none | yes | api, reviews, billing (JWKS, in-request) |
+| `school-search-reviews-dev` | HTTP service | E | **1** | none | yes | web BFF (in-request), mcp |
+| `school-search-billing-dev` | HTTP service | F | **1** | none | yes | web BFF (in-request) |
+
+Update 2026-10-14: the table now lists every deployable app. The reasoning for why these are separate apps, why one Postgres
+app holds four logical databases and why they are not merged into "one app for the API" is `docs/adr/0020-fly-topology-and-consolidation.md`.
+At launch with everything on the estate idles on **five running machines** (postgres, api, authservice, reviews, billing);
+web and mcp are stopped. Cost figures in section 6 predate reviews and billing: add two always-on 512 MB machines
+**[estimate]** at the same per-machine range.
 
 Notes on the table:
 - The import job runs as a machine of the **api app** (see section 5), not as a separate app. Its
@@ -215,3 +223,25 @@ Stated so nobody re-proposes them without a recorded decision.
 6. Postgres collation (`--locale=C` is a placeholder; Polish ICU collation is a Phase B decision).
 7. All cold-start figures in section 3.1 and all costs in section 6 are estimates, to be replaced with
    measured values after the first real deploy.
+
+## 9. Data safety of the single Postgres machine (2026-10-14)
+
+What the repository does today, stated without embellishment:
+
+- One Postgres machine (`postgres:17-alpine`, 1 GB) with one 10 GB Fly volume. `--ha=false`. No replica, no standby, no failover.
+- `flyio.yml` takes a volume snapshot (best effort, a failure only warns) before each Postgres redeploy.
+- Fly takes platform snapshots of volumes on its own schedule with its own retention. **This repository neither configures
+  nor verifies that schedule.** The owner must read the current Fly documentation and `flyctl volumes snapshots list` before
+  relying on it.
+
+What is missing:
+
+- No logical backup (`pg_dump`) and no off-Fly copy. A volume snapshot lives in the same provider and region as the volume.
+- No WAL archiving, so no point-in-time recovery: a restore returns to the snapshot instant.
+- No restore drill. A backup that was never restored is not known to work.
+- No managed failover: a host failure of the one machine means downtime until Fly recovers it or the volume is restored from
+  a snapshot onto a new machine.
+- The four databases share one machine and one role (ADR-0020): a disk-full or a runaway query in one is felt by all.
+
+Any of these may be accepted for a launch with data that can be re-imported (the catalog) but not for data that cannot
+(reviews, billing, accounts). The accepted-risk decision belongs to the owner and is recorded in ADR-0020.

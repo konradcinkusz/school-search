@@ -10,7 +10,11 @@
         "publicOnly": true,
         "maxDistanceKm": 500,
         "type": null,
-        "notes": []
+        "notes": [],
+        "kind": null,
+        "maxTuitionPln": null,
+        "hasFreePlaces": null,
+        "place": null
       },
       "aiLabel": "Wygenerowano przez AI",
       "model": "claude-haiku-5-5",

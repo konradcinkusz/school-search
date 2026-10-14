@@ -2,6 +2,9 @@ name: flyio-scale
 
 # Manual machine-count profile for the stateless apps. The Postgres app is never
 # scaled: it has a volume and must stay at one machine (FLY-IO-DEPLOYMENT §8, §12).
+# `request-path-2` runs a second api and authservice machine. Every machine runs its EF migrations on start and no
+# migration lock exists in the code (flyio/INFRASTRUCTURE-ANALYSIS.md section 7), so the profile needs an explicit
+# acknowledgement. `stop` destroys the machines (scale count 0); `start` re-creates one machine per app.
 
 on:
   workflow_dispatch:
@@ -15,6 +18,11 @@ on:
           - start
           - request-path-2
           - stop
+      acknowledge_no_migration_lock:
+        description: "Required for request-path-2: I know two machines can race the same EF migration on start (no migration lock yet)"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -32,7 +40,14 @@ jobs:
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
       PROFILE: ${{ inputs.profile }}
+      ACK_NO_LOCK: ${{ inputs.acknowledge_no_migration_lock }}
     steps:
+      - name: Refuse request-path-2 without the acknowledgement
+        run: |
+          if [ "$PROFILE" = "request-path-2" ] && [ "$ACK_NO_LOCK" != "true" ]; then
+            echo "::error::request-path-2 needs acknowledge_no_migration_lock=true (no migration lock exists yet; see flyio/INFRASTRUCTURE-ANALYSIS.md section 7)"
+            exit 1
+          fi
       - uses: superfly/flyctl-actions/setup-flyctl@v1
       - name: Apply profile
         run: |

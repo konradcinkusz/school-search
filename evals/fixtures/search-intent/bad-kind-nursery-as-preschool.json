@@ -1,0 +1,25 @@
+{
+  "caseId": "search-intent-155",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": "9999999",
+        "q": null,
+        "publicOnly": null,
+        "maxDistanceKm": null,
+        "type": null,
+        "notes": [],
+        "kind": "preschool",
+        "maxTuitionPln": null,
+        "hasFreePlaces": null,
+        "place": null
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": []
+    }
+  },
+  "note": "Intended: nursery-request-unsupported (and null-kind). A nursery was read as a preschool kind."
+}

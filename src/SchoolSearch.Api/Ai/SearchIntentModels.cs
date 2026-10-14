@@ -5,7 +5,8 @@ public sealed record SearchIntentRequest(string? Question);
 
 /// <summary>
 /// Filters the parent can see and edit. Only these fields can reach the search query; the caller applies them through
-/// the normal search API, and the model never sees results. Null means "not set".
+/// the normal search API, and the model never sees results. Null means "not set". <c>Kind</c> is school, preschool or
+/// all; <c>MaxTuitionPln</c> is 0..20000; <c>Place</c> is a free-text place phrase and never coordinates.
 /// </summary>
 public sealed record SearchIntentFilters(
     string? Gmina,
@@ -13,6 +14,10 @@ public sealed record SearchIntentFilters(
     bool? PublicOnly,
     double? MaxDistanceKm,
     string? Type,
+    string? Kind,
+    int? MaxTuitionPln,
+    bool? HasFreePlaces,
+    string? Place,
     IReadOnlyList<string> Notes);
 
 /// <summary>The response of <c>POST /api/v1/ai/search-intent</c>.</summary>

@@ -171,4 +171,176 @@ public sealed class SearchIntentParserTests
         Assert.Equal("school", result.Filters.Type);
         Assert.Empty(result.Unsupported);
     }
+
+    [Theory]
+    [InlineData("school", "school")]
+    [InlineData("Preschool", "preschool")]
+    [InlineData(" all ", "all")]
+    public void Kind_is_accepted_within_the_allowlist(string kind, string expected)
+    {
+        var result = SearchIntentParser.Parse("{\"kind\":\"" + kind + "\"}", "Przedszkole");
+
+        Assert.NotNull(result);
+        Assert.Equal(expected, result.Filters.Kind);
+        Assert.Empty(result.Unsupported);
+    }
+
+    [Theory]
+    [InlineData("{\"kind\":\"secondary\"}")]
+    [InlineData("{\"kind\":\"\"}")]
+    [InlineData("{\"kind\":1}")]
+    [InlineData("{\"kind\":[\"school\"]}")]
+    public void Kind_outside_the_allowlist_is_unsupported_and_never_guessed(string modelJson)
+    {
+        var result = SearchIntentParser.Parse(modelJson, "Liceum");
+
+        Assert.NotNull(result);
+        Assert.Null(result.Filters.Kind);
+        Assert.Contains(SearchIntentParser.KindUnsupported, result.Unsupported);
+    }
+
+    [Fact]
+    public void Nursery_is_unsupported_from_kind_unsupported_kinds_or_the_question()
+    {
+        var fromKind = SearchIntentParser.Parse("{\"kind\":\"nursery\"}", "Szukam opieki");
+        var fromList = SearchIntentParser.Parse("{\"unsupportedKinds\":[\"nursery\"]}", "Szukam opieki");
+        var fromQuestion = SearchIntentParser.Parse("{\"kind\":\"preschool\"}", "Żłobek lub przedszkole");
+
+        Assert.NotNull(fromKind);
+        Assert.Null(fromKind.Filters.Kind);
+        Assert.Contains(SearchIntentParser.NurseryUnsupported, fromKind.Unsupported);
+        Assert.NotNull(fromList);
+        Assert.Contains(SearchIntentParser.NurseryUnsupported, fromList.Unsupported);
+        Assert.NotNull(fromQuestion);
+        Assert.Contains(SearchIntentParser.NurseryUnsupported, fromQuestion.Unsupported);
+    }
+
+    [Theory]
+    [InlineData("0", 0)]
+    [InlineData("1500", 1500)]
+    [InlineData("20000", 20000)]
+    public void Max_tuition_accepts_integers_from_zero_to_twenty_thousand(string json, int expected)
+    {
+        var result = SearchIntentParser.Parse("{\"maxTuitionPln\":" + json + "}", "Przedszkole do 1500 zł");
+
+        Assert.NotNull(result);
+        Assert.Equal(expected, result.Filters.MaxTuitionPln);
+        Assert.Empty(result.Unsupported);
+    }
+
+    [Theory]
+    [InlineData("-1")]
+    [InlineData("20001")]
+    [InlineData("1500.5")]
+    [InlineData("\"1500\"")]
+    [InlineData("true")]
+    [InlineData("99999999999")]
+    public void Max_tuition_outside_the_range_or_of_the_wrong_type_is_unsupported(string json)
+    {
+        var result = SearchIntentParser.Parse("{\"maxTuitionPln\":" + json + "}", "Przedszkole");
+
+        Assert.NotNull(result);
+        Assert.Null(result.Filters.MaxTuitionPln);
+        Assert.Contains(SearchIntentParser.TuitionUnsupported, result.Unsupported);
+    }
+
+    [Fact]
+    public void Has_free_places_true_is_set_false_is_unset_and_other_types_are_unsupported()
+    {
+        var yes = SearchIntentParser.Parse("{\"hasFreePlaces\":true}", "Z wolnymi miejscami");
+        var no = SearchIntentParser.Parse("{\"hasFreePlaces\":false}", "Przedszkole");
+        var text = SearchIntentParser.Parse("{\"hasFreePlaces\":\"tak\"}", "Przedszkole");
+
+        Assert.NotNull(yes);
+        Assert.Equal(true, yes.Filters.HasFreePlaces);
+        Assert.NotNull(no);
+        Assert.Null(no.Filters.HasFreePlaces);
+        Assert.Empty(no.Unsupported);
+        Assert.NotNull(text);
+        Assert.Null(text.Filters.HasFreePlaces);
+        Assert.Contains(SearchIntentParser.FreePlacesUnsupported, text.Unsupported);
+    }
+
+    [Theory]
+    [InlineData("Plac Wolności, Poznań")]
+    [InlineData("  Stary   Rynek,  Poznań ")]
+    [InlineData("ul. Długa 15, Gdańsk")]
+    public void Place_is_trimmed_and_collapsed_when_it_is_a_plain_place_phrase(string place)
+    {
+        var result = SearchIntentParser.Parse("{\"place\":\"" + place + "\"}", "Blisko Placu Wolności");
+
+        Assert.NotNull(result);
+        Assert.Equal(SearchIntentGuard.Collapse(place), result.Filters.Place);
+        Assert.Empty(result.Unsupported);
+    }
+
+    [Theory]
+    [InlineData("52.2297, 21.0122")]
+    [InlineData("52,2297 21,0122")]
+    [InlineData("lat 52.1 lon 21")]
+    [InlineData("latitude 52 longitude 21")]
+    [InlineData("52.2297")]
+    [InlineData("jan.kowalski@example.com")]
+    [InlineData("600 123 456")]
+    [InlineData("44051401359")]
+    [InlineData("12345678")]
+    [InlineData("30-001 Kraków")]
+    [InlineData("<b>Poznań</b>")]
+    [InlineData("Jan Kowalski, Anna Nowak")]
+    [InlineData("Jan Kowalski i Anna Nowak")]
+    [InlineData("najlepsza okolica")]
+    [InlineData("12345")]
+    public void Place_with_coordinates_personal_data_markup_names_or_ranking_is_rejected_whole(string place)
+    {
+        var result = SearchIntentParser.Parse("{\"place\":\"" + place + "\"}", "Szkoła w okolicy");
+
+        Assert.NotNull(result);
+        Assert.Null(result.Filters.Place);
+        Assert.NotEmpty(result.Unsupported);
+    }
+
+    [Fact]
+    public void Place_longer_than_120_characters_or_of_the_wrong_type_is_rejected()
+    {
+        var tooLong = SearchIntentParser.Parse("{\"place\":\"" + new string('a', 121) + "\"}", "Szkoła");
+        var atLimit = SearchIntentParser.Parse("{\"place\":\"" + new string('a', 120) + "\"}", "Szkoła");
+        var number = SearchIntentParser.Parse("{\"place\":52}", "Szkoła");
+
+        Assert.NotNull(tooLong);
+        Assert.Null(tooLong.Filters.Place);
+        Assert.Contains(SearchIntentParser.PlaceUnsupported, tooLong.Unsupported);
+        Assert.NotNull(atLimit);
+        Assert.Equal(120, atLimit.Filters.Place?.Length);
+        Assert.NotNull(number);
+        Assert.Null(number.Filters.Place);
+        Assert.Contains(SearchIntentParser.PlaceUnsupported, number.Unsupported);
+    }
+
+    [Fact]
+    public void New_fields_are_null_when_the_model_does_not_set_them()
+    {
+        var result = SearchIntentParser.Parse("{}", "Szkoła");
+
+        Assert.NotNull(result);
+        Assert.Null(result.Filters.Kind);
+        Assert.Null(result.Filters.MaxTuitionPln);
+        Assert.Null(result.Filters.HasFreePlaces);
+        Assert.Null(result.Filters.Place);
+    }
+
+    [Fact]
+    public void Combined_new_fields_are_all_read()
+    {
+        var result = SearchIntentParser.Parse(
+            "{\"kind\":\"preschool\",\"maxTuitionPln\":1500,\"hasFreePlaces\":true,\"place\":\"Plac Wolności, Poznań\",\"unsupportedKinds\":[]}",
+            "Przedszkole do 1500 zł z wolnymi miejscami blisko Placu Wolności w Poznaniu");
+
+        Assert.NotNull(result);
+        Assert.Equal("preschool", result.Filters.Kind);
+        Assert.Equal(1500, result.Filters.MaxTuitionPln);
+        Assert.Equal(true, result.Filters.HasFreePlaces);
+        Assert.Equal("Plac Wolności, Poznań", result.Filters.Place);
+        Assert.Empty(result.Unsupported);
+        Assert.Empty(result.Filters.Notes);
+    }
 }

@@ -1,0 +1,355 @@
+/*
+ * Map page ("Atlas", ADR-0022). Tokens only, so dark mode follows. Every selector is scoped to .site-main.
+ * Marker colours are the two neutral kind colours from lib/map-markers.ts (MARKER_COLOR): they say "school" or
+ * "preschool", never "good" or "bad", and are mirrored here for the legend and the kind labels.
+ */
+
+.site-main .map-explorer {
+  --map-school: #0b5d6b;
+  --map-preschool: #b3470f;
+  --map-height: clamp(22rem, calc(100dvh - 15rem), 46rem);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.site-main .map-explorer [hidden] {
+  display: none !important;
+}
+
+.site-main .map-explorer > * {
+  margin: 0;
+}
+
+.site-main .map-help {
+  font-size: var(--text-sm);
+}
+
+/* Kind label: a swatch whose shape matches the marker (circle = school, rounded square = preschool). */
+.site-main .map-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.site-main .map-kind__swatch {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  background: var(--map-school);
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-border-strong);
+  border-radius: 50%;
+}
+
+.site-main .map-kind[data-kind="preschool"] .map-kind__swatch {
+  background: var(--map-preschool);
+  border-radius: 4px;
+}
+
+/* Toolbar: phone only (filters sheet button and map/list toggle). */
+.site-main .map-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.site-main .map-toolbar__views {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.site-main .map-toolbar .button[aria-pressed="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-fg);
+}
+
+.site-main .map-layout {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.site-main .map-side,
+.site-main .map-main {
+  min-width: 0;
+}
+
+.site-main .map-side {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.site-main .map-results {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.site-main .map-results > * {
+  margin: 0;
+}
+
+.site-main .map-count {
+  font-weight: var(--weight-semibold);
+}
+
+.site-main .map-place-note {
+  font-size: var(--text-sm);
+}
+
+/* Map stage */
+.site-main .map-canvas-wrap {
+  position: relative;
+  height: var(--map-height);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--color-surface-sunken);
+}
+
+.site-main .map-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.site-main .map-canvas__loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+}
+
+.site-main .map-legend {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  display: flex;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-surface);
+  color: var(--color-fg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.site-main .map-legend li {
+  margin: 0;
+  padding: 0;
+}
+
+/* Info card over the bottom of the map */
+.site-main .map-card {
+  position: absolute;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: var(--space-2);
+  max-height: 70%;
+  overflow: auto;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (min-width: 36rem) {
+  .site-main .map-card {
+    right: auto;
+    width: 22rem;
+  }
+}
+
+.site-main .map-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.site-main .map-card__close {
+  min-width: var(--tap);
+  min-height: var(--tap);
+  margin: -0.5rem -0.75rem 0 0;
+  display: inline-grid;
+  place-items: center;
+  font: inherit;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--color-fg);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.site-main .map-card__close:hover {
+  background: var(--color-accent-soft);
+}
+
+.site-main .map-card__name {
+  margin: var(--space-1) 0 var(--space-1);
+  font-size: var(--text-lg);
+}
+
+.site-main .map-card__meta {
+  margin: 0 0 var(--space-2);
+}
+
+.site-main .map-card:focus {
+  outline: none;
+}
+
+.site-main .map-card:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Result list */
+.site-main .map-list-heading {
+  font-size: var(--text-xl);
+  margin: 0 0 var(--space-3);
+}
+
+.site-main .map-list-wrap:focus {
+  outline: none;
+}
+
+.site-main .map-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.site-main .map-list__item {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+}
+
+.site-main .map-list__name {
+  margin: var(--space-1) 0 var(--space-1);
+  font-size: var(--text-lg);
+  overflow-wrap: anywhere;
+}
+
+.site-main .map-list__meta {
+  margin: 0 0 var(--space-2);
+}
+
+.site-main .map-list__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-2);
+}
+
+.site-main .map-list__facts dt {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.site-main .map-list__facts dd {
+  margin: 0;
+  font-weight: var(--weight-semibold);
+}
+
+/* Phone and tablet: filters are a bottom sheet behind a button. */
+@media (max-width: 61.99rem) {
+  .site-main .map-filters[data-open="false"] {
+    display: none;
+  }
+
+  .site-main .map-filters[data-open="true"] {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 60;
+    max-height: 88dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--space-3) var(--gutter) var(--space-4);
+    background: var(--color-bg);
+    border-top: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .site-main .map-filters[data-open="true"]:focus {
+    outline: none;
+  }
+
+  .site-main .map-sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    background: rgb(21 32 43 / 0.5);
+  }
+
+  .site-main .map-filters__done {
+    position: sticky;
+    bottom: 0;
+    padding: var(--space-2) 0;
+    background: var(--color-surface);
+  }
+}
+
+/* Desktop: filters and list on the left, the map stays in view on the right. */
+@media (min-width: 62rem) {
+  .site-main .map-toolbar {
+    display: none;
+  }
+
+  .site-main .map-layout {
+    grid-template-columns: minmax(20rem, 26rem) minmax(0, 1fr);
+    gap: var(--space-5);
+  }
+
+  /* No map: filters on the left, the result list on the right (nothing sits in the map column). */
+  .site-main .map-explorer[data-map="off"] .map-layout {
+    grid-template-columns: minmax(20rem, 26rem) minmax(0, 1fr);
+  }
+
+  .site-main .map-explorer[data-map="off"] .map-side {
+    display: contents;
+  }
+
+  .site-main .map-explorer[data-map="off"] .map-filters {
+    grid-column: 1;
+  }
+
+  .site-main .map-explorer[data-map="off"] .map-results {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .site-main .map-main {
+    position: sticky;
+    top: var(--space-4);
+  }
+
+  .site-main .map-filters[data-open="false"] {
+    display: block;
+  }
+
+  .site-main .map-canvas-wrap {
+    height: calc(100dvh - 2rem);
+    max-height: 52rem;
+    min-height: 26rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-main .map-explorer *,
+  .site-main .map-explorer *::before,
+  .site-main .map-explorer *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}

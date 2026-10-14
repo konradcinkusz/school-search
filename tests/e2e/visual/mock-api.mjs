@@ -338,6 +338,100 @@ function preschoolListItem(p, distanceKm) {
   };
 }
 
+// GET /api/v1/map/markers over the demo data. Mirrors MapEndpoints.cs: bbox required, kind, q (>= 2 chars),
+// gmina, publicOnly, maxTuition / hasFreePlaces (preschools only; 400 with kind=school), limit 1..500 (default 300),
+// ordered by slug then kind, no score/rank fields.
+function mapMarkersHandler(sp, res) {
+  const bad = (message) => fail(res, 400, "validation_failed", message);
+  const coord = (name, min, max) => {
+    const raw = sp.get(name);
+    if (raw === null || raw.trim() === "") return null;
+    const n = Number(raw.trim().replace(",", "."));
+    return Number.isFinite(n) && n >= min && n <= max ? n : null;
+  };
+  const south = coord("south", -90, 90);
+  const north = coord("north", -90, 90);
+  const west = coord("west", -180, 180);
+  const east = coord("east", -180, 180);
+  if (south === null || north === null) return bad("Parametry south i north są wymagane: szerokość geograficzna od -90 do 90.");
+  if (west === null || east === null) return bad("Parametry west i east są wymagane: długość geograficzna od -180 do 180.");
+  if (south >= north) return bad("Parametr south musi być mniejszy niż north.");
+  if (west >= east) return bad("Parametr west musi być mniejszy niż east.");
+
+  const kind = (sp.get("kind") ?? "").trim().toLowerCase() || "all";
+  if (!["school", "preschool", "all"].includes(kind)) return bad("Parametr kind przyjmuje wartości school, preschool albo all.");
+  const gmina = (sp.get("gmina") ?? "").trim();
+  if (gmina && !/^\d{7}$/.test(gmina)) return bad("Parametr gmina musi być kodem TERYT gminy (7 cyfr).");
+  let q = (sp.get("q") ?? "").trim();
+  if (q.length > 100) return bad("Parametr q może mieć najwyżej 100 znaków.");
+  if (q.length < 2) q = "";
+  const flag = (name) => {
+    const raw = (sp.get(name) ?? "").trim().toLowerCase();
+    if (raw === "") return false;
+    if (raw === "true") return true;
+    if (raw === "false") return false;
+    return null;
+  };
+  const publicOnly = flag("publicOnly");
+  if (publicOnly === null) return bad("Parametr publicOnly przyjmuje wartości true albo false.");
+  const hasFree = flag("hasFreePlaces");
+  if (hasFree === null) return bad("Parametr hasFreePlaces przyjmuje wartości true albo false.");
+  let maxTuition = null;
+  const maxRaw = (sp.get("maxTuition") ?? "").trim();
+  if (maxRaw !== "") {
+    if (!/^\d+$/.test(maxRaw)) return bad("Parametr maxTuition musi być kwotą w złotych, liczbą całkowitą nieujemną.");
+    maxTuition = Number(maxRaw);
+  }
+  let limit = 300;
+  const limitRaw = (sp.get("limit") ?? "").trim();
+  if (limitRaw !== "") {
+    if (!/^[+-]?\d+$/.test(limitRaw)) return bad("Parametr limit musi być liczbą całkowitą.");
+    limit = Math.min(500, Math.max(1, Number(limitRaw)));
+  }
+  const preschoolOnly = maxTuition !== null || hasFree;
+  if (kind === "school" && preschoolOnly) return bad("maxTuition and hasFreePlaces apply to preschools only.");
+
+  const inBox = (x) => x.latitude >= south && x.latitude <= north && x.longitude >= west && x.longitude <= east;
+  const nameOk = (x) => q === "" || fold(x.name).includes(fold(q));
+  const markers = [];
+  if (kind !== "preschool" && !preschoolOnly) {
+    for (const s of SCHOOLS) {
+      if (!inBox(s) || !nameOk(s)) continue;
+      if (gmina && s.teryt !== gmina) continue;
+      if (publicOnly && !s.isPublic) continue;
+      const g = GMINAS.find((x) => x.teryt === s.teryt);
+      markers.push({
+        kind: "school", slug: s.slug, name: s.name, latitude: s.latitude, longitude: s.longitude,
+        isPublic: s.isPublic, gminaName: g ? g.name : null, monthlyTuition: null, freePlacesCount: null,
+      });
+    }
+  }
+  if (kind !== "school") {
+    for (const x of PRESCHOOLS) {
+      if (!inBox(x) || !nameOk(x)) continue;
+      if (gmina && gmina !== "9999999") continue;
+      if (publicOnly && !x.isPublic) continue;
+      if (hasFree && !(x.facts && x.facts.free !== null && x.facts.free > 0)) continue;
+      if (maxTuition !== null && !(x.facts && x.facts.tuitionMin !== null && x.facts.tuitionMin <= maxTuition)) continue;
+      markers.push({
+        kind: "preschool", slug: x.slug, name: x.name, latitude: x.latitude, longitude: x.longitude,
+        isPublic: x.isPublic, gminaName: "Przykładowo",
+        monthlyTuition: { minPln: x.facts ? x.facts.tuitionMin : null, maxPln: x.facts ? x.facts.tuitionMax : null },
+        freePlacesCount: x.facts ? x.facts.free : null,
+      });
+    }
+  }
+  markers.sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0));
+  const body = { items: markers.slice(0, limit), total: markers.length, truncated: markers.length > limit, limit };
+  const payload = JSON.stringify(body);
+  res.writeHead(200, {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "public, max-age=60",
+    "content-length": Buffer.byteLength(payload),
+  });
+  res.end(payload);
+}
+
 function preschoolProfile(p) {
   return {
     slug: p.slug,
@@ -649,6 +743,8 @@ async function catalogHandler(req, res, url) {
       kind: rec.kind,
     });
   }
+
+  if (p === "/api/v1/map/markers") return mapMarkersHandler(sp, res);
 
   if (p === "/api/v1/preschools") {
     const gmina = sp.get("gmina");

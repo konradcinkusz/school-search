@@ -1,0 +1,126 @@
+/*
+ * Shared filter bar (AI "Opisz czego szukasz", removable chips, manual fields). Tokens only, so dark mode follows.
+ * Scoped to .filter-bar; no colour here encodes quality.
+ */
+
+.site-main .filter-bar__result {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.site-main .filter-bar__result > * {
+  margin: 0;
+}
+
+.site-main .filter-chips-wrap {
+  margin-top: var(--space-4);
+}
+
+.site-main .filter-chips__title {
+  margin: 0 0 var(--space-2);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.site-main .filter-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.site-main .filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  min-height: var(--tap);
+  margin: 0;
+  padding: 0 var(--space-1) 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-fg);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+}
+
+.site-main .filter-chip__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.site-main .filter-chip__remove {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-fg);
+  font: inherit;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.site-main .filter-chip__remove:hover {
+  background: var(--color-accent-soft);
+}
+
+.site-main .filter-chips-wrap > .link-button {
+  margin-top: var(--space-2);
+  min-height: var(--tap);
+}
+
+.site-main .filter-edit {
+  min-width: 0;
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) 0 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0 var(--space-4);
+}
+
+.site-main .filter-edit .field--check {
+  justify-content: center;
+}
+
+.site-main .filter-edit .check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+}
+
+@media (min-width: 40rem) {
+  .site-main .filter-edit {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .site-main .filter-edit > legend {
+    grid-column: 1 / -1;
+  }
+}
+
+.site-main .filter-bar__apply {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.site-main .filter-bar__apply > * {
+  margin: 0;
+}

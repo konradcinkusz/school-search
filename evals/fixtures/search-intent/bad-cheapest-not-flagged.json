@@ -1,0 +1,25 @@
+{
+  "caseId": "search-intent-152",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": "9999999",
+        "q": null,
+        "publicOnly": null,
+        "maxDistanceKm": null,
+        "type": null,
+        "notes": [],
+        "kind": null,
+        "maxTuitionPln": null,
+        "hasFreePlaces": null,
+        "place": null
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": []
+    }
+  },
+  "note": "Intended: sort-request-unsupported. A price ordering was not flagged (known product gap)."
+}

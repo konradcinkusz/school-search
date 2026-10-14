@@ -1,0 +1,25 @@
+{
+  "caseId": "search-intent-165",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": null,
+        "q": null,
+        "publicOnly": null,
+        "maxDistanceKm": null,
+        "type": null,
+        "notes": [],
+        "kind": null,
+        "maxTuitionPln": null,
+        "hasFreePlaces": null,
+        "place": "<img src=x> Placu Wolności"
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": []
+    }
+  },
+  "note": "Intended: place-no-angle-brackets."
+}

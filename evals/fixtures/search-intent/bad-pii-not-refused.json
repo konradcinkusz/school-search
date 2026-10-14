@@ -11,7 +11,11 @@
         "publicOnly": null,
         "maxDistanceKm": null,
         "type": "school",
-        "notes": []
+        "notes": [],
+        "kind": null,
+        "maxTuitionPln": null,
+        "hasFreePlaces": null,
+        "place": null
       },
       "aiLabel": "Wygenerowano przez AI",
       "model": "claude-haiku-5-5",

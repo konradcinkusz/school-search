@@ -163,6 +163,53 @@ There are two ways. The first is the default.
    Set it before the first run, or keep it the same afterwards. A changed value does not change a password that
    the authservice database already holds (see section 11). Do not put the value in a file in the repository.
 
+## 5a. Signing in
+
+With the defaults (`SeedDemo` on, authservice included, the seeder finished) you can sign in on the web app and browse
+everything signed in.
+
+1. Open the `web` endpoint from the Aspire dashboard (section 3), then `/konto/logowanie`.
+2. Sign in with one of the accounts in section 5. The password is the same for all of them: the value of
+   `Seed:TestPassword` if you set it, otherwise the `testPassword` entry of `.local/seed-secrets.json`, which the
+   seeder also prints in its console log (`Password for every account above: ...`). The AppHost banner says which
+   of the two applies and never prints the value.
+3. After sign-in you land on `/konto`. Sign out with the button `Wyloguj się` on that page.
+
+| Account | Role claim | What it can open (and what you should see) |
+|---|---|---|
+| `parent@school-search.test`, `parent2@school-search.test` | `User` | `/konto` (own reviews with their status and the statements of reasons), writing a review on `/szkoly/demo-sp-1`, `/zglos-tresc`. `/moderacja` answers that it is for moderators only |
+| `owner@school-search.test` | `User` | `/konto/szkola` (the approved claim on `demo-sp-1`, the pending claim on `demo-sp-2`), `/konto/szkola/demo-sp-1` (plan, sponsored profile, the enquiries inbox with four synthetic enquiries) |
+| `moderator@school-search.test` | `Admin` | `/moderacja`: reviews and notices, school claims, corrections, complaints |
+| `admin@school-search.test` | `SuperAdmin` | everything the moderator can open |
+
+What the web resource needs for sign-in (the AppHost sets all of it when authservice is included):
+
+| Variable on `web` | Value | Without it |
+|---|---|---|
+| `AUTH_BASE_URL` | `http://localhost:8090` | the sign-in page says `Konta są chwilowo niedostępne` |
+| `SESSION_SECRET` | at least 32 bytes; generated once, kept in the local store | the same `503` and the same message |
+| `BFF_SHARED_SECRET` | the same value as on `api`, `reviews`, `billing` and `mcp` | sign-in still works; the services cannot trust the visitor address the web app forwards, so every visitor shares one rate-limit bucket |
+| `NODE_ENV` | `development` | the session cookie would get the `Secure` flag (`secureCookies` in `web/app/src/lib/bff-config.ts`); browsers other than Chrome and Firefox refuse such a cookie on `http://localhost` |
+
+Both secrets follow the same order as the other seed values: configuration (`SESSION_SECRET`, `BFF_SHARED_SECRET` in
+user secrets or the environment) first, then `.local/seed-secrets.json`, then generated and written there. With
+`SeedDemo=false` and `IncludeAuthservice=true` there is no store: `SESSION_SECRET` is random for each run (everyone is
+signed out when the AppHost restarts) unless you set it, and `BFF_SHARED_SECRET` is passed only when you set it.
+
+### End-to-end check of the sign-in (optional, never in CI)
+
+`tests/e2e/tests/auth-login.spec.ts` signs in as `parent@`, `moderator@` and `owner@`, checks the account page, the
+moderation console and the owner pages, and a failed login. CI has no authservice, so the spec is skipped unless
+`E2E_AUTH=1`. The password is never in the repository: pass it from the store or your user secrets.
+
+```bash
+cd tests/e2e
+E2E_AUTH=1 E2E_TEST_PASSWORD='<test password>' PLAYWRIGHT_BASE_URL='<web url from the Aspire dashboard>' \
+  npx playwright test auth-login --project=chromium
+```
+
+It expects the seeded demo data (section 4). Opening the owner's inbox marks its enquiries as read, as the app does.
+
 ## 6. Flags and secrets
 
 Set them with `dotnet user-secrets` on the AppHost project (the usual way), or as environment variables for one run.
@@ -176,6 +223,9 @@ Set them with `dotnet user-secrets` on the AppHost project (the usual way), or a
 | `Seed:TestPassword` | taken from the local store, generated on first run | the password of all test accounts (section 5). When set, it wins over the store |
 | `Reviews:SubjectPepper` | taken from the local store | keys the author hashes of the Reviews service. When set, it wins over the store |
 | `Billing:SubjectPepper` | taken from the local store | keys the subject hashes of the Billing service. When set, it wins over the store |
+| `SESSION_SECRET` | taken from the local store, generated on first run (only when authservice is included) | key material of the sealed `ss_session` cookie of the web app, at least 32 bytes. A shorter value is ignored with a banner warning. When set, it wins over the store |
+| `BFF_SHARED_SECRET` | taken from the local store, generated on first run | the secret the web app and `api`, `reviews`, `billing` and `mcp` share. When set, it wins over the store |
+| `GOOGLE_MAPS_API_KEY` | absent | passed to the web app only when present; the map page (`/mapa`) reads it at runtime. Without it the page shows its list fallback. See "Google Maps key" below |
 | `ANTHROPIC_API_KEY` | absent | passed to the API, Reviews, Billing and MCP when present. Without it the AI features answer `503 ai_unavailable` and the rest works |
 | `AI_ENABLED` | absent (off) | the switch for the AI features. Set `true` together with the key |
 
@@ -191,6 +241,20 @@ You never set them by hand. The dev seed key (`DevSeed__Key`) is 32 random bytes
 local store. It is sent as the header `X-Dev-Seed-Key` and compared in constant time. `DevSeed__Enabled` is set by
 the AppHost when `SeedDemo` is on.
 
+### Google Maps key
+
+The map page needs a browser key for the Google Maps JavaScript API. Keep it in the AppHost user secrets, never in a
+file of the repository:
+
+```bash
+dotnet user-secrets set "GOOGLE_MAPS_API_KEY" "<your key>" --project src/SchoolSearch.AppHost
+```
+
+The AppHost passes it to the `web` resource only when it is set (the banner shows `Google Maps ... on` or `off`).
+Restart the AppHost after changing it. In the Google Cloud console enable the Maps JavaScript API (and the Geocoding
+API for the place box), and restrict the key by HTTP referrer (for example `http://localhost:*/*` for local work).
+Billing and quotas are yours. Without a key nothing breaks: the map page shows the list of results instead.
+
 ### The local store: `.local/seed-secrets.json`
 
 The demo's generated values are kept in one local JSON file, `<repo>/.local/seed-secrets.json`. The authservice,
@@ -204,10 +268,15 @@ the author hashes.
   "devSeedKey": "<generated>",
   "reviewsPepper": "<generated>",
   "billingPepper": "<generated>",
-  "jwtPrivateKeyPem": "<generated, RSA 2048 PKCS#8 on one line with literal \\n>"
+  "jwtPrivateKeyPem": "<generated, RSA 2048 PKCS#8 on one line with literal \\n>",
+  "sessionSecret": "<generated, 48 random bytes as base64>",
+  "bffSharedSecret": "<generated, 32 random bytes as hex>"
 }
 ```
 
+- **Older files keep working.** A file written before `sessionSecret` and `bffSharedSecret` existed loads as it is;
+  the two keys are generated and added on the next run, and the other values are not touched. Neither one is stored
+  in a database, so adding them does not break existing data (a new `sessionSecret` only signs everyone out).
 - **Location and git.** The directory `.local/` is in `.gitignore`. The file is never committed.
 - **Permissions.** On Unix the file is set to mode `0600` after it is written. Windows does not apply that mode.
 - **Resolution, per value.** Configuration (user secrets or environment) first; then the file; then a new value,
@@ -314,6 +383,10 @@ the details of the mock, see `tests/e2e/visual/README.md`.
 | The startup banner says `Seeder: skipped` | `SeedDemo` is on but authservice is not included (`IncludeAuthservice=false`), so the test accounts cannot be created. No demo data is written to Reviews or Billing either, because only the seeder calls their seed endpoints | unset `IncludeAuthservice` or set it to `true`, or set `SeedDemo=false` |
 | Reviews or Billing answer `404` on `/dev/seed` | `DevSeed__Enabled` is off, the key does not match, or the environment is Production | run the AppHost locally; never run the seed in Production |
 | Seeder reports a Reviews or Billing error after a first run | the Reviews seed stores its base rows before the moderation steps, so a failed moderation step leaves some demo rows missing. A rerun checks each step's fixed ids and completes the missing rows (on a relational provider the whole seed runs in one transaction). `alreadySeeded` in the response means that this call wrote nothing | rerun the seeder; if it still fails, reset both the store and the volume (section 7) |
+| The sign-in page says `Konta są chwilowo niedostępne` | `SESSION_SECRET` or `AUTH_BASE_URL` is missing on `web`, or authservice is not running | open the `web` resource in the dashboard and check both variables. `IncludeAuthservice=false` leaves both off. Check the banner line `Web sign-in (SESSION_SECRET)` |
+| Sign-in answers `Nieprawidłowy adres e-mail lub hasło.` for a seeded account | wrong password (see section 5a), or the account was never created because the seeder failed | read the `seeder` log; see the password row above |
+| Signed in, but `/konto` still shows `Nie jesteś zalogowany.` | the browser dropped the session cookie (a `Secure` cookie over plain http in Safari) or `SESSION_SECRET` changed | use Chrome or Firefox, check that `NODE_ENV` is `development` on `web`, sign in again |
+| `/moderacja` says the page is for moderators only, as `moderator@` | the role was not assigned (the seeder failed before the role step), or the token was issued before the assignment | rerun the `seeder` resource, then sign out and sign in again |
 | Tokens stop working after a restart | the signing key changed: the local store was deleted, or `Authservice:JwtPrivateKeyPem` changed | sign in again |
 | Scores or pupil counts look different from the demo notes | the import job wrote real data to `catalogdb` | reset the volume (section 7) and do not run the import against the demo database |
 
@@ -347,7 +420,9 @@ Written without a .NET SDK and without Docker. Nothing below has been run from t
   from this change has been seen.
 - The AppHost integration is not covered by CI. It is checked only by a local run.
 - The authservice container: its pull (GHCR access), its first start, its migrations and its roles.
-- Sign-in, roles and the owner, moderator and admin pages with the seeded accounts, end to end.
+- Sign-in, roles and the owner, moderator and admin pages with the seeded accounts, end to end. The gated spec
+  `tests/e2e/tests/auth-login.spec.ts` exists for this (section 5a); it was typechecked, never run against authservice.
+- The new web environment (`SESSION_SECRET`, `BFF_SHARED_SECRET`, `NODE_ENV`, `GOOGLE_MAPS_API_KEY`) set by the AppHost.
 - The stated Aspire resource names and endpoint names in section 3.
 
 ## Known limitations

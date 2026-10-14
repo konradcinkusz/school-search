@@ -1,0 +1,25 @@
+{
+  "caseId": "search-intent-136",
+  "shouldPass": true,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": "9999999",
+        "q": null,
+        "publicOnly": true,
+        "maxDistanceKm": null,
+        "type": null,
+        "notes": [],
+        "kind": "preschool",
+        "maxTuitionPln": 1500,
+        "hasFreePlaces": true,
+        "place": null
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": []
+    }
+  },
+  "note": "Kind, public, tuition, free places and gmina together."
+}

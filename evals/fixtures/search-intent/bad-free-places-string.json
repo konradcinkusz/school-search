@@ -1,0 +1,25 @@
+{
+  "caseId": "search-intent-134",
+  "shouldPass": false,
+  "response": {
+    "status": 200,
+    "body": {
+      "filters": {
+        "gmina": "9999999",
+        "q": null,
+        "publicOnly": null,
+        "maxDistanceKm": null,
+        "type": null,
+        "notes": [],
+        "kind": "preschool",
+        "maxTuitionPln": null,
+        "hasFreePlaces": "tak",
+        "place": null
+      },
+      "aiLabel": "Wygenerowano przez AI",
+      "model": "claude-haiku-5-5",
+      "unsupported": []
+    }
+  },
+  "note": "Intended: hasFreePlaces-true-or-null. A string is not the flag."
+}

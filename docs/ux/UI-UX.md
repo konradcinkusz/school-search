@@ -11,6 +11,7 @@ is in English. Labels below are the intended Polish labels where known, and are 
 | `/szkoly/[slug]` | School profile: identity, type, location, the data this portal holds (was `/szkola/[rspo]`) | Reads the catalog API |
 | `/metodologia` | Methodology page, versioned, with the reading guide for score and confidence | Content in place; marked draft |
 | `/dla-szkol` | For schools: what is shown, how to request a correction | Stub |
+| `/mapa` | Map of schools and preschools (Google Maps JS with a runtime key): viewport-driven neutral markers, clusters, info card, filters in a bottom sheet on phones, list as the accessible alternative and as the fallback when no key is set. Not a catchment tool (ADR-0010, ADR-0022) | Built (`web/app/src/app/mapa`, `components/map`, `app/api/map/markers`); `tests/e2e/tests/map.spec.ts` covers the no-key fallback; the Google map itself is checked by hand |
 | `/robots.txt`, `/sitemap/<id>.xml` | Search engine surface. There is no `/sitemap.xml`; `robots.ts` lists ids 0 (static pages), 1 to 5 (school profiles) and 6 (preschool profiles) | Generated (`web/app/src/app/robots.ts`, `sitemap.ts`, `lib/sitemap-config.ts`) |
 
 Other routes from the brief (catchment result, comparison, ranking) are Phase B and C. They are not scaffolded
@@ -68,6 +69,18 @@ and 15).
    admin endpoint (ADR-0008).
 7. **Compare two schools (Phase C):** side by side, same cohort, same methodology version.
 
+## Levels
+
+The product is organised in levels of schooling, shown to the parent as a choice of stage, not as separate sites.
+Level 1 covers childcare: preschools now, nurseries (żłobki, ages 0 to 3) if the owner accepts ADR-0021. Level 1 shows
+practical facts only, each with its source and as-of date, and never a quality score, rank or "best" label. Level 2 covers
+primary schools and shows scores with their interval, cohort size and methodology version. A second edition for secondary
+students and university applicants is deferred and has no screens here. Its trigger and the open decisions are in
+[`docs/adr/0021-product-scope-levels-and-nurseries.md`](../adr/0021-product-scope-levels-and-nurseries.md) (status
+Proposed). Any new level is a new `kind` or `educationLevel` value in the catalog, not a new product.
+
+Research on demand, the required content per level, legal checks and funding options is in [`docs/research/2026-10-portal-requirements.md`](../research/2026-10-portal-requirements.md) (2026-10-14; figures there are REPORTED or UNVERIFIED, not read at primary sources). Its gap table ranks recruitment calendars, fees and vacancies as the next content to add.
+
 ## Ranked backlog
 
 Ranked by user harm if wrong first, then by how much the next phase depends on it. Each item states the gate it
@@ -94,6 +107,10 @@ Status column shows what Phase C delivered; open items are the ones still gated.
 | 14 | Parent reviews and accounts | Phase E; DSA machinery required first | authservice wired; DSA terms | Pages and components exist: `/konto` (login, register, school claims), reviews and billing components. Login against authservice is NOT RUN in CI (`AUTH_BASE_URL` unset there) |
 | 15 | AI explanation panel ("Wyjaśnij ten wynik"): delimited box, label "Wygenerowano przez AI — to nie jest ocena szkoły", structured facts beside it, link to `/metodologia`, graceful messages for 503, 502 and 429 | Reader harm if the text reads as a verdict; the facts must stay next to it (ADR-0011 B6) | Playwright: label and facts visible; 503 and 502 messages; no HTML from the model | Built (`web/app/src/components/explain-panel.tsx`). `ai-surface.spec.ts` runs in the CI e2e job. No live model call in CI (no key). Needs O1 (retention) before public launch |
 | 16 | MCP connection page (`/mcp` docs) and the agent-facing wording of scores (score with interval, `n uczniów`, version) | Agents repeat numbers without context; the wording is the only guard they see | Protocol test on tool descriptions; review of the example conversation in `docs/mcp/MCP.md` | Written at PR 4; no public page yet; MCP not deployed |
+
+## Filters
+
+One shared filter model (`web/app/src/lib/search-filters.ts`: kind, name, gmina, public only, tuition ceiling, free places, place, radius) feeds the list pages, the AI filter bar and the map. `components/filters/ai-filter-bar.tsx` turns "Opisz czego szukasz" into removable chips (labelled "Wygenerowano przez AI — to nie jest ocena szkoły") and a manual edit panel that works without AI; when AI is off only the AI part degrades. Parts of a question the portal cannot answer are shown as a neutral note ("Tego jeszcze nie obsługujemy: ..."), never as a filter. On list pages place and distance are not applied: the page says "zastosujemy na mapie" and links to `/mapa` with the same parameters. Filters never carry a score, rank or sort order, and the place box never decides a school catchment (ADR-0010). Tests: `tests/e2e/tests/ai-filters.spec.ts`.
 
 ## Rules for every screen
 

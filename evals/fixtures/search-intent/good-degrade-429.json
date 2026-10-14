@@ -1,0 +1,15 @@
+{
+  "caseId": "search-intent-172",
+  "shouldPass": true,
+  "response": {
+    "status": 429,
+    "body": {
+      "error": {
+        "code": "rate_limited",
+        "message": "Za dużo zapytań. Spróbuj ponownie za chwilę.",
+        "traceId": "00-fixture-trace"
+      }
+    }
+  },
+  "note": "Rate limit: the form stays usable with manual filters."
+}

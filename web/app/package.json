@@ -3,17 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start -p 3000 -H 0.0.0.0",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@googlemaps/markerclusterer": "2.6.2",
     "next": "15.5.26",
     "react": "19.1.1",
     "react-dom": "19.1.1"
   },
   "devDependencies": {
+    "@types/google.maps": "3.66.3",
     "@types/node": "22.18.1",
     "@types/react": "19.1.8",
     "@types/react-dom": "19.1.6",
