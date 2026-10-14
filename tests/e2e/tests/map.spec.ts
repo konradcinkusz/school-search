@@ -4,8 +4,8 @@ import { expect, test, type Page } from "@playwright/test";
 // Map page (Phase M, ADR-0022). CI runs without GOOGLE_MAPS_API_KEY, so these tests exercise the graceful fallback
 // (P8): the same filters and the same results as a list, plus the Polish notice that the map is unavailable. Google is
 // never contacted. The BFF route /api/map/markers is tested through HTTP, and the error and truncation states with
-// page.route stubs. If a key IS configured in the environment under test, the fallback assertions are skipped by the
-// first test below (the map itself needs a real Google key and is checked by hand, see ADR-0022).
+// page.route stubs. If a key IS configured in the environment under test, the fallback assertions are skipped by a
+// beforeEach hook (the map itself needs a real Google key and is checked by hand, see ADR-0022).
 
 const NOTICE = "Mapa jest niedostępna: nie skonfigurowano klucza Google Maps. Wyniki są pokazane jako lista.";
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"] as const;
@@ -138,6 +138,26 @@ test.describe("map page: no Google Maps key (list fallback)", () => {
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).not.toContain("googleapis.com");
     expect(csp).not.toContain("gstatic.com");
+  });
+});
+
+test.describe("map page: Google cannot be loaded", () => {
+  test("a key whose script cannot load falls back to the list with a Polish message", async ({ page }) => {
+    // A syntactically valid key is injected into the runtime config. Google is never reachable from CI (the script is
+    // refused by the request interception, and by the Content-Security-Policy when no key is configured).
+    await page.route("**/api/config", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ catalogApiUrl: "http://localhost:8080", catalogApiSource: "default", googleMapsApiKey: "AIzaSyTestKeyForPlaywright0123456789" }),
+      }),
+    );
+    await page.route(/^https:\/\/maps\.googleapis\.com\//, (route) => route.abort());
+    await openMap(page);
+    const main = page.getByRole("main");
+    await expect(main.getByText("Nie udało się wczytać mapy Google. Wyniki są pokazane jako lista.")).toBeVisible();
+    await expect(main.locator("li.map-list__item").first()).toBeVisible();
+    await expect(main.getByRole("button", { name: "Mapa", exact: true })).toHaveCount(0);
   });
 });
 

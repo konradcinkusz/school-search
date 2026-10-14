@@ -11,6 +11,7 @@ is in English. Labels below are the intended Polish labels where known, and are 
 | `/szkoly/[slug]` | School profile: identity, type, location, the data this portal holds (was `/szkola/[rspo]`) | Reads the catalog API |
 | `/metodologia` | Methodology page, versioned, with the reading guide for score and confidence | Content in place; marked draft |
 | `/dla-szkol` | For schools: what is shown, how to request a correction | Stub |
+| `/mapa` | Map of schools and preschools (Google Maps JS with a runtime key): viewport-driven neutral markers, clusters, info card, filters in a bottom sheet on phones, list as the accessible alternative and as the fallback when no key is set. Not a catchment tool (ADR-0010, ADR-0022) | Built (`web/app/src/app/mapa`, `components/map`, `app/api/map/markers`); `tests/e2e/tests/map.spec.ts` covers the no-key fallback; the Google map itself is checked by hand |
 | `/robots.txt`, `/sitemap/<id>.xml` | Search engine surface. There is no `/sitemap.xml`; `robots.ts` lists ids 0 (static pages), 1 to 5 (school profiles) and 6 (preschool profiles) | Generated (`web/app/src/app/robots.ts`, `sitemap.ts`, `lib/sitemap-config.ts`) |
 
 Other routes from the brief (catchment result, comparison, ranking) are Phase B and C. They are not scaffolded

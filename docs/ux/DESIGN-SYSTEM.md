@@ -145,6 +145,35 @@ icons in markup carry `aria-hidden="true"`.
 | `.empty-state` | 404 with a signpost illustration (inline SVG) |
 | `.sponsored`, `.pricing` | Monetisation |
 
+## Map
+
+The map page (`/mapa`, ADR-0022, styles in `app/styles/map.css`, components in `components/map/`) follows the same rules
+as the rest of the system. What is specific to it:
+
+- **Markers are neutral.** One colour and one shape per kind of facility: schools are petrol (`#0b5d6b`, a circle with a
+  small roof), preschools burnt orange (`#b3470f`, a rounded square). Both have a white outline and measure at least 3:1
+  against white and against typical map tiles (petrol 7.5:1 on white and 5.1:1 on water blue; orange 5.5:1 on white and
+  3.7:1 on water blue). Clusters are neutral ink (`#15202b`) with a white count. Colour, size and order never encode a
+  score, rank, review or sponsorship. The two kind colours are defined once in `lib/map-markers.ts` (`MARKER_COLOR`) and
+  mirrored as `--map-school` and `--map-preschool` for the legend and kind labels. They do not change in dark mode: the
+  tiles stay light (the map has no dark style), and a changed colour would break the legend.
+- **Legend and kind label** (`.map-legend`, `.map-kind`): a swatch with the marker's shape plus the word "Szkoła" or
+  "Przedszkole", so colour is never the only cue.
+- **Info card** (`.map-card`): a `.card` over the bottom of the map (full width on phones, 22rem from 36rem), not a Google
+  info window. It takes focus when a marker is selected; the close button is a 44px target.
+- **Result list** (`.map-list`, `.map-list__item`): alphabetical, name as a link to the profile, kind, gmina, public or
+  private; preschools add tuition and free places, with "brak danych" for a missing value. It is the keyboard and
+  screen-reader alternative to the map and the whole page when no map is available.
+- **Phone layout.** Below 62rem the filters sit in a bottom sheet (`.map-filters[data-open]`) behind a "Filtry (n)"
+  button: `role="dialog"` while open, Escape closes, Tab stays inside, focus returns to the button. A "Mapa" / "Lista"
+  toggle (`aria-pressed`) shows one at a time. From 62rem the filters and list stay on the left and the map is sticky on
+  the right. Without a map the filters and the list sit side by side.
+- **Status text.** The result count is a `role="status"` line ("Placówek w tym obszarze: N."); the truncation notice is
+  "Przybliż mapę, aby zobaczyć wszystkie placówki." (with a map) or "Pokazano tylko część placówek. Zawęź filtry, aby
+  zobaczyć wszystkie." (list only). The unavailable notice is a `.notice--caution` with `role="note"`.
+- **Motion.** `prefers-reduced-motion: reduce` makes the map jump instead of pan and removes every transition on the page.
+- **Out of scope here:** a dark map style (the tiles stay light), custom controls beyond Google's defaults.
+
 ## Responsive
 
 Phone first; the reference width is 360px and no page scrolls sideways at that width (checked at 360, 768 and

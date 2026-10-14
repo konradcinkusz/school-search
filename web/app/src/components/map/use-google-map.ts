@@ -124,45 +124,52 @@ export function useGoogleMap({ apiKey, markers, selectedSlug, onSelect, onViewpo
     const clusterer = clustererRef.current;
     const Marker = markerCtorRef.current;
     if (status !== "ready" || clusterer === null || Marker === null) return;
-    const wanted = new Map(markers.map((m) => [m.slug, m]));
-    const stale: google.maps.Marker[] = [];
-    for (const [slug, entry] of drawn.current) {
-      if (!wanted.has(slug)) {
-        stale.push(entry.marker);
-        drawn.current.delete(slug);
-      }
-    }
-    if (stale.length > 0) clusterer.removeMarkers(stale, true);
-    const fresh: google.maps.Marker[] = [];
-    for (const m of markers) {
-      const selected = m.slug === selectedSlug;
-      const existing = drawn.current.get(m.slug);
-      const size = selected ? 36 : 30;
-      const icon = (): google.maps.Icon => ({
-        url: markerIconUrl(m.kind, selected),
-        scaledSize: new google.maps.Size(size, size),
-        anchor: new google.maps.Point(size / 2, size / 2),
-      });
-      if (existing) {
-        if (existing.selected !== selected) {
-          existing.marker.setIcon(icon());
-          existing.marker.setZIndex(selected ? MAX_Z : null);
-          existing.selected = selected;
+    try {
+      const wanted = new Map(markers.map((m) => [m.slug, m]));
+      const stale: google.maps.Marker[] = [];
+      for (const [slug, entry] of drawn.current) {
+        if (!wanted.has(slug)) {
+          stale.push(entry.marker);
+          drawn.current.delete(slug);
         }
-        continue;
       }
-      const marker = new Marker({
-        position: { lat: m.latitude, lng: m.longitude },
-        title: `${m.name}`,
-        icon: icon(),
-        zIndex: selected ? MAX_Z : null,
-      });
-      marker.addListener("click", () => onSelectRef.current(m));
-      drawn.current.set(m.slug, { marker, kind: m.kind, selected });
-      fresh.push(marker);
+      if (stale.length > 0) clusterer.removeMarkers(stale, true);
+      const fresh: google.maps.Marker[] = [];
+      for (const m of markers) {
+        const selected = m.slug === selectedSlug;
+        const existing = drawn.current.get(m.slug);
+        const size = selected ? 36 : 30;
+        const icon = (): google.maps.Icon => ({
+          url: markerIconUrl(m.kind, selected),
+          scaledSize: new google.maps.Size(size, size),
+          anchor: new google.maps.Point(size / 2, size / 2),
+        });
+        if (existing) {
+          if (existing.selected !== selected) {
+            existing.marker.setIcon(icon());
+            existing.marker.setZIndex(selected ? MAX_Z : null);
+            existing.selected = selected;
+          }
+          continue;
+        }
+        const marker = new Marker({
+          position: { lat: m.latitude, lng: m.longitude },
+          title: `${m.name}`,
+          icon: icon(),
+          zIndex: selected ? MAX_Z : null,
+        });
+        marker.addListener("click", () => onSelectRef.current(m));
+        drawn.current.set(m.slug, { marker, kind: m.kind, selected });
+        fresh.push(marker);
+      }
+      if (fresh.length > 0) clusterer.addMarkers(fresh, true);
+      clusterer.render();
+    } catch (error) {
+      // A failure while drawing must never take the page down: fall back to the list.
+      console.warn("[map] could not draw markers", error);
+      setFailure("Nie udało się narysować mapy. Wyniki są pokazane jako lista.");
+      setStatus("error");
     }
-    if (fresh.length > 0) clusterer.addMarkers(fresh, true);
-    clusterer.render();
   }, [markers, selectedSlug, status]);
 
   const flyTo = useCallback((lat: number, lng: number, zoom: number) => {
