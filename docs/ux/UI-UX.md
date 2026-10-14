@@ -78,6 +78,8 @@ students and university applicants is deferred and has no screens here. Its trig
 [`docs/adr/0021-product-scope-levels-and-nurseries.md`](../adr/0021-product-scope-levels-and-nurseries.md) (status
 Proposed). Any new level is a new `kind` or `educationLevel` value in the catalog, not a new product.
 
+Research on demand, the required content per level, legal checks and funding options is in [`docs/research/2026-10-portal-requirements.md`](../research/2026-10-portal-requirements.md) (2026-10-14; figures there are REPORTED or UNVERIFIED, not read at primary sources). Its gap table ranks recruitment calendars, fees and vacancies as the next content to add.
+
 ## Ranked backlog
 
 Ranked by user harm if wrong first, then by how much the next phase depends on it. Each item states the gate it

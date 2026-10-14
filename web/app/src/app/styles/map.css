@@ -310,12 +310,22 @@
     gap: var(--space-5);
   }
 
+  /* No map: filters on the left, the result list on the right (nothing sits in the map column). */
   .site-main .map-explorer[data-map="off"] .map-layout {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(20rem, 26rem) minmax(0, 1fr);
   }
 
-  .site-main .map-explorer[data-map="off"] .map-list {
-    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  .site-main .map-explorer[data-map="off"] .map-side {
+    display: contents;
+  }
+
+  .site-main .map-explorer[data-map="off"] .map-filters {
+    grid-column: 1;
+  }
+
+  .site-main .map-explorer[data-map="off"] .map-results {
+    grid-column: 2;
+    grid-row: 1;
   }
 
   .site-main .map-main {
