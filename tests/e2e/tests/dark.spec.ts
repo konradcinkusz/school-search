@@ -4,7 +4,7 @@ import { expect, test, type ConsoleMessage, type Page } from "@playwright/test";
 // Dark colour scheme (C-03). Runs only in the 'dark' project (colorScheme "dark"). The web app switches its tokens on
 // prefers-color-scheme, so these checks prove the dark theme is actually applied, not only that the page renders.
 
-const ROUTES = ["/", "/szkoly/demo-sp-1", "/ranking/country"] as const;
+const ROUTES = ["/", "/szkoly/demo-sp-1", "/ranking/country", "/mapa"] as const;
 
 /** Parses a computed CSS colour such as "rgb(27, 30, 35)" or "rgba(0, 0, 0, 0)" into its channels. */
 function parseRgb(value: string): { r: number; g: number; b: number; a: number } | null {

@@ -12,6 +12,7 @@ const ROUTES = [
   "/ranking/country",
   "/metodologia",
   "/przedszkola",
+  "/mapa",
   "/doradca",
   "/dla-szkol",
 ] as const;

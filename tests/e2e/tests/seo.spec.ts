@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 // sitemap file ids are checked. The ids follow SCHOOL_SITEMAP_FILES (5) and PRESCHOOL_SITEMAP_ID (6), see sitemap-config.ts.
 
 const SITEMAP_IDS = [0, 1, 2, 3, 4, 5, 6] as const;
-const STATIC_PATHS = ["/", "/porownaj", "/metodologia", "/dla-szkol", "/ranking/country", "/przedszkola"] as const;
+const STATIC_PATHS = ["/", "/porownaj", "/metodologia", "/dla-szkol", "/ranking/country", "/przedszkola", "/mapa"] as const;
 const TITLE_ROUTES = [
   "/",
   "/szkoly/demo-sp-1",

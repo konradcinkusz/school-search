@@ -45,12 +45,6 @@ be repeated in the answer), `maxDistanceKmAtMost`, `enumOnly`, `noAngle`. Keys s
 
 ## Known gaps (found while writing the cases; the cases stay as they are)
 
-- The product guard (`SearchIntentGuard.RankingWords`) now lists `najlepiej` and `najgorzej`. Case `search-intent-099` and
-  fixture `bad-najlepiej-in-q` remain as regression checks.
-- Price ordering ("najtańsze", case `search-intent-152`, fixture `bad-cheapest-not-flagged`) is not in the product's word list
-  yet. The case expects it to go to `unsupported` as a sort request, so it fails until the product catches it.
-- Nationality refusal (case `search-intent-156`, fixture `good-refused-nationality`): the product has no message for it yet.
-  The fixture text is a placeholder. The grader only requires a non-empty `unsupported` list and no nationality stem in `q`.
 - `kind` and `type` both exist in the contract. The grader requires `kind` for the new cases and does not require `type` to
   mirror it. The owner should decide whether `type` is retired.
 - The gmina code is checked for shape and for presence in the question, not for existence. `0000000` is accepted if typed

@@ -12,6 +12,7 @@ const ROUTES = [
   "/ranking/country",
   "/porownaj?slugs=demo-sp-1,demo-sp-7",
   "/przedszkola",
+  "/mapa",
   "/przedszkola/przedszkole-demonstracyjne-nr-1",
   "/metodologia",
   "/dla-szkol",

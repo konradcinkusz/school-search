@@ -19,9 +19,9 @@
       "aiLabel": "Wygenerowano przez AI",
       "model": "claude-haiku-5-5",
       "unsupported": [
-        "Nie przygotowujemy zestawień według narodowości ani pochodzenia dzieci. Wybierz gminę albo typ placówki."
+        "Nie wyszukujemy szkół według narodowości ani pochodzenia uczniów."
       ]
     }
   },
-  "note": "Placeholder refusal text (no product message yet): the grader needs a non-empty unsupported list and no nationality in q."
+  "note": "Text matches SearchIntentGuard.NationalityMessage: the grader needs a non-empty unsupported list and no nationality in q."
 }

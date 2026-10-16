@@ -11,6 +11,7 @@ public static partial class SearchIntentGuard
     public const int MaxQuestionLength = 300;
     public const string EmptyMessage = "Opisz, czego szukasz.";
     public const string TooLongMessage = "Pytanie może mieć najwyżej 300 znaków.";
+    public const string NationalityMessage = "Nie wyszukujemy szkół według narodowości ani pochodzenia uczniów.";
     public const string PersonalDataMessage = "Nie wpisuj adresu, numeru telefonu ani danych dziecka.";
 
     [GeneratedRegex(@"[\p{L}0-9._%+-]+@[\p{L}0-9.-]+\.\p{L}{2,}", RegexOptions.CultureInvariant)]
@@ -29,8 +30,11 @@ public static partial class SearchIntentGuard
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex RankingWords();
 
-    [GeneratedRegex("sortuj|sortowa|rosnąc|malejąc|ascending|descending", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex("sortuj|sortowa|rosnąc|malejąc|ascending|descending|najtańsz|najtansz|najtani|najdroższ|najdrozsz|najdrożej|najdrozej|po cenie|według ceny|wedlug ceny", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex SortingWords();
+
+    [GeneratedRegex("narodowo|pochodzeni|cudzoziem|obcokrajow|ukrain|ukraiń", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex NationalityWords();
 
     /// <summary>Null when the question may be sent; otherwise the Polish message shown to the parent.</summary>
     public static string? Validate(string? question)
@@ -62,6 +66,8 @@ public static partial class SearchIntentGuard
     public static bool MentionsRanking(string text) => RankingWords().IsMatch(text);
 
     public static bool MentionsSorting(string text) => SortingWords().IsMatch(text);
+
+    public static bool MentionsNationality(string text) => NationalityWords().IsMatch(text);
 
     /// <summary>Trims and collapses runs of whitespace to a single space.</summary>
     public static string Collapse(string text) =>

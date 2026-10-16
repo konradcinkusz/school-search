@@ -15,7 +15,7 @@ const CATALOG_PAGE_SIZE = 100;
 const PAGES_PER_SITEMAP = 100;
 const FETCH_CONCURRENCY = 8;
 
-const STATIC_PATHS = ["/", "/porownaj", "/metodologia", "/dla-szkol", "/ranking/country", "/przedszkola"] as const;
+const STATIC_PATHS = ["/", "/porownaj", "/metodologia", "/dla-szkol", "/ranking/country", "/przedszkola", "/mapa"] as const;
 
 /**
  * Id 0 holds the static pages; ids 1..SCHOOL_SITEMAP_FILES hold school profiles and PRESCHOOL_SITEMAP_ID holds

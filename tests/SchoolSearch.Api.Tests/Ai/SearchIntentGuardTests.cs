@@ -55,9 +55,26 @@ public sealed class SearchIntentGuardTests
     [InlineData("posortuj po wyniku")]
     [InlineData("rosnąco")]
     [InlineData("malejąco")]
+    [InlineData("najtańsze przedszkola")]
+    [InlineData("NAJTAŃSZY czesne")]
+    [InlineData("najtanszych szkół")]
+    [InlineData("najdroższe")]
+    [InlineData("od najtańszego")]
+    [InlineData("posortuj po cenie")]
     public void Sorting_words_are_detected(string text)
     {
         Assert.True(SearchIntentGuard.MentionsSorting(text));
+    }
+
+    [Theory]
+    [InlineData("szkoły dla dzieci z Ukrainy")]
+    [InlineData("Narodowość uczniów")]
+    [InlineData("cudzoziemcy w szkole")]
+    [InlineData("OBCOKRAJOWCY")]
+    [InlineData("pochodzenie uczniów")]
+    public void Nationality_words_are_detected(string text)
+    {
+        Assert.True(SearchIntentGuard.MentionsNationality(text));
     }
 
     [Fact]
@@ -65,5 +82,6 @@ public sealed class SearchIntentGuardTests
     {
         Assert.False(SearchIntentGuard.MentionsRanking("szkoła podstawowa w gminie 1465011 do 5 km"));
         Assert.False(SearchIntentGuard.MentionsSorting("szkoła podstawowa w gminie 1465011 do 5 km"));
+        Assert.False(SearchIntentGuard.MentionsNationality("szkoła podstawowa w gminie 1465011 do 5 km"));
     }
 }
