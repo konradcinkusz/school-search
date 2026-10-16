@@ -57,6 +57,16 @@ export default function PrivacyPage() {
         decyzji.
       </p>
 
+      <h2>Mapa (Google Maps)</h2>
+      <p>
+        Mapa na stronie <a href="/mapa">/mapa</a> korzysta z Google Maps tylko wtedy, gdy jest włączona. Wtedy Twoja
+        przeglądarka łączy się z Google, które otrzymuje Twój adres IP oraz miejsce wpisane w filtrze „miejsce”.
+        Miejsce służy wyłącznie do przesunięcia mapy. Serwis nie używa mapy do ustalania obwodów szkół i nie zapisuje
+        wpisanego miejsca na swoich serwerach. Miejsce widać w adresie strony, dzięki czemu można go udostępnić dalej.
+        Google przetwarza te dane na własnych zasadach, zgodnie z własnymi warunkami i polityką prywatności. Gdy mapa
+        nie jest włączona, strona /mapa pokazuje listę i nic nie jest wysyłane do Google.
+      </p>
+
       <h2>Okres przechowywania</h2>
       <p className="notice notice--caution" role="note">
         [do uzupełnienia przez właściciela serwisu i prawnika].
